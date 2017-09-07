@@ -35,17 +35,14 @@
 #include <sstream>
 #include <string>
 
-namespace aew {
+namespace amem {
 
 
-struct AliasEdgeWriter : public llvm::ModulePass {
+struct AliasMem : public llvm::ModulePass {
     static char ID;
     std::map<std::string, uint64_t> Data;
 
-    llvm::StringRef FunctionName;
-
-    AliasEdgeWriter(llvm::StringRef fn) : llvm::ModulePass(ID), FunctionName(fn) {}
-    explicit AliasEdgeWriter() : llvm::ModulePass(ID){}
+    explicit AliasMem() : llvm::ModulePass(ID){}
 
     virtual bool runOnModule(llvm::Module &) override;
     virtual bool doInitialization(llvm::Module &M) override;

@@ -1,4 +1,4 @@
-#define DEBUG_TYPE "generator_aew"
+#define DEBUG_TYPE "generator_amem"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
@@ -23,19 +23,18 @@
 #include <typeinfo>
 
 #include "AliasMem.h"
-//#include "Common.h"
 
 using namespace llvm;
-using namespace aew;
+using namespace amem;
 using namespace std;
 
-extern cl::list<std::string> FunctionList;
+extern cl::opt<std::string> XKETCHName;
 
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
 
 
-void AliasEdgeWriter::writeEdges(CallInst *CI, Function *OF) {
+void AliasMem::writeEdges(CallInst *CI, Function *OF) {
 
     // Get all the things we need to check
     // aliasing for
@@ -210,7 +209,7 @@ void AliasEdgeWriter::writeEdges(CallInst *CI, Function *OF) {
     MayEdgeFile.close();
 }
 
-bool AliasEdgeWriter::runOnModule(Module &M) {
+bool AliasMem::runOnModule(Module &M) {
 
     DenseMap<StringRef, SmallVector<CallInst *, 1>> Map;
 
@@ -225,7 +224,7 @@ bool AliasEdgeWriter::runOnModule(Module &M) {
             for (auto &I : BB) {
                 if (auto *CI = dyn_cast<CallInst>(&I)) {
                     if (auto *F = CI->getCalledFunction()) {
-                        if (F->getName() == this->FunctionName) {
+                        if (F->getName() == XKETCHName.getValue()) {
                             if (Map.count(F->getName()) == 0) {
                                 Map.insert({F->getName(),
                                             SmallVector<CallInst *, 1>()});
@@ -251,13 +250,13 @@ bool AliasEdgeWriter::runOnModule(Module &M) {
     return false;
 }
 
-bool AliasEdgeWriter::doInitialization(Module &M) {
+bool AliasMem::doInitialization(Module &M) {
     Data.clear();
     return false;
 }
 
-bool AliasEdgeWriter::doFinalization(Module &M) {
-    ofstream Outfile("aew.stats.txt", ios::out);
+bool AliasMem::doFinalization(Module &M) {
+    ofstream Outfile("amem.stats.txt", ios::out);
     for (auto KV : Data) {
         Outfile << KV.first << " " << KV.second << "\n";
     }
@@ -266,7 +265,7 @@ bool AliasEdgeWriter::doFinalization(Module &M) {
 
 
 
-char AliasEdgeWriter::ID = 0;
+char AliasMem::ID = 0;
 
-static RegisterPass<AliasEdgeWriter> X(
-    "aew", "Alias edge writer pass");
+static RegisterPass<AliasMem> X(
+    "amem", "Alias edge writer pass");
