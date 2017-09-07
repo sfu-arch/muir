@@ -193,9 +193,6 @@ LLVM_INCLUDE_TOOLS:BOOL=ON
 lx_LIB_DEPENDS:STATIC=
 
 //Dependencies for target
-memalias-lib_LIB_DEPENDS:STATIC=
-
-//Dependencies for target
 memalias_LIB_DEPENDS:STATIC=
 
 //Value Computed by CMake

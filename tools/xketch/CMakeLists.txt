@@ -1,3 +1,4 @@
+set(LLVM_USED_LIBS memalias)
 #configure_file("${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake" 
                #"${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 

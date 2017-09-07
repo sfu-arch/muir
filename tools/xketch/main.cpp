@@ -6,6 +6,11 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 
+#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
+
 // Support for LLVM 4.0+
 #define LLVM_VERSION_GE(major, minor) \
     (LLVM_VERSION_MAJOR > (major) ||  \
@@ -263,6 +268,20 @@ static void extractLoops(Module &m) {
 
     replaceExt(inPath, "lx.bc");
     saveModule(m, inPath);
+}
+
+
+static void AApassTest(Module &m) {
+    legacy::PassManager pm;
+    pm.add(createBasicAAWrapperPass());
+    pm.add(llvm::createTypeBasedAAWrapperPass());
+    pm.add(createGlobalsAAWrapperPass());
+    pm.add(createSCEVAAWrapperPass());
+    pm.add(createScopedNoAliasAAWrapperPass());
+    pm.add(createCFLAndersAAWrapperPass());
+    pm.add(createAAResultsWrapperPass());
+    pm.add(new amem::AliasMem(XKETCHName));
+    pm.run(m);
 }
 
 int main(int argc, char **argv) {

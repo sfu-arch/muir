@@ -168,19 +168,6 @@ memalias/fast:
 .PHONY : memalias/fast
 
 #=============================================================================
-# Target rules for targets named memalias-lib
-
-# Build rule for target.
-memalias-lib: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 memalias-lib
-.PHONY : memalias-lib
-
-# fast build rule for target.
-memalias-lib/fast:
-	$(MAKE) -f lib/memalias/CMakeFiles/memalias-lib.dir/build.make lib/memalias/CMakeFiles/memalias-lib.dir/build
-.PHONY : memalias-lib/fast
-
-#=============================================================================
 # Target rules for targets named lx
 
 # Build rule for target.
@@ -219,7 +206,6 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... memalias"
-	@echo "... memalias-lib"
 	@echo "... lx"
 	@echo "... xketch"
 .PHONY : help

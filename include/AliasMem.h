@@ -42,6 +42,9 @@ struct AliasMem : public llvm::ModulePass {
     static char ID;
     std::map<std::string, uint64_t> Data;
 
+    llvm::StringRef FunctionName;
+
+    AliasMem(llvm::StringRef fn) : llvm::ModulePass(ID), FunctionName(fn) {}
     explicit AliasMem() : llvm::ModulePass(ID){}
 
     virtual bool runOnModule(llvm::Module &) override;

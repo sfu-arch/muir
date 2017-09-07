@@ -28,7 +28,7 @@ using namespace llvm;
 using namespace amem;
 using namespace std;
 
-extern cl::opt<std::string> XKETCHName;
+//extern cl::opt<string> XKETCHName;
 
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
@@ -218,13 +218,11 @@ bool AliasMem::runOnModule(Module &M) {
         if (F.isDeclaration())
             continue;
 
-        //outs() << "FunctionName: " << FunctionName << "\n";
-
         for (auto &BB : F) {
             for (auto &I : BB) {
                 if (auto *CI = dyn_cast<CallInst>(&I)) {
                     if (auto *F = CI->getCalledFunction()) {
-                        if (F->getName() == XKETCHName.getValue()) {
+                        if (F->getName() == this->FunctionName) {
                             if (Map.count(F->getName()) == 0) {
                                 Map.insert({F->getName(),
                                             SmallVector<CallInst *, 1>()});

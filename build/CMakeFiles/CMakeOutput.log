@@ -28,28 +28,28 @@ The CXX compiler identification is GNU, found in "/home/amiralis/git/xketch-gene
 Determining if the C compiler works passed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_02c7c/fast"
-/usr/bin/make -f CMakeFiles/cmTC_02c7c.dir/build.make CMakeFiles/cmTC_02c7c.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_b5acc/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b5acc.dir/build.make CMakeFiles/cmTC_b5acc.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_02c7c.dir/testCCompiler.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_02c7c.dir/testCCompiler.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/testCCompiler.c
-Linking C executable cmTC_02c7c
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_02c7c.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_02c7c.dir/testCCompiler.c.o  -o cmTC_02c7c -rdynamic 
+Building C object CMakeFiles/cmTC_b5acc.dir/testCCompiler.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_b5acc.dir/testCCompiler.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_b5acc
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b5acc.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_b5acc.dir/testCCompiler.c.o  -o cmTC_b5acc -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
 Detecting C compiler ABI info compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_77e22/fast"
-/usr/bin/make -f CMakeFiles/cmTC_77e22.dir/build.make CMakeFiles/cmTC_77e22.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_c824d/fast"
+/usr/bin/make -f CMakeFiles/cmTC_c824d.dir/build.make CMakeFiles/cmTC_c824d.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCCompilerABI.c
-Linking C executable cmTC_77e22
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_77e22.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4      -v CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o  -o cmTC_77e22 -rdynamic  
+Building C object CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCCompilerABI.c
+Linking C executable cmTC_c824d
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c824d.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4      -v CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o  -o cmTC_c824d -rdynamic  
 Using built-in specs.
 COLLECT_GCC=/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4
 COLLECT_LTO_WRAPPER=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper
@@ -59,9 +59,9 @@ Thread model: posix
 gcc version 6.4.0 (GCC) 
 COMPILER_PATH=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/
 LIBRARY_PATH=/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/p-ssd/modules/gdb-7.12/lib/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../:/lib/:/usr/lib/
-COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_77e22' '-rdynamic' '-mtune=generic' '-march=x86-64'
- /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccQ4gX2z.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_77e22 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
-COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_77e22' '-rdynamic' '-mtune=generic' '-march=x86-64'
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c824d' '-rdynamic' '-mtune=generic' '-march=x86-64'
+ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccv19fMA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c824d /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c824d' '-rdynamic' '-mtune=generic' '-march=x86-64'
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -69,14 +69,14 @@ Parsed C implicit link information from above output:
   link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
   ignore line: [Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp]
   ignore line: []
-  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_77e22/fast"]
-  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_77e22.dir/build.make CMakeFiles/cmTC_77e22.dir/build]
+  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_c824d/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_c824d.dir/build.make CMakeFiles/cmTC_c824d.dir/build]
   ignore line: [make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp']
-  ignore line: [Building C object CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o]
-  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCCompilerABI.c]
-  ignore line: [Linking C executable cmTC_77e22]
-  ignore line: [/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_77e22.dir/link.txt --verbose=1]
-  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4      -v CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o  -o cmTC_77e22 -rdynamic  ]
+  ignore line: [Building C object CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTC_c824d]
+  ignore line: [/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c824d.dir/link.txt --verbose=1]
+  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4      -v CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o  -o cmTC_c824d -rdynamic  ]
   ignore line: [Using built-in specs.]
   ignore line: [COLLECT_GCC=/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4]
   ignore line: [COLLECT_LTO_WRAPPER=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper]
@@ -86,13 +86,13 @@ Parsed C implicit link information from above output:
   ignore line: [gcc version 6.4.0 (GCC) ]
   ignore line: [COMPILER_PATH=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/]
   ignore line: [LIBRARY_PATH=/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/p-ssd/modules/gdb-7.12/lib/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../:/lib/:/usr/lib/]
-  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_77e22' '-rdynamic' '-mtune=generic' '-march=x86-64']
-  link line: [ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccQ4gX2z.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_77e22 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c824d' '-rdynamic' '-mtune=generic' '-march=x86-64']
+  link line: [ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccv19fMA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c824d /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o]
     arg [/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2] ==> ignore
     arg [-plugin] ==> ignore
     arg [/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so] ==> ignore
     arg [-plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper] ==> ignore
-    arg [-plugin-opt=-fresolution=/tmp/ccQ4gX2z.res] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccv19fMA.res] ==> ignore
     arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
     arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
     arg [-plugin-opt=-pass-through=-lc] ==> ignore
@@ -105,7 +105,7 @@ Parsed C implicit link information from above output:
     arg [-dynamic-linker] ==> ignore
     arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
     arg [-o] ==> ignore
-    arg [cmTC_77e22] ==> ignore
+    arg [cmTC_c824d] ==> ignore
     arg [/usr/lib/x86_64-linux-gnu/crt1.o] ==> ignore
     arg [/usr/lib/x86_64-linux-gnu/crti.o] ==> ignore
     arg [/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o] ==> ignore
@@ -116,7 +116,7 @@ Parsed C implicit link information from above output:
     arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
     arg [-L/p-ssd/modules/gdb-7.12/lib] ==> dir [/p-ssd/modules/gdb-7.12/lib]
     arg [-L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../..] ==> dir [/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../..]
-    arg [CMakeFiles/cmTC_77e22.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [CMakeFiles/cmTC_c824d.dir/CMakeCCompilerABI.c.o] ==> ignore
     arg [-lgcc] ==> lib [gcc]
     arg [--as-needed] ==> ignore
     arg [-lgcc_s] ==> lib [gcc_s]
@@ -149,14 +149,14 @@ Parsed C implicit link information from above output:
 Detecting C [-std=c11] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_cc0f3/fast"
-/usr/bin/make -f CMakeFiles/cmTC_cc0f3.dir/build.make CMakeFiles/cmTC_cc0f3.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_5475d/fast"
+/usr/bin/make -f CMakeFiles/cmTC_5475d.dir/build.make CMakeFiles/cmTC_5475d.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_cc0f3.dir/feature_tests.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c11 -o CMakeFiles/cmTC_cc0f3.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
-Linking C executable cmTC_cc0f3
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_cc0f3.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_cc0f3.dir/feature_tests.c.o  -o cmTC_cc0f3 -rdynamic 
+Building C object CMakeFiles/cmTC_5475d.dir/feature_tests.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c11 -o CMakeFiles/cmTC_5475d.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_5475d
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5475d.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_5475d.dir/feature_tests.c.o  -o cmTC_5475d -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -169,14 +169,14 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Detecting C [-std=c99] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_037ec/fast"
-/usr/bin/make -f CMakeFiles/cmTC_037ec.dir/build.make CMakeFiles/cmTC_037ec.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_58cb9/fast"
+/usr/bin/make -f CMakeFiles/cmTC_58cb9.dir/build.make CMakeFiles/cmTC_58cb9.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_037ec.dir/feature_tests.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c99 -o CMakeFiles/cmTC_037ec.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
-Linking C executable cmTC_037ec
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_037ec.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_037ec.dir/feature_tests.c.o  -o cmTC_037ec -rdynamic 
+Building C object CMakeFiles/cmTC_58cb9.dir/feature_tests.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c99 -o CMakeFiles/cmTC_58cb9.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_58cb9
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_58cb9.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_58cb9.dir/feature_tests.c.o  -o cmTC_58cb9 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -189,14 +189,14 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Detecting C [-std=c90] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_f729b/fast"
-/usr/bin/make -f CMakeFiles/cmTC_f729b.dir/build.make CMakeFiles/cmTC_f729b.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_bd4a2/fast"
+/usr/bin/make -f CMakeFiles/cmTC_bd4a2.dir/build.make CMakeFiles/cmTC_bd4a2.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_f729b.dir/feature_tests.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c90 -o CMakeFiles/cmTC_f729b.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
-Linking C executable cmTC_f729b
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f729b.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_f729b.dir/feature_tests.c.o  -o cmTC_f729b -rdynamic 
+Building C object CMakeFiles/cmTC_bd4a2.dir/feature_tests.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -std=c90 -o CMakeFiles/cmTC_bd4a2.dir/feature_tests.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_bd4a2
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bd4a2.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_bd4a2.dir/feature_tests.c.o  -o cmTC_bd4a2 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -207,28 +207,28 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Determining if the CXX compiler works passed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_1cab7/fast"
-/usr/bin/make -f CMakeFiles/cmTC_1cab7.dir/build.make CMakeFiles/cmTC_1cab7.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_61569/fast"
+/usr/bin/make -f CMakeFiles/cmTC_61569.dir/build.make CMakeFiles/cmTC_61569.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building CXX object CMakeFiles/cmTC_1cab7.dir/testCXXCompiler.cxx.o
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_1cab7.dir/testCXXCompiler.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
-Linking CXX executable cmTC_1cab7
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1cab7.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_1cab7.dir/testCXXCompiler.cxx.o  -o cmTC_1cab7 -rdynamic 
+Building CXX object CMakeFiles/cmTC_61569.dir/testCXXCompiler.cxx.o
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_61569.dir/testCXXCompiler.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTC_61569
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_61569.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_61569.dir/testCXXCompiler.cxx.o  -o cmTC_61569 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
 Detecting CXX compiler ABI info compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_08dbf/fast"
-/usr/bin/make -f CMakeFiles/cmTC_08dbf.dir/build.make CMakeFiles/cmTC_08dbf.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_a32de/fast"
+/usr/bin/make -f CMakeFiles/cmTC_a32de.dir/build.make CMakeFiles/cmTC_a32de.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building CXX object CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCXXCompilerABI.cpp
-Linking CXX executable cmTC_08dbf
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_08dbf.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4       -v CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_08dbf -rdynamic  
+Building CXX object CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCXXCompilerABI.cpp
+Linking CXX executable cmTC_a32de
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a32de.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4       -v CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_a32de -rdynamic  
 Using built-in specs.
 COLLECT_GCC=/p-ssd/modules/gcc-6.4.0/bin/g++-6.4
 COLLECT_LTO_WRAPPER=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper
@@ -238,9 +238,9 @@ Thread model: posix
 gcc version 6.4.0 (GCC) 
 COMPILER_PATH=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/
 LIBRARY_PATH=/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/p-ssd/modules/gdb-7.12/lib/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../:/lib/:/usr/lib/
-COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_08dbf' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
- /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccpIHVwU.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_08dbf /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
-COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_08dbf' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a32de' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccoU5DsU.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_a32de /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a32de' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -248,14 +248,14 @@ Parsed CXX implicit link information from above output:
   link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
   ignore line: [Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp]
   ignore line: []
-  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_08dbf/fast"]
-  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_08dbf.dir/build.make CMakeFiles/cmTC_08dbf.dir/build]
+  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_a32de/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_a32de.dir/build.make CMakeFiles/cmTC_a32de.dir/build]
   ignore line: [make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp']
-  ignore line: [Building CXX object CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o]
-  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCXXCompilerABI.cpp]
-  ignore line: [Linking CXX executable cmTC_08dbf]
-  ignore line: [/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_08dbf.dir/link.txt --verbose=1]
-  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/g++-6.4       -v CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_08dbf -rdynamic  ]
+  ignore line: [Building CXX object CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/g++-6.4      -o CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Linking CXX executable cmTC_a32de]
+  ignore line: [/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a32de.dir/link.txt --verbose=1]
+  ignore line: [/p-ssd/modules/gcc-6.4.0/bin/g++-6.4       -v CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_a32de -rdynamic  ]
   ignore line: [Using built-in specs.]
   ignore line: [COLLECT_GCC=/p-ssd/modules/gcc-6.4.0/bin/g++-6.4]
   ignore line: [COLLECT_LTO_WRAPPER=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper]
@@ -265,13 +265,13 @@ Parsed CXX implicit link information from above output:
   ignore line: [gcc version 6.4.0 (GCC) ]
   ignore line: [COMPILER_PATH=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/]
   ignore line: [LIBRARY_PATH=/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/p-ssd/modules/gdb-7.12/lib/:/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../:/lib/:/usr/lib/]
-  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_08dbf' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64']
-  link line: [ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccpIHVwU.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_08dbf /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a32de' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=x86-64']
+  link line: [ /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2 -plugin /p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so -plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccoU5DsU.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_a32de /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0 -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/p-ssd/modules/gdb-7.12/lib -L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../.. CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o]
     arg [/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/collect2] ==> ignore
     arg [-plugin] ==> ignore
     arg [/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/liblto_plugin.so] ==> ignore
     arg [-plugin-opt=/p-ssd/modules/gcc-6.4.0/libexec/gcc/x86_64-pc-linux-gnu/6.4.0/lto-wrapper] ==> ignore
-    arg [-plugin-opt=-fresolution=/tmp/ccpIHVwU.res] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccoU5DsU.res] ==> ignore
     arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
     arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
     arg [-plugin-opt=-pass-through=-lc] ==> ignore
@@ -284,7 +284,7 @@ Parsed CXX implicit link information from above output:
     arg [-dynamic-linker] ==> ignore
     arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
     arg [-o] ==> ignore
-    arg [cmTC_08dbf] ==> ignore
+    arg [cmTC_a32de] ==> ignore
     arg [/usr/lib/x86_64-linux-gnu/crt1.o] ==> ignore
     arg [/usr/lib/x86_64-linux-gnu/crti.o] ==> ignore
     arg [/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/crtbegin.o] ==> ignore
@@ -295,7 +295,7 @@ Parsed CXX implicit link information from above output:
     arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
     arg [-L/p-ssd/modules/gdb-7.12/lib] ==> dir [/p-ssd/modules/gdb-7.12/lib]
     arg [-L/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../..] ==> dir [/p-ssd/modules/gcc-6.4.0/lib/gcc/x86_64-pc-linux-gnu/6.4.0/../../..]
-    arg [CMakeFiles/cmTC_08dbf.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [CMakeFiles/cmTC_a32de.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
     arg [-lstdc++] ==> lib [stdc++]
     arg [-lm] ==> lib [m]
     arg [-lgcc_s] ==> lib [gcc_s]
@@ -326,14 +326,14 @@ Parsed CXX implicit link information from above output:
 Detecting CXX [-std=c++14] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_9c7e6/fast"
-/usr/bin/make -f CMakeFiles/cmTC_9c7e6.dir/build.make CMakeFiles/cmTC_9c7e6.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_54a51/fast"
+/usr/bin/make -f CMakeFiles/cmTC_54a51.dir/build.make CMakeFiles/cmTC_54a51.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building CXX object CMakeFiles/cmTC_9c7e6.dir/feature_tests.cxx.o
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++14 -o CMakeFiles/cmTC_9c7e6.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
-Linking CXX executable cmTC_9c7e6
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9c7e6.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_9c7e6.dir/feature_tests.cxx.o  -o cmTC_9c7e6 -rdynamic 
+Building CXX object CMakeFiles/cmTC_54a51.dir/feature_tests.cxx.o
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++14 -o CMakeFiles/cmTC_54a51.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
+Linking CXX executable cmTC_54a51
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_54a51.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_54a51.dir/feature_tests.cxx.o  -o cmTC_54a51 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -399,14 +399,14 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Detecting CXX [-std=c++11] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_ecdab/fast"
-/usr/bin/make -f CMakeFiles/cmTC_ecdab.dir/build.make CMakeFiles/cmTC_ecdab.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_03b40/fast"
+/usr/bin/make -f CMakeFiles/cmTC_03b40.dir/build.make CMakeFiles/cmTC_03b40.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building CXX object CMakeFiles/cmTC_ecdab.dir/feature_tests.cxx.o
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++11 -o CMakeFiles/cmTC_ecdab.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
-Linking CXX executable cmTC_ecdab
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ecdab.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_ecdab.dir/feature_tests.cxx.o  -o cmTC_ecdab -rdynamic 
+Building CXX object CMakeFiles/cmTC_03b40.dir/feature_tests.cxx.o
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++11 -o CMakeFiles/cmTC_03b40.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
+Linking CXX executable cmTC_03b40
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_03b40.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_03b40.dir/feature_tests.cxx.o  -o cmTC_03b40 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -472,14 +472,14 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Detecting CXX [-std=c++98] compiler features compiled with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_74082/fast"
-/usr/bin/make -f CMakeFiles/cmTC_74082.dir/build.make CMakeFiles/cmTC_74082.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_71362/fast"
+/usr/bin/make -f CMakeFiles/cmTC_71362.dir/build.make CMakeFiles/cmTC_71362.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building CXX object CMakeFiles/cmTC_74082.dir/feature_tests.cxx.o
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++98 -o CMakeFiles/cmTC_74082.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
-Linking CXX executable cmTC_74082
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_74082.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_74082.dir/feature_tests.cxx.o  -o cmTC_74082 -rdynamic 
+Building CXX object CMakeFiles/cmTC_71362.dir/feature_tests.cxx.o
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4     -std=c++98 -o CMakeFiles/cmTC_71362.dir/feature_tests.cxx.o -c /home/amiralis/git/xketch-generator/build/CMakeFiles/feature_tests.cxx
+Linking CXX executable cmTC_71362
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_71362.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4        CMakeFiles/cmTC_71362.dir/feature_tests.cxx.o  -o cmTC_71362 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
@@ -543,28 +543,28 @@ make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles
 Determining if the include file pthread.h exists passed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_05256/fast"
-/usr/bin/make -f CMakeFiles/cmTC_05256.dir/build.make CMakeFiles/cmTC_05256.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_5b7e4/fast"
+/usr/bin/make -f CMakeFiles/cmTC_5b7e4.dir/build.make CMakeFiles/cmTC_5b7e4.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_05256.dir/CheckIncludeFile.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_05256.dir/CheckIncludeFile.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
-Linking C executable cmTC_05256
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_05256.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_05256.dir/CheckIncludeFile.c.o  -o cmTC_05256 -rdynamic 
+Building C object CMakeFiles/cmTC_5b7e4.dir/CheckIncludeFile.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_5b7e4.dir/CheckIncludeFile.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_5b7e4
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5b7e4.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_5b7e4.dir/CheckIncludeFile.c.o  -o cmTC_5b7e4 -rdynamic 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 
 Determining if the function pthread_create exists in the pthread passed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_246d1/fast"
-/usr/bin/make -f CMakeFiles/cmTC_246d1.dir/build.make CMakeFiles/cmTC_246d1.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_e6e32/fast"
+/usr/bin/make -f CMakeFiles/cmTC_e6e32.dir/build.make CMakeFiles/cmTC_e6e32.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_246d1.dir/CheckFunctionExists.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_246d1.dir/CheckFunctionExists.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CheckFunctionExists.c
-Linking C executable cmTC_246d1
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_246d1.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_246d1.dir/CheckFunctionExists.c.o  -o cmTC_246d1 -rdynamic -lpthread 
+Building C object CMakeFiles/cmTC_e6e32.dir/CheckFunctionExists.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_e6e32.dir/CheckFunctionExists.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CheckFunctionExists.c
+Linking C executable cmTC_e6e32
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e6e32.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_e6e32.dir/CheckFunctionExists.c.o  -o cmTC_e6e32 -rdynamic -lpthread 
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
 
 

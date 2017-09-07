@@ -1,20 +1,20 @@
 Determining if the pthread_create exist failed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_bb505/fast"
-/usr/bin/make -f CMakeFiles/cmTC_bb505.dir/build.make CMakeFiles/cmTC_bb505.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_16398/fast"
+/usr/bin/make -f CMakeFiles/cmTC_16398.dir/build.make CMakeFiles/cmTC_16398.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_bb505.dir/CheckSymbolExists.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_bb505.dir/CheckSymbolExists.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
-Linking C executable cmTC_bb505
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bb505.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_bb505.dir/CheckSymbolExists.c.o  -o cmTC_bb505 -rdynamic 
-CMakeFiles/cmTC_bb505.dir/CheckSymbolExists.c.o: In function `main':
+Building C object CMakeFiles/cmTC_16398.dir/CheckSymbolExists.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_16398.dir/CheckSymbolExists.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_16398
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_16398.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_16398.dir/CheckSymbolExists.c.o  -o cmTC_16398 -rdynamic 
+CMakeFiles/cmTC_16398.dir/CheckSymbolExists.c.o: In function `main':
 CheckSymbolExists.c:(.text+0x16): undefined reference to `pthread_create'
 collect2: error: ld returned 1 exit status
-make[1]: *** [cmTC_bb505] Error 1
+make[1]: *** [cmTC_16398] Error 1
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-make: *** [cmTC_bb505/fast] Error 2
+make: *** [cmTC_16398/fast] Error 2
 
 File /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
 /* */
@@ -34,18 +34,18 @@ int main(int argc, char** argv)
 Determining if the function pthread_create exists in the pthreads failed with the following output:
 Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_f22b9/fast"
-/usr/bin/make -f CMakeFiles/cmTC_f22b9.dir/build.make CMakeFiles/cmTC_f22b9.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_394f0/fast"
+/usr/bin/make -f CMakeFiles/cmTC_394f0.dir/build.make CMakeFiles/cmTC_394f0.dir/build
 make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_f22b9.dir/CheckFunctionExists.c.o
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_f22b9.dir/CheckFunctionExists.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CheckFunctionExists.c
-Linking C executable cmTC_f22b9
-/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f22b9.dir/link.txt --verbose=1
-/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_f22b9.dir/CheckFunctionExists.c.o  -o cmTC_f22b9 -rdynamic -lpthreads 
+Building C object CMakeFiles/cmTC_394f0.dir/CheckFunctionExists.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_394f0.dir/CheckFunctionExists.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CheckFunctionExists.c
+Linking C executable cmTC_394f0
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_394f0.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_394f0.dir/CheckFunctionExists.c.o  -o cmTC_394f0 -rdynamic -lpthreads 
 /usr/bin/ld: cannot find -lpthreads
 collect2: error: ld returned 1 exit status
-make[1]: *** [cmTC_f22b9] Error 1
+make[1]: *** [cmTC_394f0] Error 1
 make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
-make: *** [cmTC_f22b9/fast] Error 2
+make: *** [cmTC_394f0/fast] Error 2
 
 
