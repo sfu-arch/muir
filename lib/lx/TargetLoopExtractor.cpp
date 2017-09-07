@@ -18,37 +18,14 @@ using namespace llvm;
 using namespace std;
 using namespace lx;
 
-// extern cl::opt<string> LLVMLXLocations;
-// extern cl::opt<bool> LLVMLXDumpAllLoopLocations;
 
 bool TargetLoopExtractor::doInitialization(Module &M) {
-    // SmallVector<StringRef, 4> LocList;
-    // StringRef(LLVMLXLocations).split(LocList, ",");
-    // for(auto Loc : LocList) {
-    // if(Loc.find(":") == StringRef::npos || Loc.find(":") != Loc.rfind(":")) {
-    // report_fatal_error("[llvm-lx] Specify locations in the form of
-    // -t=<file1>:<line1>[,<file2>:<line2> ...]");
-    //}
-    // auto File = Loc.substr(0, Loc.find(":"));
-    // auto Line = stoi(Loc.substr(Loc.find(":")+1));
-    // Locations.insert({File, Line});
-    //}
-
-    // if(LLVMLXDumpAllLoopLocations)
-    // LoopLocationDumpFile.open("loop-locs.txt", ios::out);
-
+    //TODO: Add code here if it's needed before running loop extraction
     return false;
 }
 
 bool TargetLoopExtractor::doFinalization(Module &M) {
-    // for(auto Loc : Locations) {
-    // errs() << "[llvm-lx] Loop Not Found - " << Loc.first << " " << Loc.second
-    // << "\n";
-    //}
-
-    // if(LLVMLXDumpAllLoopLocations)
-    // LoopLocationDumpFile.close();
-
+    //TODO: Add code here to do post loop extraction
     return false;
 }
 
@@ -126,42 +103,39 @@ static string getBaseName(string Path) {
 }
 
 static string getLXName(string File, size_t Line) {
-    return string("__lx_") + File + string("_") + to_string(Line);
+    return string("_lx_") + File + string("_L") + to_string(Line);
 }
 
 bool TargetLoopExtractor::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration() || ExtractedLoopFunctions.count(&F)) continue;
 
-        auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-        auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+        bool hasLoop = true;
 
-        for (auto &L : getLoops(LI)) {
-            auto Loc = L->getStartLoc();
-            auto Filename = getBaseName(Loc->getFilename().str());
-            auto Line = Loc.getLine();
+        //Iterating over function's loops and start from
+        //most inner loop to make it as a function call
+        //and re-run the extraction, untill there is no other loops
+        do {
+            auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+            auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
 
-            if (L->getSubLoops().size() == 0) {
-                if (!extractLoop(L, LI, DT, getLXName(Filename, Line))) {
-                    errs() << "[llvm-lx] Unable to extract loop at " << Filename
-                           << ":" << Line << "\n";
+            if(getLoops(LI).size() == 0)
+                hasLoop = false;
+
+            for (auto &L : getLoops(LI)) {
+                auto Loc = L->getStartLoc();
+                auto Filename = getBaseName(Loc->getFilename().str());
+                auto Line = Loc.getLine();
+
+                if (L->getSubLoops().size() == 0) {
+                    if (!extractLoop(L, LI, DT, getLXName(Filename, Line))) {
+                        errs() << "[llvm-lx] Unable to extract loop at "
+                               << Filename << ":" << Line << "\n";
+                    }
                 }
             }
 
-            // if(LLVMLXDumpAllLoopLocations) {
-            // LoopLocationDumpFile << Filename << ":" << Line << "\n";
-            //}
-
-            // if(Locations.count({Filename, Line})) {
-            // errs() << "[llvm-lx] Found loop at " << Filename << ":" << Line
-            // << "\n";
-            // if(!extractLoop(L, LI, DT, getLXName(Filename, Line))) {
-            // errs() << "[llvm-lx] Unable to extract loop at " << Filename <<
-            // ":" << Line << "\n";
-            //}
-            // Locations.erase({Filename, Line});
-            //}
-        }
+        } while (hasLoop);
     }
 
     return false;

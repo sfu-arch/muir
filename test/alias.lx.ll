@@ -10,44 +10,26 @@ define void @foo(float**, float**, float, i32) #0 !dbg !6 {
   call void @llvm.dbg.value(metadata float %2, i64 0, metadata !18, metadata !14), !dbg !19
   call void @llvm.dbg.value(metadata i32 %3, i64 0, metadata !20, metadata !14), !dbg !21
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !22, metadata !14), !dbg !23
-  br label %5, !dbg !24
+  br label %codeRepl2, !dbg !24
 
-; <label>:5:                                      ; preds = %9, %4
-  %.01 = phi i32 [ 0, %4 ], [ %10, %9 ]
-  call void @llvm.dbg.value(metadata i32 %.01, i64 0, metadata !22, metadata !14), !dbg !23
-  %6 = icmp slt i32 %.01, %3, !dbg !26
-  br i1 %6, label %7, label %11, !dbg !29
+codeRepl2:                                        ; preds = %4
+  call void @__lx_alias.c_5(i32 %3, float** %0, float %2, float** %1)
+  br label %5
 
-; <label>:7:                                      ; preds = %5
-  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !31, metadata !14), !dbg !32
-  br label %codeRepl, !dbg !33
+; <label>:5:                                      ; preds = %codeRepl2
+  br label %.split1, !dbg !26
 
-codeRepl:                                         ; preds = %7
-  call void @__lx_alias.c_6(i32 %3, i32 %.01, float** %0, float %2, float** %1)
-  br label %8
-
-; <label>:8:                                      ; preds = %codeRepl
-  br label %.split, !dbg !36
-
-.split:                                           ; preds = %8
-  br label %9, !dbg !36
-
-; <label>:9:                                      ; preds = %.split
-  %10 = add nsw i32 %.01, 1, !dbg !37
-  call void @llvm.dbg.value(metadata i32 %10, i64 0, metadata !22, metadata !14), !dbg !23
-  br label %5, !dbg !39, !llvm.loop !40
-
-; <label>:11:                                     ; preds = %5
-  ret void, !dbg !43
+.split1:                                          ; preds = %5
+  ret void, !dbg !26
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind uwtable
-define i32 @main() #0 !dbg !44 {
-  call void @foo(float** undef, float** undef, float undef, i32 undef), !dbg !47
-  ret i32 0, !dbg !48
+define i32 @main() #0 !dbg !27 {
+  call void @foo(float** undef, float** undef, float undef, i32 undef), !dbg !30
+  ret i32 0, !dbg !31
 }
 
 ; Function Attrs: nounwind readnone
@@ -97,7 +79,38 @@ newFuncRoot:
 
 ; <label>:31:                                     ; preds = %6
   %32 = add nsw i32 %.0, 1
-  br label %4, !llvm.loop !49
+  br label %4, !llvm.loop !32
+}
+
+; Function Attrs: noinline nounwind uwtable
+define internal void @__lx_alias.c_5(i32, float**, float, float**) #0 {
+newFuncRoot:
+  br label %4
+
+.exitStub:                                        ; preds = %4
+  ret void
+
+; <label>:4:                                      ; preds = %8, %newFuncRoot
+  %.01 = phi i32 [ 0, %newFuncRoot ], [ %9, %8 ]
+  %5 = icmp slt i32 %.01, %0
+  br i1 %5, label %6, label %.exitStub
+
+; <label>:6:                                      ; preds = %4
+  br label %codeRepl
+
+codeRepl:                                         ; preds = %6
+  call void @__lx_alias.c_6(i32 %0, i32 %.01, float** %1, float %2, float** %3)
+  br label %7
+
+; <label>:7:                                      ; preds = %codeRepl
+  br label %.split
+
+.split:                                           ; preds = %7
+  br label %8
+
+; <label>:8:                                      ; preds = %.split
+  %9 = add nsw i32 %.01, 1
+  br label %4, !llvm.loop !38
 }
 
 attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -133,29 +146,18 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocation(line: 3, column: 6, scope: !6)
 !24 = !DILocation(line: 5, column: 7, scope: !25)
 !25 = distinct !DILexicalBlock(scope: !6, file: !1, line: 5, column: 2)
-!26 = !DILocation(line: 5, column: 16, scope: !27)
-!27 = !DILexicalBlockFile(scope: !28, file: !1, discriminator: 1)
-!28 = distinct !DILexicalBlock(scope: !25, file: !1, line: 5, column: 2)
-!29 = !DILocation(line: 5, column: 2, scope: !30)
-!30 = !DILexicalBlockFile(scope: !25, file: !1, discriminator: 1)
-!31 = !DILocalVariable(name: "j", scope: !6, file: !1, line: 3, type: !12)
-!32 = !DILocation(line: 3, column: 8, scope: !6)
-!33 = !DILocation(line: 6, column: 13, scope: !34)
+!26 = !DILocation(line: 11, column: 1, scope: !6)
+!27 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 13, type: !28, isLocal: false, isDefinition: true, scopeLine: 13, isOptimized: false, unit: !0, variables: !2)
+!28 = !DISubroutineType(types: !29)
+!29 = !{!12}
+!30 = !DILocation(line: 17, column: 5, scope: !27)
+!31 = !DILocation(line: 19, column: 5, scope: !27)
+!32 = distinct !{!32, !33, !37}
+!33 = !DILocation(line: 6, column: 9, scope: !34)
 !34 = distinct !DILexicalBlock(scope: !35, file: !1, line: 6, column: 9)
-!35 = distinct !DILexicalBlock(scope: !28, file: !1, line: 5, column: 31)
-!36 = !DILocation(line: 10, column: 2, scope: !35)
-!37 = !DILocation(line: 5, column: 27, scope: !38)
-!38 = !DILexicalBlockFile(scope: !28, file: !1, discriminator: 2)
-!39 = !DILocation(line: 5, column: 2, scope: !38)
-!40 = distinct !{!40, !41, !42}
-!41 = !DILocation(line: 5, column: 2, scope: !25)
-!42 = !DILocation(line: 10, column: 2, scope: !25)
-!43 = !DILocation(line: 11, column: 1, scope: !6)
-!44 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 13, type: !45, isLocal: false, isDefinition: true, scopeLine: 13, isOptimized: false, unit: !0, variables: !2)
-!45 = !DISubroutineType(types: !46)
-!46 = !{!12}
-!47 = !DILocation(line: 17, column: 5, scope: !44)
-!48 = !DILocation(line: 19, column: 5, scope: !44)
-!49 = distinct !{!49, !50, !51}
-!50 = !DILocation(line: 6, column: 9, scope: !34)
-!51 = !DILocation(line: 9, column: 9, scope: !34)
+!35 = distinct !DILexicalBlock(scope: !36, file: !1, line: 5, column: 31)
+!36 = distinct !DILexicalBlock(scope: !25, file: !1, line: 5, column: 2)
+!37 = !DILocation(line: 9, column: 9, scope: !34)
+!38 = distinct !{!38, !39, !40}
+!39 = !DILocation(line: 5, column: 2, scope: !25)
+!40 = !DILocation(line: 10, column: 2, scope: !25)
