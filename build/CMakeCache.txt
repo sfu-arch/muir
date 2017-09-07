@@ -183,6 +183,9 @@ LLVM_BUILD_TOOLS:BOOL=ON
 //The directory containing a CMake configuration file for LLVM.
 LLVM_DIR:PATH=/p-ssd/modules/llvm-4.0.1/lib/cmake/llvm
 
+//No help, variable specified on the command line.
+LLVM_ENABLE_ASSERTIONS:UNINITIALIZED=ON
+
 //Enable C++14
 LLVM_ENABLE_CXX1Y:BOOL=ON
 
@@ -190,13 +193,13 @@ LLVM_ENABLE_CXX1Y:BOOL=ON
 LLVM_INCLUDE_TOOLS:BOOL=ON
 
 //Dependencies for target
-callcounter-inst_LIB_DEPENDS:STATIC=
+lx_LIB_DEPENDS:STATIC=
 
 //Dependencies for target
-callcounter-lib_LIB_DEPENDS:STATIC=
+memalias-lib_LIB_DEPENDS:STATIC=
 
 //Dependencies for target
-callcounter-rt_LIB_DEPENDS:STATIC=
+memalias_LIB_DEPENDS:STATIC=
 
 //Value Computed by CMake
 xketch-generator_BINARY_DIR:STATIC=/home/amiralis/git/xketch-generator/build

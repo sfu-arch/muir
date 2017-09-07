@@ -34,8 +34,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/amiralis/git/xketch-generator/build/lib/callcounter-inst/cmake_install.cmake")
-  include("/home/amiralis/git/xketch-generator/build/lib/callcounter-rt/cmake_install.cmake")
+  include("/home/amiralis/git/xketch-generator/build/lib/memalias/cmake_install.cmake")
+  include("/home/amiralis/git/xketch-generator/build/lib/lx/cmake_install.cmake")
 
 endif()
 

@@ -1,7 +1,7 @@
-add_library(memalis
-    AliasEdgeWriter.cpp
+add_library(memalias
+    AliasMem.cpp
 )
 
-add_library(memalis-lib MODULE
-    AliasEdgeWriter.cpp
+add_library(memalias-lib MODULE
+    AliasMem.cpp
 )

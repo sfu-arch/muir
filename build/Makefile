@@ -155,56 +155,56 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named callcounter-inst
+# Target rules for targets named memalias
 
 # Build rule for target.
-callcounter-inst: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 callcounter-inst
-.PHONY : callcounter-inst
+memalias: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 memalias
+.PHONY : memalias
 
 # fast build rule for target.
-callcounter-inst/fast:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build
-.PHONY : callcounter-inst/fast
+memalias/fast:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias.dir/build.make lib/memalias/CMakeFiles/memalias.dir/build
+.PHONY : memalias/fast
 
 #=============================================================================
-# Target rules for targets named callcounter-lib
+# Target rules for targets named memalias-lib
 
 # Build rule for target.
-callcounter-lib: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 callcounter-lib
-.PHONY : callcounter-lib
+memalias-lib: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 memalias-lib
+.PHONY : memalias-lib
 
 # fast build rule for target.
-callcounter-lib/fast:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build
-.PHONY : callcounter-lib/fast
+memalias-lib/fast:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias-lib.dir/build.make lib/memalias/CMakeFiles/memalias-lib.dir/build
+.PHONY : memalias-lib/fast
 
 #=============================================================================
-# Target rules for targets named callcounter-rt
+# Target rules for targets named lx
 
 # Build rule for target.
-callcounter-rt: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 callcounter-rt
-.PHONY : callcounter-rt
+lx: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 lx
+.PHONY : lx
 
 # fast build rule for target.
-callcounter-rt/fast:
-	$(MAKE) -f lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build.make lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build
-.PHONY : callcounter-rt/fast
+lx/fast:
+	$(MAKE) -f lib/lx/CMakeFiles/lx.dir/build.make lib/lx/CMakeFiles/lx.dir/build
+.PHONY : lx/fast
 
 #=============================================================================
-# Target rules for targets named callcounter
+# Target rules for targets named xketch
 
 # Build rule for target.
-callcounter: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 callcounter
-.PHONY : callcounter
+xketch: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 xketch
+.PHONY : xketch
 
 # fast build rule for target.
-callcounter/fast:
-	$(MAKE) -f tools/callcounter/CMakeFiles/callcounter.dir/build.make tools/callcounter/CMakeFiles/callcounter.dir/build
-.PHONY : callcounter/fast
+xketch/fast:
+	$(MAKE) -f tools/xketch/CMakeFiles/xketch.dir/build.make tools/xketch/CMakeFiles/xketch.dir/build
+.PHONY : xketch/fast
 
 # Help Target
 help:
@@ -218,10 +218,10 @@ help:
 	@echo "... install/local"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... callcounter-inst"
-	@echo "... callcounter-lib"
-	@echo "... callcounter-rt"
-	@echo "... callcounter"
+	@echo "... memalias"
+	@echo "... memalias-lib"
+	@echo "... lx"
+	@echo "... xketch"
 .PHONY : help
 
 

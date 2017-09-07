@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../libcallcounter-inst.a  CMakeFiles/callcounter-inst.dir/StaticCallCounter.cpp.o CMakeFiles/callcounter-inst.dir/DynamicCallCounter.cpp.o
-/usr/bin/ranlib ../libcallcounter-inst.a

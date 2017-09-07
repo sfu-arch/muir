@@ -63,169 +63,169 @@ CMAKE_BINARY_DIR = /home/amiralis/git/xketch-generator/build
 # Directory level rules for directory lib
 
 # Convenience name for "all" pass in the directory.
-lib/all: lib/callcounter-inst/all
-lib/all: lib/callcounter-rt/all
+lib/all: lib/memalias/all
+lib/all: lib/lx/all
 
 .PHONY : lib/all
 
 # Convenience name for "clean" pass in the directory.
-lib/clean: lib/callcounter-inst/clean
-lib/clean: lib/callcounter-rt/clean
+lib/clean: lib/memalias/clean
+lib/clean: lib/lx/clean
 
 .PHONY : lib/clean
 
 # Convenience name for "preinstall" pass in the directory.
-lib/preinstall: lib/callcounter-inst/preinstall
-lib/preinstall: lib/callcounter-rt/preinstall
+lib/preinstall: lib/memalias/preinstall
+lib/preinstall: lib/lx/preinstall
 
 .PHONY : lib/preinstall
 
 #=============================================================================
-# Directory level rules for directory lib/callcounter-inst
+# Directory level rules for directory lib/memalias
 
 # Convenience name for "all" pass in the directory.
-lib/callcounter-inst/all: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all
-lib/callcounter-inst/all: lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/all
+lib/memalias/all: lib/memalias/CMakeFiles/memalias.dir/all
+lib/memalias/all: lib/memalias/CMakeFiles/memalias-lib.dir/all
 
-.PHONY : lib/callcounter-inst/all
-
-# Convenience name for "clean" pass in the directory.
-lib/callcounter-inst/clean: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/clean
-lib/callcounter-inst/clean: lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/clean
-
-.PHONY : lib/callcounter-inst/clean
-
-# Convenience name for "preinstall" pass in the directory.
-lib/callcounter-inst/preinstall:
-
-.PHONY : lib/callcounter-inst/preinstall
-
-#=============================================================================
-# Target rules for target lib/callcounter-inst/CMakeFiles/callcounter-inst.dir
-
-# All Build rule for target.
-lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/depend
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=3,4,5 "Built target callcounter-inst"
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all
-
-# Include target in all.
-all: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all
-
-.PHONY : all
-
-# Build rule for subdir invocation for target.
-lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 3
-	$(MAKE) -f CMakeFiles/Makefile2 lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/rule
-
-# Convenience name for target.
-callcounter-inst: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/rule
-
-.PHONY : callcounter-inst
-
-# clean rule for target.
-lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/clean:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/clean
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/clean
-
-# clean rule for target.
-clean: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/clean
-
-.PHONY : clean
-
-#=============================================================================
-# Target rules for target lib/callcounter-inst/CMakeFiles/callcounter-lib.dir
-
-# All Build rule for target.
-lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/all:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/depend
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=6,7,8 "Built target callcounter-lib"
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/all
-
-# Include target in all.
-all: lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/all
-
-.PHONY : all
-
-# Build rule for subdir invocation for target.
-lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 3
-	$(MAKE) -f CMakeFiles/Makefile2 lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/rule
-
-# Convenience name for target.
-callcounter-lib: lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/rule
-
-.PHONY : callcounter-lib
-
-# clean rule for target.
-lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/clean:
-	$(MAKE) -f lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/build.make lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/clean
-.PHONY : lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/clean
-
-# clean rule for target.
-clean: lib/callcounter-inst/CMakeFiles/callcounter-lib.dir/clean
-
-.PHONY : clean
-
-#=============================================================================
-# Directory level rules for directory lib/callcounter-rt
-
-# Convenience name for "all" pass in the directory.
-lib/callcounter-rt/all: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/all
-
-.PHONY : lib/callcounter-rt/all
+.PHONY : lib/memalias/all
 
 # Convenience name for "clean" pass in the directory.
-lib/callcounter-rt/clean: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean
+lib/memalias/clean: lib/memalias/CMakeFiles/memalias.dir/clean
+lib/memalias/clean: lib/memalias/CMakeFiles/memalias-lib.dir/clean
 
-.PHONY : lib/callcounter-rt/clean
+.PHONY : lib/memalias/clean
 
 # Convenience name for "preinstall" pass in the directory.
-lib/callcounter-rt/preinstall:
+lib/memalias/preinstall:
 
-.PHONY : lib/callcounter-rt/preinstall
+.PHONY : lib/memalias/preinstall
 
 #=============================================================================
-# Target rules for target lib/callcounter-rt/CMakeFiles/callcounter-rt.dir
+# Target rules for target lib/memalias/CMakeFiles/memalias.dir
 
 # All Build rule for target.
-lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/all:
-	$(MAKE) -f lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build.make lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/depend
-	$(MAKE) -f lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build.make lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=9,10 "Built target callcounter-rt"
-.PHONY : lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/all
+lib/memalias/CMakeFiles/memalias.dir/all:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias.dir/build.make lib/memalias/CMakeFiles/memalias.dir/depend
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias.dir/build.make lib/memalias/CMakeFiles/memalias.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=3,4 "Built target memalias"
+.PHONY : lib/memalias/CMakeFiles/memalias.dir/all
 
 # Include target in all.
-all: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/all
+all: lib/memalias/CMakeFiles/memalias.dir/all
 
 .PHONY : all
 
 # Build rule for subdir invocation for target.
-lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/rule: cmake_check_build_system
+lib/memalias/CMakeFiles/memalias.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 2
-	$(MAKE) -f CMakeFiles/Makefile2 lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/all
+	$(MAKE) -f CMakeFiles/Makefile2 lib/memalias/CMakeFiles/memalias.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
-.PHONY : lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/rule
+.PHONY : lib/memalias/CMakeFiles/memalias.dir/rule
 
 # Convenience name for target.
-callcounter-rt: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/rule
+memalias: lib/memalias/CMakeFiles/memalias.dir/rule
 
-.PHONY : callcounter-rt
-
-# clean rule for target.
-lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean:
-	$(MAKE) -f lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/build.make lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean
-.PHONY : lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean
+.PHONY : memalias
 
 # clean rule for target.
-clean: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean
+lib/memalias/CMakeFiles/memalias.dir/clean:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias.dir/build.make lib/memalias/CMakeFiles/memalias.dir/clean
+.PHONY : lib/memalias/CMakeFiles/memalias.dir/clean
+
+# clean rule for target.
+clean: lib/memalias/CMakeFiles/memalias.dir/clean
+
+.PHONY : clean
+
+#=============================================================================
+# Target rules for target lib/memalias/CMakeFiles/memalias-lib.dir
+
+# All Build rule for target.
+lib/memalias/CMakeFiles/memalias-lib.dir/all:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias-lib.dir/build.make lib/memalias/CMakeFiles/memalias-lib.dir/depend
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias-lib.dir/build.make lib/memalias/CMakeFiles/memalias-lib.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=5,6 "Built target memalias-lib"
+.PHONY : lib/memalias/CMakeFiles/memalias-lib.dir/all
+
+# Include target in all.
+all: lib/memalias/CMakeFiles/memalias-lib.dir/all
+
+.PHONY : all
+
+# Build rule for subdir invocation for target.
+lib/memalias/CMakeFiles/memalias-lib.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 lib/memalias/CMakeFiles/memalias-lib.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
+.PHONY : lib/memalias/CMakeFiles/memalias-lib.dir/rule
+
+# Convenience name for target.
+memalias-lib: lib/memalias/CMakeFiles/memalias-lib.dir/rule
+
+.PHONY : memalias-lib
+
+# clean rule for target.
+lib/memalias/CMakeFiles/memalias-lib.dir/clean:
+	$(MAKE) -f lib/memalias/CMakeFiles/memalias-lib.dir/build.make lib/memalias/CMakeFiles/memalias-lib.dir/clean
+.PHONY : lib/memalias/CMakeFiles/memalias-lib.dir/clean
+
+# clean rule for target.
+clean: lib/memalias/CMakeFiles/memalias-lib.dir/clean
+
+.PHONY : clean
+
+#=============================================================================
+# Directory level rules for directory lib/lx
+
+# Convenience name for "all" pass in the directory.
+lib/lx/all: lib/lx/CMakeFiles/lx.dir/all
+
+.PHONY : lib/lx/all
+
+# Convenience name for "clean" pass in the directory.
+lib/lx/clean: lib/lx/CMakeFiles/lx.dir/clean
+
+.PHONY : lib/lx/clean
+
+# Convenience name for "preinstall" pass in the directory.
+lib/lx/preinstall:
+
+.PHONY : lib/lx/preinstall
+
+#=============================================================================
+# Target rules for target lib/lx/CMakeFiles/lx.dir
+
+# All Build rule for target.
+lib/lx/CMakeFiles/lx.dir/all:
+	$(MAKE) -f lib/lx/CMakeFiles/lx.dir/build.make lib/lx/CMakeFiles/lx.dir/depend
+	$(MAKE) -f lib/lx/CMakeFiles/lx.dir/build.make lib/lx/CMakeFiles/lx.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=1,2 "Built target lx"
+.PHONY : lib/lx/CMakeFiles/lx.dir/all
+
+# Include target in all.
+all: lib/lx/CMakeFiles/lx.dir/all
+
+.PHONY : all
+
+# Build rule for subdir invocation for target.
+lib/lx/CMakeFiles/lx.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 lib/lx/CMakeFiles/lx.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
+.PHONY : lib/lx/CMakeFiles/lx.dir/rule
+
+# Convenience name for target.
+lx: lib/lx/CMakeFiles/lx.dir/rule
+
+.PHONY : lx
+
+# clean rule for target.
+lib/lx/CMakeFiles/lx.dir/clean:
+	$(MAKE) -f lib/lx/CMakeFiles/lx.dir/build.make lib/lx/CMakeFiles/lx.dir/clean
+.PHONY : lib/lx/CMakeFiles/lx.dir/clean
+
+# clean rule for target.
+clean: lib/lx/CMakeFiles/lx.dir/clean
 
 .PHONY : clean
 
@@ -233,72 +233,73 @@ clean: lib/callcounter-rt/CMakeFiles/callcounter-rt.dir/clean
 # Directory level rules for directory tools
 
 # Convenience name for "all" pass in the directory.
-tools/all: tools/callcounter/all
+tools/all: tools/xketch/all
 
 .PHONY : tools/all
 
 # Convenience name for "clean" pass in the directory.
-tools/clean: tools/callcounter/clean
+tools/clean: tools/xketch/clean
 
 .PHONY : tools/clean
 
 # Convenience name for "preinstall" pass in the directory.
-tools/preinstall: tools/callcounter/preinstall
+tools/preinstall: tools/xketch/preinstall
 
 .PHONY : tools/preinstall
 
 #=============================================================================
-# Directory level rules for directory tools/callcounter
+# Directory level rules for directory tools/xketch
 
 # Convenience name for "all" pass in the directory.
-tools/callcounter/all: tools/callcounter/CMakeFiles/callcounter.dir/all
+tools/xketch/all: tools/xketch/CMakeFiles/xketch.dir/all
 
-.PHONY : tools/callcounter/all
+.PHONY : tools/xketch/all
 
 # Convenience name for "clean" pass in the directory.
-tools/callcounter/clean: tools/callcounter/CMakeFiles/callcounter.dir/clean
+tools/xketch/clean: tools/xketch/CMakeFiles/xketch.dir/clean
 
-.PHONY : tools/callcounter/clean
+.PHONY : tools/xketch/clean
 
 # Convenience name for "preinstall" pass in the directory.
-tools/callcounter/preinstall:
+tools/xketch/preinstall:
 
-.PHONY : tools/callcounter/preinstall
+.PHONY : tools/xketch/preinstall
 
 #=============================================================================
-# Target rules for target tools/callcounter/CMakeFiles/callcounter.dir
+# Target rules for target tools/xketch/CMakeFiles/xketch.dir
 
 # All Build rule for target.
-tools/callcounter/CMakeFiles/callcounter.dir/all: lib/callcounter-inst/CMakeFiles/callcounter-inst.dir/all
-	$(MAKE) -f tools/callcounter/CMakeFiles/callcounter.dir/build.make tools/callcounter/CMakeFiles/callcounter.dir/depend
-	$(MAKE) -f tools/callcounter/CMakeFiles/callcounter.dir/build.make tools/callcounter/CMakeFiles/callcounter.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=1,2 "Built target callcounter"
-.PHONY : tools/callcounter/CMakeFiles/callcounter.dir/all
+tools/xketch/CMakeFiles/xketch.dir/all: lib/memalias/CMakeFiles/memalias.dir/all
+tools/xketch/CMakeFiles/xketch.dir/all: lib/lx/CMakeFiles/lx.dir/all
+	$(MAKE) -f tools/xketch/CMakeFiles/xketch.dir/build.make tools/xketch/CMakeFiles/xketch.dir/depend
+	$(MAKE) -f tools/xketch/CMakeFiles/xketch.dir/build.make tools/xketch/CMakeFiles/xketch.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/amiralis/git/xketch-generator/build/CMakeFiles --progress-num=7,8 "Built target xketch"
+.PHONY : tools/xketch/CMakeFiles/xketch.dir/all
 
 # Include target in all.
-all: tools/callcounter/CMakeFiles/callcounter.dir/all
+all: tools/xketch/CMakeFiles/xketch.dir/all
 
 .PHONY : all
 
 # Build rule for subdir invocation for target.
-tools/callcounter/CMakeFiles/callcounter.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 5
-	$(MAKE) -f CMakeFiles/Makefile2 tools/callcounter/CMakeFiles/callcounter.dir/all
+tools/xketch/CMakeFiles/xketch.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 6
+	$(MAKE) -f CMakeFiles/Makefile2 tools/xketch/CMakeFiles/xketch.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/amiralis/git/xketch-generator/build/CMakeFiles 0
-.PHONY : tools/callcounter/CMakeFiles/callcounter.dir/rule
+.PHONY : tools/xketch/CMakeFiles/xketch.dir/rule
 
 # Convenience name for target.
-callcounter: tools/callcounter/CMakeFiles/callcounter.dir/rule
+xketch: tools/xketch/CMakeFiles/xketch.dir/rule
 
-.PHONY : callcounter
-
-# clean rule for target.
-tools/callcounter/CMakeFiles/callcounter.dir/clean:
-	$(MAKE) -f tools/callcounter/CMakeFiles/callcounter.dir/build.make tools/callcounter/CMakeFiles/callcounter.dir/clean
-.PHONY : tools/callcounter/CMakeFiles/callcounter.dir/clean
+.PHONY : xketch
 
 # clean rule for target.
-clean: tools/callcounter/CMakeFiles/callcounter.dir/clean
+tools/xketch/CMakeFiles/xketch.dir/clean:
+	$(MAKE) -f tools/xketch/CMakeFiles/xketch.dir/build.make tools/xketch/CMakeFiles/xketch.dir/clean
+.PHONY : tools/xketch/CMakeFiles/xketch.dir/clean
+
+# clean rule for target.
+clean: tools/xketch/CMakeFiles/xketch.dir/clean
 
 .PHONY : clean
 
