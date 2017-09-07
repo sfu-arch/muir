@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../libcallcounter-rt.a  CMakeFiles/callcounter-rt.dir/runtime.cpp.o
+/usr/bin/ranlib ../libcallcounter-rt.a

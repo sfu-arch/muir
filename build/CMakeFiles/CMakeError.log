@@ -1,0 +1,51 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b93f6/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b93f6.dir/build.make CMakeFiles/cmTC_b93f6.dir/build
+make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b93f6.dir/CheckSymbolExists.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4     -o CMakeFiles/cmTC_b93f6.dir/CheckSymbolExists.c.o   -c /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_b93f6
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b93f6.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4       CMakeFiles/cmTC_b93f6.dir/CheckSymbolExists.c.o  -o cmTC_b93f6 -rdynamic 
+CMakeFiles/cmTC_b93f6.dir/CheckSymbolExists.c.o: In function `main':
+CheckSymbolExists.c:(.text+0x16): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+make[1]: *** [cmTC_b93f6] Error 1
+make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
+make: *** [cmTC_b93f6/fast] Error 2
+
+File /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_17d72/fast"
+/usr/bin/make -f CMakeFiles/cmTC_17d72.dir/build.make CMakeFiles/cmTC_17d72.dir/build
+make[1]: Entering directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_17d72.dir/CheckFunctionExists.c.o
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_17d72.dir/CheckFunctionExists.c.o   -c /p-ssd/modules/cmake-3.6.2/share/cmake-3.6/Modules/CheckFunctionExists.c
+Linking C executable cmTC_17d72
+/p-ssd/modules/cmake-3.6.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_17d72.dir/link.txt --verbose=1
+/p-ssd/modules/gcc-6.4.0/bin/gcc-6.4   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_17d72.dir/CheckFunctionExists.c.o  -o cmTC_17d72 -rdynamic -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [cmTC_17d72] Error 1
+make[1]: Leaving directory `/home/amiralis/git/xketch-generator/build/CMakeFiles/CMakeTmp'
+make: *** [cmTC_17d72/fast] Error 2
+
+

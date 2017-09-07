@@ -1,0 +1,1 @@
+/p-ssd/modules/gcc-6.4.0/bin/g++-6.4  -fPIC  -std=c++14 -fno-rtti -g  -shared  -o ../libcallcounter-lib.so CMakeFiles/callcounter-lib.dir/StaticCallCounter.cpp.o CMakeFiles/callcounter-lib.dir/DynamicCallCounter.cpp.o  -L/p-ssd/modules/llvm-4.0.1/lib 
