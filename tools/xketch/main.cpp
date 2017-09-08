@@ -12,8 +12,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 
 // Support for LLVM 4.0+
-#define LLVM_VERSION_GE(major, minor) \
-    (LLVM_VERSION_MAJOR > (major) ||  \
+#define LLVM_VERSION_GE(major, minor) \ (LLVM_VERSION_MAJOR > (major) ||  \
      LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
 
 #define LLVM_VERSION_EQ(major, minor) \
@@ -305,6 +304,7 @@ int main(int argc, char **argv) {
     }
 
     extractLoops(*module);
+    AApassTest(*moduel);
 
     return 0;
 }

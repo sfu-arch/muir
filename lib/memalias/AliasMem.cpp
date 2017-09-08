@@ -28,13 +28,8 @@ using namespace llvm;
 using namespace amem;
 using namespace std;
 
-//extern cl::opt<string> XKETCHName;
 
-extern bool isTargetFunction(const Function &f,
-                             const cl::list<std::string> &FunctionList);
-
-
-void AliasMem::writeEdges(CallInst *CI, Function *OF) {
+void AliasMem::findEdges(CallInst *CI, Function *OF) {
 
     // Get all the things we need to check
     // aliasing for
@@ -42,7 +37,6 @@ void AliasMem::writeEdges(CallInst *CI, Function *OF) {
     ReversePostOrderTraversal<Function *> RPOT(OF);
     for (auto BB = RPOT.begin(); BB != RPOT.end(); ++BB) {
         for (auto &I : **BB) {
-            I.dump();
             if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
                 if (auto *SI = dyn_cast<StoreInst>(&I)) {
                     if (SI->getMetadata("LO") != nullptr) {
@@ -209,15 +203,19 @@ void AliasMem::writeEdges(CallInst *CI, Function *OF) {
     MayEdgeFile.close();
 }
 
+/**
+ * We start from top level function and start traversing the nested functions
+ * The target function should have been called in the program
+ * Here we traverse the target function and run the analysis an all
+ * the child functions
+ */
 bool AliasMem::runOnModule(Module &M) {
 
     DenseMap<StringRef, SmallVector<CallInst *, 1>> Map;
 
     for (auto &F : M) {
-
         if (F.isDeclaration())
             continue;
-
         for (auto &BB : F) {
             for (auto &I : BB) {
                 if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -237,11 +235,15 @@ bool AliasMem::runOnModule(Module &M) {
 
     assert(Map.size() == 1 && "Only one extracted function at the moment");
 
+    /**
+     * We relax this limitation and process all the callsites
+     */
+
     for (auto &KV : Map) {
         assert(KV.second.size() == 1 && "Only one call site at the moment");
         for (auto &CI : KV.second) {
             auto *OF = CI->getCalledFunction();
-            writeEdges(CI, OF);
+            findEdges(CI, OF);
         }
     }
 
