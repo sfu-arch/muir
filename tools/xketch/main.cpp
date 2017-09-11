@@ -283,6 +283,8 @@ static void AApassTest(Module &m) {
 
 void labelFunctions(Module &M){
     for(auto &F : M){
+        if(F.isDeclaration())
+            continue;
         helpers::FunctionUIDLabel(F);
     }
 }
@@ -310,7 +312,7 @@ int main(int argc, char **argv) {
     extractLoops(*module);
     labelFunctions(*module);
     saveModule(*module, "test.bc");
-    //AApassTest(*module);
+    AApassTest(*module);
 
     return 0;
 }
