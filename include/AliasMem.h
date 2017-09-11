@@ -35,6 +35,8 @@
 #include <sstream>
 #include <string>
 
+using AliasContainer = std::pair<llvm::Function*, llvm::CallInst*>;
+
 namespace amem {
 
 
@@ -42,10 +44,10 @@ struct AliasMem : public llvm::ModulePass {
     static char ID;
     std::map<std::string, uint64_t> Data;
 
-    std::map<llvm::Function*, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> NaiveAliasEdges;
-    std::map<llvm::Function*, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> AliasEdges;
-    std::map<llvm::Function*, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> MayAliasEdges;
-    std::map<llvm::Function*, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> MustAliasEdges;
+    std::map<AliasContainer, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> NaiveAliasEdges;
+    std::map<AliasContainer, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> AliasEdges;
+    std::map<AliasContainer, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> MayAliasEdges;
+    std::map<AliasContainer, llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>> MustAliasEdges;
 
     llvm::StringRef FunctionName;
 

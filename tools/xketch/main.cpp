@@ -12,22 +12,19 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 
 // Support for LLVM 4.0+
-#define LLVM_VERSION_GE(major, minor) \ (LLVM_VERSION_MAJOR > (major) ||  \
-     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
-
+#define LLVM_VERSION_GE(major, minor) \
+                (LLVM_VERSION_MAJOR > (major) ||  \
+                                            LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
 #define LLVM_VERSION_EQ(major, minor) \
-    (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
-
+                (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
 #define LLVM_VERSION_LE(major, minor) \
-    (LLVM_VERSION_MAJOR < (major) ||  \
-     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
-
+                (LLVM_VERSION_MAJOR < (major) ||  \
+                                            LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
 #if LLVM_VERSION_GE(3, 7)
 #include "llvm/IR/LegacyPassManager.h"
 #else
 #include "llvm/PassManager.h"
 #endif
-
 #if LLVM_VERSION_GE(4, 0)
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -304,7 +301,7 @@ int main(int argc, char **argv) {
     }
 
     extractLoops(*module);
-    AApassTest(*moduel);
+    AApassTest(*module);
 
     return 0;
 }

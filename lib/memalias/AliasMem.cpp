@@ -1,5 +1,7 @@
 #define DEBUG_TYPE "generator_amem"
 
+#include <queue>
+#include <typeinfo>
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -20,7 +22,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <typeinfo>
 
 #include "AliasMem.h"
 
@@ -28,9 +29,7 @@ using namespace llvm;
 using namespace amem;
 using namespace std;
 
-
 void AliasMem::findEdges(CallInst *CI, Function *OF) {
-
     // Get all the things we need to check
     // aliasing for
     SetVector<Instruction *> MemOps;
@@ -44,8 +43,7 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
                     }
                 }
                 // Unlabeled shit will be undo log
-                if (I.getMetadata("UID"))
-                    MemOps.insert(&I);
+                if (I.getMetadata("UID")) MemOps.insert(&I);
             }
         }
     }
@@ -57,17 +55,17 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
 
     // Setup Arg-Param Map for use with IPAA
     // What if I set this up for all functions and their callsites
-    //outs() << MemOps.size() << "\n";
+    // outs() << MemOps.size() << "\n";
     ValueToValueMapTy ArgParamMap;
     uint32_t Idx = 0;
     for (auto &A : OF->args()) {
         ArgParamMap[&A] = CI->getArgOperand(Idx++);
     }
 
-    SmallVector<pair<uint32_t, uint32_t>, 16> NaiveAliasEdges;
-    SmallVector<pair<uint32_t, uint32_t>, 16> AliasEdges;
-    SmallVector<pair<uint32_t, uint32_t>, 16> MayAliasEdges;
-    SmallVector<pair<uint32_t, uint32_t>, 16> MustAliasEdges;
+    SmallVector<pair<uint32_t, uint32_t>, 16> t_NaiveAliasEdges;
+    SmallVector<pair<uint32_t, uint32_t>, 16> t_AliasEdges;
+    SmallVector<pair<uint32_t, uint32_t>, 16> t_MayAliasEdges;
+    SmallVector<pair<uint32_t, uint32_t>, 16> t_MustAliasEdges;
     auto &AA = getAnalysis<AAResultsWrapperPass>(*OF).getAAResults();
 
     auto getUID = [](Instruction *I) -> uint32_t {
@@ -76,7 +74,8 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
         return stoi(S->getString().str());
     };
 
-    //Class template std::function is a general-purpose polymorphic function wrapper.
+    // Class template std::function is a general-purpose polymorphic function
+    // wrapper.
     function<Value *(Value *)> getPtr;
 
     auto getPtrWrapper = [&getPtr](Value *V) -> Value * {
@@ -124,7 +123,6 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
 
     for (auto MB = MemOps.begin(), ME = MemOps.end(); MB != ME; MB++) {
         for (auto NB = next(MB); NB != ME; NB++) {
-
             Data["num-aa-pairs"]++;
 
             if (isa<LoadInst>(*MB) && isa<LoadInst>(*NB)) {
@@ -133,30 +131,30 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
             }
 
             switch (
-                    AA.alias(MemoryLocation::get(*MB), MemoryLocation::get(*NB))) {
+                AA.alias(MemoryLocation::get(*MB), MemoryLocation::get(*NB))) {
                 case AliasResult::NoAlias:
                     Data["num-no-alias"]++;
                     break;
                 case AliasResult::MustAlias:
                     must_edge.push_back({*MB, *NB});
                     Data["num-must-alias"]++;
-                    AliasEdges.push_back({getUID(*MB), getUID(*NB)});
-                    NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
-                    MustAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_AliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_MustAliasEdges.push_back({getUID(*MB), getUID(*NB)});
                     break;
                 case AliasResult::PartialAlias:
                     must_edge.push_back({*MB, *NB});
                     Data["num-partial-alias"]++;
-                    MayAliasEdges.push_back({getUID(*MB), getUID(*NB)});
-                    AliasEdges.push_back({getUID(*MB), getUID(*NB)});
-                    NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_MayAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_AliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
                     break;
                 case AliasResult::MayAlias: {
                     must_edge.push_back({*MB, *NB});
                     Data["num-may-alias-naive"]++;
                     auto *P = getPtrWrapper(*MB);
                     auto *Q = getPtrWrapper(*NB);
-                    NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                    t_NaiveAliasEdges.push_back({getUID(*MB), getUID(*NB)});
                     if (P && Q && P != Q) {
                         if (!isa<AllocaInst>(P) && !isa<GlobalValue>(P)) {
                             errs() << "checkP: " << *P << "\n";
@@ -165,8 +163,8 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
                         Data["num-ipaa-no-alias"]++;
                     } else {
                         Data["num-ipaa-may-alias"]++;
-                        AliasEdges.push_back({getUID(*MB), getUID(*NB)});
-                        MayAliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                        t_AliasEdges.push_back({getUID(*MB), getUID(*NB)});
+                        t_MayAliasEdges.push_back({getUID(*MB), getUID(*NB)});
                     }
                     break;
                 }
@@ -174,30 +172,32 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
         }
     }
 
+    //Saving analysis information
+    AliasContainer map_entry(OF, CI);
 
+    //Write down alis analysis information to file
+    MustAliasEdges[map_entry] = t_MustAliasEdges;
     ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
-    for (auto P : MustAliasEdges) {
+    for (auto P : t_MustAliasEdges) {
         MustEdgeFile << P.first << " " << P.second << "\n";
+        DEBUG(outs() << P.first << " " << P.second << "\n");
     }
     MustEdgeFile.close();
 
-
     ofstream EdgeFile((OF->getName() + ".aa.txt").str(), ios::out);
-    for (auto P : AliasEdges) {
+    for (auto P : t_AliasEdges) {
         EdgeFile << P.first << " " << P.second << "\n";
     }
     EdgeFile.close();
 
-
     ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(), ios::out);
-    for (auto P : NaiveAliasEdges) {
+    for (auto P : t_NaiveAliasEdges) {
         NaiveEdgeFile << P.first << " " << P.second << "\n";
     }
     NaiveEdgeFile.close();
 
-
     ofstream MayEdgeFile((OF->getName() + ".may.txt").str(), ios::out);
-    for (auto P : MayAliasEdges) {
+    for (auto P : t_MayAliasEdges) {
         MayEdgeFile << P.first << " " << P.second << "\n";
     }
     MayEdgeFile.close();
@@ -210,12 +210,11 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
  * the child functions
  */
 bool AliasMem::runOnModule(Module &M) {
-
     DenseMap<StringRef, SmallVector<CallInst *, 1>> Map;
+    std::queue<CallInst *> call_site_depth;
 
     for (auto &F : M) {
-        if (F.isDeclaration())
-            continue;
+        if (F.isDeclaration()) continue;
         for (auto &BB : F) {
             for (auto &I : BB) {
                 if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -226,6 +225,7 @@ bool AliasMem::runOnModule(Module &M) {
                                             SmallVector<CallInst *, 1>()});
                             }
                             Map[F->getName()].push_back(CI);
+                            call_site_depth.push(CI);
                         }
                     }
                 }
@@ -238,6 +238,32 @@ bool AliasMem::runOnModule(Module &M) {
     /**
      * We relax this limitation and process all the callsites
      */
+
+    while (call_site_depth.empty()) {
+        auto temp_call = call_site_depth.front();
+        auto called_function = temp_call->getCalledFunction();
+        for (auto &BB : *called_function) {
+            for (auto &I : BB) {
+                if (auto *CI = dyn_cast<CallInst>(&I)) {
+                    if (auto *F = CI->getCalledFunction()) {
+                        if (F->isDeclaration())
+                            continue;
+                        else {
+                            if (Map.count(F->getName()) == 0) {
+                                Map.insert({F->getName(),
+                                            SmallVector<CallInst *, 1>()});
+                            }
+                            Map[F->getName()].push_back(CI);
+                            call_site_depth.push(CI);
+                        }
+                    }
+                }
+            }
+        }
+        call_site_depth.pop();
+    }
+
+    /************************/
 
     for (auto &KV : Map) {
         assert(KV.second.size() == 1 && "Only one call site at the moment");
@@ -263,9 +289,6 @@ bool AliasMem::doFinalization(Module &M) {
     return false;
 }
 
-
-
 char AliasMem::ID = 0;
 
-static RegisterPass<AliasMem> X(
-    "amem", "Alias edge writer pass");
+static RegisterPass<AliasMem> X("amem", "Alias edge writer pass");

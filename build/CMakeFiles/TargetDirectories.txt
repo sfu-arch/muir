@@ -24,6 +24,13 @@
 /home/amiralis/git/xketch-generator/build/lib/lx/CMakeFiles/install/strip.dir
 /home/amiralis/git/xketch-generator/build/lib/lx/CMakeFiles/install/local.dir
 /home/amiralis/git/xketch-generator/build/lib/lx/CMakeFiles/edit_cache.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/install.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/list_install_components.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/rebuild_cache.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/common.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/install/strip.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/install/local.dir
+/home/amiralis/git/xketch-generator/build/lib/common/CMakeFiles/edit_cache.dir
 /home/amiralis/git/xketch-generator/build/tools/CMakeFiles/install.dir
 /home/amiralis/git/xketch-generator/build/tools/CMakeFiles/list_install_components.dir
 /home/amiralis/git/xketch-generator/build/tools/CMakeFiles/install/strip.dir

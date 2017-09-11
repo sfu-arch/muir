@@ -181,6 +181,19 @@ lx/fast:
 .PHONY : lx/fast
 
 #=============================================================================
+# Target rules for targets named common
+
+# Build rule for target.
+common: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 common
+.PHONY : common
+
+# fast build rule for target.
+common/fast:
+	$(MAKE) -f lib/common/CMakeFiles/common.dir/build.make lib/common/CMakeFiles/common.dir/build
+.PHONY : common/fast
+
+#=============================================================================
 # Target rules for targets named xketch
 
 # Build rule for target.
@@ -207,6 +220,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... memalias"
 	@echo "... lx"
+	@echo "... common"
 	@echo "... xketch"
 .PHONY : help
 
