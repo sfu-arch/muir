@@ -11,6 +11,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 #include <map>
 #include <sstream>
@@ -108,6 +109,8 @@ namespace helpers {
             AU.setPreservesAll();
         }
     };
+
+    void FunctionUIDLabel(llvm::Function &);
 }
 
 #endif

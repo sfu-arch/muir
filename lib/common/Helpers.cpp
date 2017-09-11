@@ -21,10 +21,10 @@ using namespace helpers;
 // LabelUID Helper Class
 char LabelUID::ID = 0;
 
-extern cl::list<std::string> FunctionList;
+//extern cl::list<std::string> FunctionList;
 
-extern bool isTargetFunction(const Function &f,
-                             const cl::list<std::string> &FunctionList);
+//extern bool isTargetFunction(const Function &f,
+                             //const cl::list<std::string> &FunctionList);
 
 template <typename T>
 void LabelUID::visitGeneric(string S, T &IT) {
@@ -234,3 +234,15 @@ bool DFGPrinter::runOnFunction(Function &F) {
     dotfile.close();
     return false;
 }
+
+
+
+void helpers::FunctionUIDLabel(Function &FF){
+    legacy::FunctionPassManager FPM(FF.getParent());
+    FPM.add(new helpers::LabelUID());
+    FPM.doInitialization();
+    FPM.run(FF);
+    FPM.doFinalization();
+}
+
+

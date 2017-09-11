@@ -66,6 +66,7 @@
 #include <memory>
 #include <string>
 
+#include "Common.h"
 #include "AliasMem.h"
 #include "TargetLoopExtractor.h"
 
@@ -280,6 +281,12 @@ static void AApassTest(Module &m) {
     pm.run(m);
 }
 
+void labelFunctions(Module &M){
+    for(auto &F : M){
+        helpers::FunctionUIDLabel(F);
+    }
+}
+
 int main(int argc, char **argv) {
     // This boilerplate provides convenient stack traces and clean LLVM exit
     // handling. It also initializes the built in support for convenient
@@ -301,7 +308,9 @@ int main(int argc, char **argv) {
     }
 
     extractLoops(*module);
-    AApassTest(*module);
+    labelFunctions(*module);
+    saveModule(*module, "test.bc");
+    //AApassTest(*module);
 
     return 0;
 }
