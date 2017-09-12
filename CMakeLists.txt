@@ -16,6 +16,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 
+############## EXTERNAL PROJECT ##################
+# Global settings
+set(GLOBAL_OUTPUT_PATH   ${PROJECT_BINARY_DIR}/bin)
+set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/install)
+
+# 3rdparty Libraries
+include(CMakeLists.txt.in)
+
 ############## LLVM CONFIGURATION #################
 
 # LLVM_DIR must be set to the prefix of /share/llvm/cmake via commandline

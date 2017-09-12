@@ -239,7 +239,6 @@ bool AliasMem::runOnModule(Module &M) {
     /**
      * We relax this limitation and process all the callsites
      */
-
     while(!call_site_depth.empty()) {
         auto temp_call = call_site_depth.front();
         auto called_function = temp_call->getCalledFunction();
@@ -264,7 +263,6 @@ bool AliasMem::runOnModule(Module &M) {
         call_site_depth.pop();
     }
 
-    /************************/
 
     for (auto &KV : Map) {
         assert(KV.second.size() == 1 && "Only one call site at the moment");
