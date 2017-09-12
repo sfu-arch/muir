@@ -279,15 +279,28 @@ static void AApassTest(Module &m) {
     pm.add(createCFLAndersAAWrapperPass());
     pm.add(createAAResultsWrapperPass());
     pm.add(new amem::AliasMem(XKETCHName));
+    pm.add(createVerifierPass());
     pm.run(m);
 }
 
+static void codeGeneration(Module &m){
+    legacy::PassManager pm;
+
+    pm.add(llvm::createPromoteMemoryToRegisterPass());
+    pm.add(createSeparateConstOffsetFromGEPPass());
+
+    pm.add(createVerifierPass());
+    pm.run(m);
+}
+
+/**
+ * Running UIDLabel pss
+ */
 void labelFunctions(Module &M){
     for(auto &F : M){
         if(F.isDeclaration())
             continue;
-        if(F.getName() == "foo")
-            helpers::FunctionUIDLabel(F);
+        helpers::FunctionUIDLabel(F);
     }
 }
 
@@ -311,10 +324,20 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    //Labeling instructions
     labelFunctions(*module);
+
+    //Extracting for loops
     extractLoops(*module);
+
+    //Running Alias Analysis pass
     AApassTest(*module);
-    saveModule(*module, "test.bc");
+
+    //Generating Chisel code
+    codeGeneration(*module);
+
+    //Saving the final modified bc file
+    saveModule(*module, "final.bc");
 
 
     return 0;
