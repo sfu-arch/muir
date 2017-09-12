@@ -9,9 +9,9 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/IR/LegacyPassManager.h"
 
 #include <map>
 #include <sstream>
@@ -23,94 +23,64 @@ using namespace llvm;
 
 namespace helpers {
 
-    // Functions
-    void printAlloca(llvm::Function &);
+// Functions
+void printAlloca(llvm::Function &);
 
-    void printStruct(llvm::Module &);
+void printStruct(llvm::Module &);
 
-    void printDFG(llvm::Function &);
+void printDFG(llvm::Function &);
 
-    void printDFG(llvm::Module &);
+void printDFG(llvm::Module &);
 
-    void PDGPrinter(llvm::Function &);
+void PDGPrinter(llvm::Function &);
 
-    void UIDLabel(Function &);
+void UIDLabel(Function &);
 
-    struct pdgDump : public llvm::FunctionPass {
-        static char ID;
+struct pdgDump : public llvm::FunctionPass {
+    static char ID;
 
-        pdgDump() : FunctionPass(ID) {}
+    pdgDump() : FunctionPass(ID) {}
 
-        virtual bool runOnFunction(llvm::Function &F);
+    virtual bool runOnFunction(llvm::Function &F);
+};
+
+class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
+    friend class InstVisitor<LabelUID>;
+
+    uint64_t counter;
+
+    void visitFunction(Function &F);
+
+    void visitBasicBlock(BasicBlock &BB);
+
+    void visitInstruction(Instruction &I);
+
+    template <typename T>
+    void visitGeneric(string, T &);
+
+    map<Value *, uint64_t> values;
+
+   public:
+    static char ID;
+
+    LabelUID() : FunctionPass(ID), counter(0) {}
+
+    bool doInitialization(Module &) override {
+        counter = 0;
+        values.clear();
+        return false;
     };
 
-    class DFGPrinter : public llvm::FunctionPass,
-                       public llvm::InstVisitor<DFGPrinter> {
-        friend class InstVisitor<DFGPrinter>;
+    bool doFinalization(Module &) override { return true; };
 
-        void visitFunction(llvm::Function &F);
+    bool runOnFunction(Function &) override;
 
-        void visitBasicBlock(llvm::BasicBlock &BB);
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
 
-        void visitInstruction(llvm::Instruction &I);
-
-        stringstream dot;
-        std::map<llvm::Value *, uint64_t> nodes;
-        uint64_t counter;
-
-    public:
-        static char ID;
-
-        DFGPrinter() : FunctionPass(ID), counter(999999) {}
-
-        bool doInitialization(llvm::Module &) override;
-
-        bool doFinalization(llvm::Module &) override;
-
-        bool runOnFunction(llvm::Function &) override;
-
-        void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-            AU.setPreservesAll();
-        }
-    };
-
-    class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
-        friend class InstVisitor<LabelUID>;
-
-        uint64_t counter;
-
-        void visitFunction(Function &F);
-
-        void visitBasicBlock(BasicBlock &BB);
-
-        void visitInstruction(Instruction &I);
-
-        template<typename T>
-        void visitGeneric(string, T &);
-
-        map<Value *, uint64_t> values;
-
-    public:
-        static char ID;
-
-        LabelUID() : FunctionPass(ID), counter(0) {}
-
-        bool doInitialization(Module &) override {
-            counter = 0;
-            values.clear();
-            return false;
-        };
-
-        bool doFinalization(Module &) override { return true; };
-
-        bool runOnFunction(Function &) override;
-
-        void getAnalysisUsage(AnalysisUsage &AU) const override {
-            AU.setPreservesAll();
-        }
-    };
-
-    void FunctionUIDLabel(llvm::Function &);
+void FunctionUIDLabel(llvm::Function &);
 }
 
 #endif

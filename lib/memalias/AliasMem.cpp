@@ -29,6 +29,8 @@ using namespace llvm;
 using namespace amem;
 using namespace std;
 
+extern cl::opt<bool> aaTrace;
+
 void AliasMem::findEdges(CallInst *CI, Function *OF) {
     // Get all the things we need to check
     // aliasing for
@@ -48,10 +50,6 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
         }
     }
 
-    // errs() << "MemOps\n";
-    // for(auto &M : MemOps) {
-    //     errs() << *M << "\n";
-    // }
 
     // Setup Arg-Param Map for use with IPAA
     // What if I set this up for all functions and their callsites
@@ -177,30 +175,33 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
 
     //Write down alis analysis information to file
     MustAliasEdges[map_entry] = t_MustAliasEdges;
-    ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
-    for (auto P : t_MustAliasEdges) {
-        MustEdgeFile << P.first << " " << P.second << "\n";
-        DEBUG(outs() << P.first << " " << P.second << "\n");
-    }
-    MustEdgeFile.close();
 
-    ofstream EdgeFile((OF->getName() + ".aa.txt").str(), ios::out);
-    for (auto P : t_AliasEdges) {
-        EdgeFile << P.first << " " << P.second << "\n";
-    }
-    EdgeFile.close();
+    if(aaTrace){
+        //Dumping alias information to file
+        ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
+        for (auto P : t_MustAliasEdges) {
+            MustEdgeFile << P.first << " " << P.second << "\n";
+        }
+        MustEdgeFile.close();
 
-    ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(), ios::out);
-    for (auto P : t_NaiveAliasEdges) {
-        NaiveEdgeFile << P.first << " " << P.second << "\n";
-    }
-    NaiveEdgeFile.close();
+        ofstream EdgeFile((OF->getName() + ".aa.txt").str(), ios::out);
+        for (auto P : t_AliasEdges) {
+            EdgeFile << P.first << " " << P.second << "\n";
+        }
+        EdgeFile.close();
 
-    ofstream MayEdgeFile((OF->getName() + ".may.txt").str(), ios::out);
-    for (auto P : t_MayAliasEdges) {
-        MayEdgeFile << P.first << " " << P.second << "\n";
+        ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(), ios::out);
+        for (auto P : t_NaiveAliasEdges) {
+            NaiveEdgeFile << P.first << " " << P.second << "\n";
+        }
+        NaiveEdgeFile.close();
+
+        ofstream MayEdgeFile((OF->getName() + ".may.txt").str(), ios::out);
+        for (auto P : t_MayAliasEdges) {
+            MayEdgeFile << P.first << " " << P.second << "\n";
+        }
+        MayEdgeFile.close();
     }
-    MayEdgeFile.close();
 }
 
 /**
@@ -239,7 +240,7 @@ bool AliasMem::runOnModule(Module &M) {
      * We relax this limitation and process all the callsites
      */
 
-    while (call_site_depth.empty()) {
+    while(!call_site_depth.empty()) {
         auto temp_call = call_site_depth.front();
         auto called_function = temp_call->getCalledFunction();
         for (auto &BB : *called_function) {

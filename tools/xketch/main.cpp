@@ -78,9 +78,6 @@ using llvm::sys::ExecuteAndWait;
 using llvm::sys::findProgramByName;
 using llvm::legacy::PassManager;
 
-enum class AnalysisType { STATIC, DYNAMIC };
-
-namespace {
 
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
@@ -88,6 +85,11 @@ cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
 
 cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
                              cl::value_desc("Function name"), cl::Required);
+
+cl::opt<bool> aaTrace(
+        "aa-trace", cl::desc("Alias analysis trace"),
+        cl::value_desc("T/F {default = true}"), cl::init(true)
+        );
 
 static cl::opt<char> optLevel(
     "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -101,7 +103,6 @@ cl::list<string> libPaths("L", cl::Prefix,
 cl::list<string> libraries("l", cl::Prefix,
                            cl::desc("Specify libraries to link to"),
                            cl::value_desc("library prefix"));
-}
 
 static void compile(Module &m, string outputPath) {
     string err;
@@ -285,7 +286,8 @@ void labelFunctions(Module &M){
     for(auto &F : M){
         if(F.isDeclaration())
             continue;
-        helpers::FunctionUIDLabel(F);
+        if(F.getName() == "foo")
+            helpers::FunctionUIDLabel(F);
     }
 }
 
@@ -309,10 +311,11 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    extractLoops(*module);
     labelFunctions(*module);
-    saveModule(*module, "test.bc");
+    extractLoops(*module);
     AApassTest(*module);
+    saveModule(*module, "test.bc");
+
 
     return 0;
 }
