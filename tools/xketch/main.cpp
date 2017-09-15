@@ -62,6 +62,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/TailRecursionElimination.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 
 #include <memory>
 #include <string>
@@ -88,7 +91,7 @@ cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
 
 cl::opt<bool> aaTrace(
         "aa-trace", cl::desc("Alias analysis trace"),
-        cl::value_desc("T/F {default = true}"), cl::init(true)
+        cl::value_desc("T/F {default = true}"), cl::init(false)
         );
 
 static cl::opt<char> optLevel(
@@ -288,6 +291,8 @@ static void codeGeneration(Module &m){
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
+    pm.add(llvm::createTailCallEliminationPass());
+    pm.add(llvm::createFunctionInliningPass(1));
 
     pm.add(createVerifierPass());
     pm.run(m);

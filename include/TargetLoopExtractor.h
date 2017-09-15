@@ -22,12 +22,13 @@ namespace lx {
 struct TargetLoopExtractor : public llvm::ModulePass {
     static char ID;
 
+    uint32_t lid;
     std::set<std::pair<std::string, int>> Locations;
 
     std::set<llvm::Function*> ExtractedLoopFunctions; 
     std::ofstream LoopLocationDumpFile;
 
-    TargetLoopExtractor() : llvm::ModulePass(ID) {}
+    TargetLoopExtractor() : llvm::ModulePass(ID), lid(0) {}
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
         AU.addRequiredID(llvm::BreakCriticalEdgesID);

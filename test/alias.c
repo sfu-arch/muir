@@ -1,3 +1,7 @@
+void bar(int *a){
+    *a+=1;
+}
+
 void foo(float **in, float **out, float gain, int nsamps)
 {
 	int i,j;
@@ -8,6 +12,8 @@ void foo(float **in, float **out, float gain, int nsamps)
 		    out[i][j] = in[i][j] * gain;
         }
 	}
+
+    bar(&i);
 }
 
 int main(){

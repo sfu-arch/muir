@@ -21,12 +21,12 @@ using namespace lx;
 extern cl::opt<string> XKETCHName;
 
 bool TargetLoopExtractor::doInitialization(Module &M) {
-    //TODO: Add code here if it's needed before running loop extraction
+    // TODO: Add code here if it's needed before running loop extraction
     return false;
 }
 
 bool TargetLoopExtractor::doFinalization(Module &M) {
-    //TODO: Add code here to do post loop extraction
+    // TODO: Add code here to do post loop extraction
     return false;
 }
 
@@ -77,6 +77,12 @@ bool TargetLoopExtractor::extractLoop(Loop *L, LoopInfo &LI, DominatorTree &DT,
             F->setName(Name);
             F->addFnAttr(Attribute::NoInline);
             stripDebugInfo(*F);
+
+            // Set metadata to distinct for loops
+            MDNode *N = MDNode::get(
+                F->getContext(),
+                MDString::get(F->getContext(), to_string(lid++)));
+            F->setMetadata("LID", N);
             ExtractedLoopFunctions.insert(F);
             return true;
         }
@@ -113,15 +119,14 @@ bool TargetLoopExtractor::runOnModule(Module &M) {
 
         bool hasLoop = true;
 
-        //Iterating over function's loops and start from
-        //most inner loop to make it as a function call
-        //and re-run the extraction, untill there is no other loops
+        // Iterating over function's loops and start from
+        // most inner loop to make it as a function call
+        // and re-run the extraction, untill there is no other loops
         do {
             auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
             auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
 
-            if(getLoops(LI).size() == 0)
-                hasLoop = false;
+            if (getLoops(LI).size() == 0) hasLoop = false;
 
             for (auto &L : getLoops(LI)) {
                 auto Loc = L->getStartLoc();
