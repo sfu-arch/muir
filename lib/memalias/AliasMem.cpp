@@ -2,9 +2,12 @@
 
 #include <queue>
 #include <typeinfo>
+#include <algorithm>
+
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -35,8 +38,33 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
     // Get all the things we need to check
     // aliasing for
     SetVector<Instruction *> MemOps;
+    std::vector<BasicBlock *> BBSCC;
+
+    //outs() << "SCCs for " << OF->getName() << " in post-order:\n";
+    for (scc_iterator<Function *> I = scc_begin(OF), IE = scc_end(OF); I != IE;
+         ++I) {
+        // Obtain the vector of BBs in this SCC and print it out.
+        const std::vector<BasicBlock *> &SCCBBs = *I;
+        //outs() << "  SCC: ";
+        for (std::vector<BasicBlock *>::const_iterator BBI = SCCBBs.begin(),
+                                                       BBIE = SCCBBs.end();
+             BBI != BBIE; ++BBI) {
+            BBSCC.push_back(*BBI);
+            //outs() << (*BBI)->getName() << "  ";
+        }
+        //outs() << "\n";
+    }
+
+
     ReversePostOrderTraversal<Function *> RPOT(OF);
-    for (auto BB = RPOT.begin(); BB != RPOT.end(); ++BB) {
+
+    //XXX In order to travers for loops we used 
+    // reverse strongly connected component traversal of BB graph instead of
+    // reverse post-order traversal
+    // to undo the changes uncomment the following line and comment the second line
+    //
+    //for (auto BB = RPOT.begin(); BB != RPOT.end(); ++BB) {
+    for(auto BB = BBSCC.rbegin(); BB != BBSCC.rend(); ++BB){
         for (auto &I : **BB) {
             if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
                 if (auto *SI = dyn_cast<StoreInst>(&I)) {
@@ -45,11 +73,21 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
                     }
                 }
                 // Unlabeled shit will be undo log
-                if (I.getMetadata("UID")) MemOps.insert(&I);
+                if (I.getMetadata("UID")) {
+                    I.dump();
+                    MemOps.insert(&I);
+                }
             }
         }
     }
 
+    // TODO: Test
+    // outs() << "Basic blocks of " << OF->getName() << " in post-order:\n";
+    // for (po_iterator<BasicBlock *> I = po_begin(&OF->getEntryBlock()),
+    // IE = po_end(&OF->getEntryBlock());
+    // I != IE; ++I) {
+    // outs() << "  " << (*I)->getName() << "\n";
+    //}
 
     // Setup Arg-Param Map for use with IPAA
     // What if I set this up for all functions and their callsites
@@ -170,14 +208,14 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
         }
     }
 
-    //Saving analysis information
+    // Saving analysis information
     AliasContainer map_entry(OF, CI);
 
-    //Write down alis analysis information to file
+    // Write down alis analysis information to file
     MustAliasEdges[map_entry] = t_MustAliasEdges;
 
-    if(aaTrace){
-        //Dumping alias information to file
+    if (aaTrace) {
+        // Dumping alias information to file
         ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
         for (auto P : t_MustAliasEdges) {
             MustEdgeFile << P.first << " " << P.second << "\n";
@@ -190,7 +228,8 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
         }
         EdgeFile.close();
 
-        ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(), ios::out);
+        ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(),
+                               ios::out);
         for (auto P : t_NaiveAliasEdges) {
             NaiveEdgeFile << P.first << " " << P.second << "\n";
         }
@@ -239,7 +278,7 @@ bool AliasMem::runOnModule(Module &M) {
     /**
      * We relax this limitation and process all the callsites
      */
-    while(!call_site_depth.empty()) {
+    while (!call_site_depth.empty()) {
         auto temp_call = call_site_depth.front();
         auto called_function = temp_call->getCalledFunction();
         for (auto &BB : *called_function) {
@@ -263,11 +302,11 @@ bool AliasMem::runOnModule(Module &M) {
         call_site_depth.pop();
     }
 
-
     for (auto &KV : Map) {
         assert(KV.second.size() == 1 && "Only one call site at the moment");
         for (auto &CI : KV.second) {
             auto *OF = CI->getCalledFunction();
+            // outs() << OF->getName() << "\n";
             findEdges(CI, OF);
         }
     }

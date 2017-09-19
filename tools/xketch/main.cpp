@@ -329,11 +329,12 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    //Labeling instructions
-    labelFunctions(*module);
 
     //Extracting for loops
     extractLoops(*module);
+
+    //Labeling instructions
+    labelFunctions(*module);
 
     //Running Alias Analysis pass
     AApassTest(*module);
