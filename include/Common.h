@@ -26,15 +26,15 @@ namespace common {
 
 // Structures
 struct GepOne {
-    uint64_t index;
-    uint64_t numByte;
+    int64_t index;
+    int64_t numByte;
 };
 
 struct GepTwo {
-    uint64_t index1;
-    uint64_t numByte1;
-    uint64_t index2;
-    uint64_t numByte2;
+    int64_t index1;
+    int64_t numByte1;
+    int64_t index2;
+    int64_t numByte2;
 };
 
 // Functions
@@ -144,8 +144,8 @@ class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
     }
 };
 
-class InsTest : public ModulePass, public InstVisitor<InsTest> {
-    friend class InstVisitor<InsTest>;
+class GEPAddrCalculation : public ModulePass, public InstVisitor<GEPAddrCalculation> {
+    friend class InstVisitor<GEPAddrCalculation>;
 
     // void visitFunction(Function &F);
     // void visitBasicBlock(BasicBlock &BB);
@@ -167,7 +167,7 @@ class InsTest : public ModulePass, public InstVisitor<InsTest> {
     // Function name
     llvm::StringRef function_name;
 
-    InsTest(llvm::StringRef FN)
+    GEPAddrCalculation(llvm::StringRef FN)
         : ModulePass(ID), function_name(FN), counter(0) {}
 
     bool doInitialization(Module &) override {
