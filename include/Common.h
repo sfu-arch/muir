@@ -13,17 +13,42 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 
+#include "NodeType.h"
+
 #include <map>
 #include <sstream>
 #include <string>
 
-// using namespace llvm;
 using namespace std;
 using namespace llvm;
 
-namespace helpers {
+namespace common {
+
+// Structures
+struct GepOne {
+    uint64_t index;
+    uint64_t numByte;
+};
+
+struct GepTwo {
+    uint64_t index1;
+    uint64_t numByte1;
+    uint64_t index2;
+    uint64_t numByte2;
+};
 
 // Functions
+void optimizeModule(llvm::Module *);
+
+InstructionType getLLVMOpcodeName(uint32_t OpCode);
+}
+
+namespace helpers {
+
+/**
+ * FUNCTIONS
+ */
+
 void printAlloca(llvm::Function &);
 
 void printStruct(llvm::Module &);
@@ -36,6 +61,15 @@ void PDGPrinter(llvm::Function &);
 
 void UIDLabel(Function &);
 
+void FunctionUIDLabel(llvm::Function &);
+
+/**
+ * CLSSES
+ */
+
+/**
+ * pdgDump class dumps PDG of the given funciton
+ */
 struct pdgDump : public llvm::FunctionPass {
     static char ID;
 
@@ -80,7 +114,46 @@ class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
     }
 };
 
-void FunctionUIDLabel(llvm::Function &);
+class InsTest : public ModulePass, public InstVisitor<InsTest> {
+    friend class InstVisitor<InsTest>;
+
+    // void visitFunction(Function &F);
+    // void visitBasicBlock(BasicBlock &BB);
+    // void visitInstruction(Instruction &I);
+
+    void visitGetElementPtrInst(Instruction &I);
+    void visitSExtInst(Instruction &I);
+
+    map<Value *, uint64_t> values;
+    uint64_t counter;
+
+   public:
+    static char ID;
+
+    // Gep containers
+    std::map<llvm::Instruction *, common::GepOne> SingleGepIns;
+    std::map<llvm::Instruction *, common::GepTwo> TwoGepIns;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    InsTest(llvm::StringRef FN)
+        : ModulePass(ID), function_name(FN), counter(0) {}
+
+    bool doInitialization(Module &) override {
+        counter = 0;
+        values.clear();
+        return false;
+    };
+
+    bool doFinalization(Module &) override { return true; };
+
+    bool runOnModule(Module &) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
 }
 
 #endif
