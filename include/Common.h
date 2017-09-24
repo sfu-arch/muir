@@ -78,6 +78,36 @@ struct pdgDump : public llvm::FunctionPass {
     virtual bool runOnFunction(llvm::Function &F);
 };
 
+class DFGPrinter : public llvm::FunctionPass,
+                   public llvm::InstVisitor<DFGPrinter> {
+    friend class InstVisitor<DFGPrinter>;
+
+    void visitFunction(llvm::Function &F);
+
+    void visitBasicBlock(llvm::BasicBlock &BB);
+
+    void visitInstruction(llvm::Instruction &I);
+
+    stringstream dot;
+    std::map<llvm::Value *, uint64_t> nodes;
+    uint64_t counter;
+
+   public:
+    static char ID;
+
+    DFGPrinter() : FunctionPass(ID), counter(999999) {}
+
+    bool doInitialization(llvm::Module &) override;
+
+    bool doFinalization(llvm::Module &) override;
+
+    bool runOnFunction(llvm::Function &) override;
+
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
+
 class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
     friend class InstVisitor<LabelUID>;
 
