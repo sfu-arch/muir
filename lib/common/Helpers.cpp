@@ -16,16 +16,23 @@
 #include "Common.h"
 
 using namespace llvm;
-using namespace helpers;
+using helpers::LabelUID;
 
+/**
+ * Helper classes
+ */
 
-
+namespace helpers {
 // LabelUID Helper Class
 char LabelUID::ID = 0;
 
+RegisterPass<LabelUID> X("lableUID", "Labeling the instructions with UID");
+
+
+}
+
 template <typename T>
 void LabelUID::visitGeneric(string S, T &IT) {
-
     if (values.count(&IT) == 0) {
         values.insert(make_pair(&IT, counter));
         counter++;
@@ -64,6 +71,9 @@ bool LabelUID::runOnFunction(Function &F) {
     return false;
 }
 
+/**
+ * Function lists
+ */
 void helpers::FunctionUIDLabel(Function &FF) {
     legacy::FunctionPassManager FPM(FF.getParent());
     FPM.add(new helpers::LabelUID());
