@@ -3,52 +3,45 @@
 #ifndef STATICCALLCOUNTER_H
 #define STATICCALLCOUNTER_H
 
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
 
 #include <string>
 
+namespace codegen {
 
-namespace codegen{
+struct DataflowGenerator : public llvm::ModulePass {
+    static char ID;
 
+    // Default value is standard out
+    llvm::raw_ostream &outCode;
 
-struct DataflowGenerator: public llvm::ModulePass {
+    //Function name
+    llvm::StringRef FunctionName;
 
-  static char ID;
+    DataflowGenerator() : llvm::ModulePass(ID), outCode(llvm::outs()) {}
 
-  //Default value is standard out
-  llvm::raw_ostream &outCode;
+    DataflowGenerator(llvm::raw_ostream &out, llvm::StringRef name)
+        : llvm::ModulePass(ID), outCode(out), FunctionName(name) {}
 
-  DataflowGenerator()
-    : llvm::ModulePass(ID),outCode(llvm::outs())
-      { }
+    virtual bool runOnModule(llvm::Module &m) override;
 
-  DataflowGenerator(llvm::raw_ostream &out)
-    : llvm::ModulePass(ID),
-    outCode(out)
-      { }
+    void printCode(std::string code);
 
-  virtual bool runOnModule(llvm::Module &m) override;
+    void setOutput(llvm::raw_ostream &);
 
-  void printCode(std::string code);
+    void generateFunction(llvm::Function &);
 
-  void setOutput(llvm::raw_ostream &out);
-
-  /**
-   * Print method gets called right after the pass finishes
-   */
-  //virtual void print(llvm::raw_ostream &out,
-                     //llvm::Module const *m) const override;
-
+    /**
+     * Print method gets called right after the pass finishes
+     */
+    // virtual void print(llvm::raw_ostream &out,
+    // llvm::Module const *m) const override;
 };
-
-
 }
 
-
 #endif
-
