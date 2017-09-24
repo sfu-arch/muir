@@ -74,7 +74,7 @@ void AliasMem::findEdges(CallInst *CI, Function *OF) {
                 }
                 // Unlabeled shit will be undo log
                 if (I.getMetadata("UID")) {
-                    I.dump();
+                    DEBUG(I.dump());
                     MemOps.insert(&I);
                 }
             }

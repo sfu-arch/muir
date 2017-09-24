@@ -307,7 +307,7 @@ static void codeGenerator(Module &m){
     pm.add(llvm::createTailCallEliminationPass());
     pm.add(llvm::createFunctionInliningPass(1));
 
-    pm.add(new codegen::DataflowGenerator());
+    pm.add(new codegen::DataflowGenerator(outs(), XKETCHName));
 
     pm.add(createVerifierPass());
     pm.run(m);
