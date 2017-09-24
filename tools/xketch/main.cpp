@@ -72,6 +72,7 @@
 #include "Common.h"
 #include "AliasMem.h"
 #include "TargetLoopExtractor.h"
+#include "DataflowGenerator.h"
 
 using namespace llvm;
 using std::string;
@@ -91,8 +92,13 @@ cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
 
 cl::opt<bool> aaTrace(
         "aa-trace", cl::desc("Alias analysis trace"),
-        cl::value_desc("T/F {default = true}"), cl::init(false)
-        );
+        cl::value_desc("T/F {default = true}"), cl::init(false));
+
+cl::opt<string> 
+outFile("o",
+        cl::desc("Xketch output file"),
+        cl::value_desc("filename"),
+        cl::init(""));
 
 static cl::opt<char> optLevel(
     "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -286,13 +292,22 @@ static void AApassTest(Module &m) {
     pm.run(m);
 }
 
-static void codeGeneration(Module &m){
+static void codeGenerator(Module &m){
+
+    //Check wether xketch outpufile name has been specified
+    if(outFile.getValue() == ""){
+        errs() << "o command line option must be specified.\n";
+        exit(-1);
+    }
+
     legacy::PassManager pm;
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
     pm.add(llvm::createTailCallEliminationPass());
     pm.add(llvm::createFunctionInliningPass(1));
+
+    pm.add(new codegen::DataflowGenerator());
 
     pm.add(createVerifierPass());
     pm.run(m);
@@ -340,7 +355,7 @@ int main(int argc, char **argv) {
     AApassTest(*module);
 
     //Generating Chisel code
-    codeGeneration(*module);
+    codeGenerator(*module);
 
     //Saving the final modified bc file
     saveModule(*module, "final.bc");
