@@ -8,7 +8,6 @@
 
 #include "luacpptemplater/LuaTemplater.h"
 
-
 #include <string>
 
 #include "AliasMem.h"
@@ -56,8 +55,8 @@ InstructionType InstructionTypeNode(Instruction &ins) {
     else if (isa<llvm::PHINode>(ins))
         return common::TPHINode;
 
-    //Alloca instruction
-    else if(isa<llvm::AllocaInst>(ins))
+    // Alloca instruction
+    else if (isa<llvm::AllocaInst>(ins))
         return common::TAlloca;
 
     // Return instruction
@@ -259,13 +258,11 @@ void DataflowGeneratorPass::generateImportSection() {
     printCode(command);
 }
 
-
 /**
  * This function dumps helper object which maps all
  * the instrucitons, basic block and arguments to their indexes
  */
 void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
-
     LuaTemplater ins_template;
 
     string comment =
@@ -274,10 +271,10 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         "  * It contains all the transformation from indecies to their "
         "module's name\n"
         "  */\n\n";
-    comment = "object Data_" + F.getName().str() + "_FlowParam{\n";
+    comment = comment + "object Data_" + F.getName().str() + "_FlowParam{\n";
     param_name = "Data_" + F.getName().str() + "_FlowParam";
 
-    //Print the first initial part of the object
+    // Print the first initial part of the object
     printCode(comment);
 
     // Iterate over branches to pick basicblock branch targets
@@ -304,6 +301,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         "  )\n\n";
     ins_template.set("bb_name", basic_block_info[&entry_bb].name);
 
+    // Printing entry basic block maping
     printCode(ins_template.render(command));
 
     string final_command;
@@ -321,7 +319,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         }
         final_command = final_command.substr(0, final_command.length() - 2);
         final_command.append("\n  )\n\n");
-        outs() << final_command;
+        printCode(final_command);
     }
 
     for (auto branch_to_bb : instruction_branch) {
@@ -341,7 +339,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         }
         final_command = final_command.substr(0, final_command.length() - 2);
         final_command.append("\n  )\n\n");
-        outs() << final_command;
+        printCode(final_command);
     }
 
     for (auto &bb : F) {
@@ -359,7 +357,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         }
         final_command = final_command.substr(0, final_command.length() - 2);
         final_command.append("\n  )\n\n");
-        outs() << final_command;
+        printCode(final_command);
     }
 
     for (auto &ins : instruction_phi) {
@@ -387,7 +385,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         }
         final_command = final_command.substr(0, final_command.length() - 2);
         final_command.append("\n  )\n\n");
-        outs() << final_command;
+        printCode(final_command);
     }
 
     for (auto &bb : F) {
@@ -398,6 +396,13 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                 continue;
             else {
                 final_command.clear();
+
+                // Printing each instruction
+                string init_test = "  //";
+                raw_string_ostream out(init_test);
+                out << ins;
+
+                printCode(out.str());
                 command = "  val {{ins_name}}_in = Map( \n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 final_command.append(ins_template.render(command));
@@ -445,12 +450,12 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                 final_command =
                     final_command.substr(0, final_command.length() - 2);
                 final_command.append("\n  )\n\n");
-                outs() << final_command;
+                printCode(final_command);
             }
         }
     }
 
-    outs() << "}\n\n";
+    printCode("}\n\n");
 }
 
 /**
@@ -479,12 +484,19 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     generateImportSection();
 
     // Step2: Printing helper param object
+    //
     // This object contains mapping from each instructions to their consequent
     // instructions and basic blocks
     // Since we have to use indexes to to connect differet modules to getter
     // we use this mapping so that instead of using pure indexes we can use
     // a mapping from the name's to their index
     PrintHelperObject(F);
+
+    // Step3:
+    // Printing Datflow abstract IO class
+    printHeader(outs(), "Printing Ports Definition");
+    PrintDatFlowAbstractIO(F);
+    printHeader(outs(), "Printing Module Definition");
 }
 
 // Output for a pure analysis pass should happen in the print method.
