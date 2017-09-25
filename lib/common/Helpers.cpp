@@ -305,7 +305,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
            "Gep with more than 2 operand is not supported");
 
     // Dumping the instruction
-    I.dump();
+    DEBUG(I.dump());
 
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();

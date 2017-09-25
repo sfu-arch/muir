@@ -300,14 +300,21 @@ static void codeGenerator(Module &m){
         exit(-1);
     }
 
+
+    std::error_code errc;
+    raw_fd_ostream out(outFile, errc, sys::fs::F_None);
+
     legacy::PassManager pm;
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
     pm.add(llvm::createTailCallEliminationPass());
     pm.add(llvm::createFunctionInliningPass(1));
+    pm.add(llvm::createAAResultsWrapperPass());
 
-    pm.add(new codegen::DataflowGenerator(outs(), XKETCHName));
+    pm.add(new helpers::GEPAddrCalculation(XKETCHName));
+    pm.add(new amem::AliasMem(XKETCHName));
+    pm.add(new codegen::DataflowGeneratorPass(out, XKETCHName));
 
     pm.add(createVerifierPass());
     pm.run(m);

@@ -66,6 +66,7 @@ struct AliasMem : public llvm::ModulePass {
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
         AU.addRequired<llvm::AAResultsWrapperPass>();
+        AU.setPreservesAll();
     }
 };
 }

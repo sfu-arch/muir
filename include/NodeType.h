@@ -13,6 +13,7 @@ enum InstructionType {
     TUBranchInst,
     TCBranchInst,
     TPHINode,
+    TAlloca,
     TGEP,
     TLoad,
     TStore,
@@ -21,8 +22,8 @@ enum InstructionType {
     TPtrToInt,
     TBitCast,
     TTrunc,
-    TReturnInst
-
+    TReturnInst,
+    TNULL
 };
 
 struct InstructionInfo {
