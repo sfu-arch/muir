@@ -316,6 +316,11 @@ static void codeGenerator(Module &m){
     pm.add(llvm::createFunctionInliningPass(1));
     pm.add(llvm::createAAResultsWrapperPass());
 
+    pm.add(createBreakCriticalEdgesPass());
+    pm.add(createLoopSimplifyPass());
+    pm.add(new DominatorTreeWrapperPass());
+    pm.add(new LoopInfoWrapperPass());
+
     pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new amem::AliasMem(XKETCHName));
     pm.add(new codegen::DataflowGeneratorPass(out, XKETCHName));

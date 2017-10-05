@@ -30,6 +30,25 @@ RegisterPass<DataflowGeneratorPass> X("codegen", "Generating chisel code");
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
 
+static SetVector<Loop *> getLoops(LoopInfo &LI) {
+    SetVector<Loop *> Loops;
+
+    for (auto &L : LI) {
+        for (auto &SL : L->getSubLoops()) {
+            Loops.insert(SL);
+        }
+        Loops.insert(L);
+    }
+
+    return Loops;
+}
+
+
+static string getBaseName(string Path) {
+    auto Idx = Path.find_last_of('/');
+    return Idx == string::npos ? Path : Path.substr(Idx + 1);
+}
+
 /**
  * Printing LLVM instruciton opcodes
  */
@@ -163,7 +182,7 @@ void DataflowGeneratorPass::printHeader(string header) {
     header_final.append("*\n");
 
     tmp_line =
-        "\n\n\n  /* "
+        "\n\n  /* "
         "================================================================== "
         "*\n"
         "   *                   " +
@@ -198,6 +217,7 @@ bool DataflowGeneratorPass::runOnModule(Module &M) {
  * Set pass dependencies
  */
 void DataflowGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
+    AU.addRequired<llvm::LoopInfoWrapperPass>();
     AU.addRequired<helpers::GEPAddrCalculation>();
     AU.addRequired<amem::AliasMem>();
     AU.setPreservesAll();
@@ -322,6 +342,7 @@ void DataflowGeneratorPass::generateImportSection() {
         "import regfile._\n"
         "import memory._\n"
         "import arbiters._\n"
+        "import loop._\n"
         "import node._\n\n";
 
     // Print to the OUTPUT
@@ -560,13 +581,16 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         "  })\n"
         "}\n\n");
 
-    final_command.append(
+    printCode(ins_template.render(final_command));
+
+    final_command =
         "class {{module_name}}DF(implicit p: Parameters)"
-        " extends {{module_name}}DFIO()(p) {\n");
+        " extends {{module_name}}DFIO()(p) {\n";
     ins_template.set("module_name", F.getName().str());
 
     printHeader("Printing Module Definition");
     printCode(ins_template.render(final_command));
+
     // outs() << ins_template.render(final_command);
 }
 
@@ -594,22 +618,20 @@ void DataflowGeneratorPass::HelperPrintInistInit(Function &F) {
         comment = "  // [BasicBlock]" + BB.getName().str() + ":";
         printCode(comment);
         for (auto &INS : BB) {
-
-            //Check wether the instruction is function call
-            //TODO: Implement function call
-            //TODO: Inline the function call
+            // Check wether the instruction is function call
+            // TODO: Implement function call
+            // TODO: Inline the function call
             llvm::CallSite CS(&INS);
-            if (CS){
+            if (CS) {
                 // Printing each instruction
                 string init_test = "\n  //";
                 raw_string_ostream out(init_test);
                 out << INS;
                 printCode("\n  // Function Call: " +
-                        CS->getFunction()->getName().str() +
-                        out.str()+"\n");
+                          CS->getFunction()->getName().str() + out.str() +
+                          "\n");
                 continue;
             }
-
 
             PrintInstInit(INS);
         }
@@ -1050,7 +1072,6 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
 
         result = bb_template.render(bb_define);
 
-        // outs() << result << "\n";
     } else {
         bb_define =
             "  val {{bb_name}} = "
@@ -1067,8 +1088,6 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
         bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
 
         result = bb_template.render(bb_define);
-
-        // outs() << result << "\n";
     }
 
     result = result + "\n";
@@ -1093,11 +1112,11 @@ void DataflowGeneratorPass::PrintStackFile() {
     printCode(result);
 }
 
-
 void DataflowGeneratorPass::PrintCacheMem() {
     string command =
         "\tval CacheMem = Module(new "
-        "UnifiedController(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}})"
+        "UnifiedController(ID=0,Size=32,NReads={{load_num}},NWrites={{store_"
+        "num}})"
         "\n"
         "\t\t            (WControl=new "
         "WriteMemoryController(NumOps={{store_num}},BaseSize=2,NumEntries=2))\n"
@@ -1113,7 +1132,6 @@ void DataflowGeneratorPass::PrintCacheMem() {
     printCode(result);
 }
 
-
 void DataflowGeneratorPass::PrintParamObject() {
     string param =
         "  /**\n"
@@ -1124,7 +1142,7 @@ void DataflowGeneratorPass::PrintParamObject() {
     printCode(param);
 }
 
-void DataflowGeneratorPass::HelperPrintBasicBlockPredicate(){
+void DataflowGeneratorPass::HelperPrintBasicBlockPredicate() {
     string comment =
         ""
         "  /**\n"
@@ -1156,7 +1174,6 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPredicate(){
         "    * Connecting basic blocks to predicate instructions\n"
         "    */\n";
     printCode(comment);
-
 
     // Iterate over branch instruction and connect them their BasicBlock
     if (instruction_branch.size() == 0)
@@ -1197,14 +1214,10 @@ void DataflowGeneratorPass::PrintBranchBasicBlockCon(Instruction &ins) {
 
         result = ins_template.render(command);
         printCode(result);
-
-        // outs() << basic_block_info[branch_ins->getSuccessor(i)].name << "\n";
     }
 }
 
-
-void DataflowGeneratorPass::HelperPrintBasicBlockPhi(){
-
+void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
     string comment =
         "  /**\n"
         "    * Connecting PHI Masks\n"
@@ -1212,20 +1225,18 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi(){
         "  //Connect PHI node\n";
     printCode(comment);
 
-    if(instruction_phi.size() == 0){
+    if (instruction_phi.size() == 0) {
         comment = comment + "  // There is no PHI node";
         printCode(comment);
     }
 
-    else{
-        std::for_each(
-            instruction_phi.begin(), instruction_phi.end(),
-            [this](Instruction *ins) { DataflowGeneratorPass::PrintPHIMask(*ins); });
+    else {
+        std::for_each(instruction_phi.begin(), instruction_phi.end(),
+                      [this](Instruction *ins) {
+                          DataflowGeneratorPass::PrintPHIMask(*ins);
+                      });
     }
-
 }
-
-
 
 void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
@@ -1495,7 +1506,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "{{pred_ins}}.io.SuccOp(0)\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("pred_ins", instruction_info[mp].name);
-                outs() << ins_template.render(command);
+                printCode(ins_template.render(command));
             }
             printCode("\n");
 
@@ -1543,42 +1554,45 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                              ins.getOperand(c))]
                             .name);
                 }
-            }
-            else{
-
+            } else {
                 // If the input is function argument
                 if (tmp_find_arg != function_argument.end()) {
                     // First get the instruction
                     auto op_ins = ins.getOperand(c);
                     auto op_arg = dyn_cast<llvm::Argument>(op_ins);
-   
+
                     comment = "";
-                    //comment =
-                        //"  // Wiring Store instruction to the function "
-                        //"argument\n";
-                    command = "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n";
+                    // comment =
+                    //"  // Wiring Store instruction to the function "
+                    //"argument\n";
+                    command =
+                        "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n";
                     command =
                         "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name", argument_info[op_arg].name);
+                    ins_template.set("operand_name",
+                                     argument_info[op_arg].name);
                 } else {
                     // If the store input comes from an instruction
-                    //comment =
-                        //"  // Wiring Store instruction to the parent instruction\n";
+                    // comment =
+                    //"  // Wiring Store instruction to the parent
+                    //instruction\n";
                     comment = "";
                     command =
                         "  {{ins_name}}.io.inData <> {{operand_name}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-    
+
                     ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name",
-                                     instruction_info[dyn_cast<llvm::Instruction>(
-                                                          ins.getOperand(c))]
-                                         .name);
+                    ins_template.set(
+                        "operand_name",
+                        instruction_info[dyn_cast<llvm::Instruction>(
+                                             ins.getOperand(c))]
+                            .name);
                 }
 
-                //command.append("Amirali\n");
-                command.append("  {{ins_name}}.io.memResp  <> "
+                // command.append("Amirali\n");
+                command.append(
+                    "  {{ins_name}}.io.memResp  <> "
                     "StackFile.io.WriteOut({{ins_index}})\n"
                     "  StackFile.io.WriteIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n"
@@ -1756,16 +1770,13 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
         } else {
             ins.dump();
-            //assert(!"The instruction is not supported in the dataflow connection phase");
+            // assert(!"The instruction is not supported in the dataflow
+            // connection phase");
         }
     }
 }
 
-
-
-
-void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F){
-
+void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
     string comment =
         "  /**\n"
         "    * Connecting Dataflow signals\n"
@@ -1792,9 +1803,31 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F){
         }
     }
 
-    outs() << "}\n";
+    printCode("}\n");
+}
 
+void DataflowGeneratorPass::HelperPrintLoop(Function &F) {
+    auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    if (getLoops(LI).size() == 0)
+        printCode("  //Function doesn't have any loop");
+    else {
+        LuaTemplater ins_template;
 
+        for (auto &L : getLoops(LI)) {
+            auto Loc = L->getStartLoc();
+            auto Filename = getBaseName(Loc->getFilename().str());
+
+            //TODO Fix number of inputs and outputs for loop head
+            //TODO Do we need output anymore?
+            string loop_define =
+                "  val {{ins_name}} = "
+                "Module(new LoopHeader(NumInputs = NumInputs, NumOuts = 4, ID "
+                "= 0)(p))\n";
+
+            ins_template.set("ins_name", "loop_L_" + std::to_string(Loc.getLine()));
+            printCode(ins_template.render(loop_define));
+        }
+    }
 }
 
 /**
@@ -1837,15 +1870,20 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     PrintDatFlowAbstractIO(F);
 
     // Step4:
-    // Printing BasicBlock definitions
-    printHeader("Printing BasicBlocks");
-    HelperPrintBBInit(F);
-
-    // Step5:
     // Printing Memory system and Stackfile
     printHeader("Printing Memory System");
     PrintStackFile();
     PrintCacheMem();
+
+    // Step5:
+    // Printing BasicBlock definitions
+    printHeader("Printing BasicBlocks");
+    HelperPrintBBInit(F);
+
+    // Step6:
+    // Printing Loop headers
+    printHeader("Printing Loop Headers");
+    HelperPrintLoop(F);
 
     // Step6:
     // Printing Instruction initialization
@@ -1869,7 +1907,6 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
 
-
-    //Closing the object
+    // Closing the object
     printCode("}\n");
 }

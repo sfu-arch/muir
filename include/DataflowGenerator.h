@@ -9,6 +9,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 #include "Common.h"
 #include "NodeType.h"
@@ -125,6 +126,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintZextIns(Instruction &);
 
     void PrintParamObject();
+
+    void HelperPrintLoop(llvm::Function &);
 
     void HelperPrintBasicBlockPredicate();
     void PrintBranchBasicBlockCon(Instruction &);
