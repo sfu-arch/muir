@@ -100,6 +100,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void FillFunctionArg(llvm::Function &);
 
     void PrintHelperObject(llvm::Function &);
+    void PrintDatFlowAbstractIO(llvm::Function &);
+    void printHeader(string );
 
     void NamingBasicBlock(llvm::Function &);
     void NamingInstruction(llvm::Function &);
@@ -108,6 +110,32 @@ class DataflowGeneratorPass : public llvm::ModulePass {
      * Print functions
      */
     void generateImportSection();
+    void HelperPrintBBInit(llvm::Function &);
+    void PrintBasicBlockInit(llvm::BasicBlock &);
+
+    void HelperPrintInistInit(llvm::Function &);
+    void PrintInstInit(Instruction &);
+    void PrintBinaryComparisionIns(Instruction &);
+    void PrintBranchIns(Instruction &);
+    void PrintPHIIns(Instruction &);
+    void PrintGepIns(Instruction &);
+    void PrintLoadIns(Instruction &);
+    void PrintStoreIns(Instruction &);
+    void PrintSextIns(Instruction &);
+    void PrintZextIns(Instruction &);
+
+    void PrintParamObject();
+
+    void HelperPrintBasicBlockPredicate();
+    void PrintBranchBasicBlockCon(Instruction &);
+    void HelperPrintBasicBlockPhi();
+    void PrintPHIMask(llvm::Instruction &);
+
+    void HelperPrintInstructionDF(llvm::Function &);
+    void PrintDataFlow(llvm::Instruction &);
+    // Get instruction type
+
+    void PrintStackFile();
 
     /**
      * Print method gets called right after the pass finishes

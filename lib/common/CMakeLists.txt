@@ -4,4 +4,5 @@ if(RT32 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 add_library(common
+    Common.cpp
     Helpers.cpp)
