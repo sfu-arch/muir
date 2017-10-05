@@ -252,6 +252,8 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
                 instruction_load.push_back(&Ins);
             else if (ins_type == TStore)
                 instruction_store.push_back(&Ins);
+            else if (ins_type == TAlloca)
+                instruction_alloca.push_back(&Ins);
         }
     }
 }
@@ -1094,10 +1096,13 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
     printCode(result);
 }
 
-void DataflowGeneratorPass::PrintStackFile() {
+/**
+ * Printing instantiating the Registerfile
+ */
+void DataflowGeneratorPass::PrintRegisterFile() {
     string command =
-        "\tval StackFile = Module(new "
-        "TypeStackFile(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}})"
+        "\tval RegisterFile = Module(new "
+        "TypeRegisterFile(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}})"
         "\n"
         "\t\t            (WControl=new "
         "WriteMemoryController(NumOps={{store_num}},BaseSize=2,NumEntries=2))\n"
@@ -1111,6 +1116,23 @@ void DataflowGeneratorPass::PrintStackFile() {
     string result = stack_template.render(command);
     printCode(result);
 }
+
+/**
+ * Instantiating the StackPointer
+ */
+void DataflowGeneratorPass::PrintStackPointer(){
+
+    string command =
+        "\tval StackPointer = Module(new "
+        "Stack(NumOps = {{num_ops}})\n";
+
+    LuaTemplater stack_template;
+    stack_template.set("num_ops", static_cast<int>(instruction_alloca.size()));
+
+    string result = stack_template.render(command);
+    printCode(result);
+}
+
 
 void DataflowGeneratorPass::PrintCacheMem() {
     string command =
@@ -1459,8 +1481,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "StackFile.io.ReadOut({{ins_index}})\n"
-                    "  StackFile.io.ReadIn({{ins_index}}) <> "
+                    "RegisterFile.io.ReadOut({{ins_index}})\n"
+                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -1474,8 +1496,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                     "  {{ins_name}}.io.memResp  <> "
-                    "StackFile.io.ReadOut({{ins_index}})\n"
-                    "  StackFile.io.ReadIn({{ins_index}}) <> "
+                    "RegisterFile.io.ReadOut({{ins_index}})\n"
+                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -1532,8 +1554,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     command =
                         "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n";
                     //"  {{ins_name}}.io.memResp  <> "
-                    //"StackFile.io.WriteOut({{ins_index}})\n"
-                    //"  StackFile.io.WriteIn({{ins_index}}) <> "
+                    //"RegisterFile.io.WriteOut({{ins_index}})\n"
+                    //"  RegisterFile.io.WriteIn({{ins_index}}) <> "
                     //"{{ins_name}}.io.memReq\n\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
@@ -1593,8 +1615,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 // command.append("Amirali\n");
                 command.append(
                     "  {{ins_name}}.io.memResp  <> "
-                    "StackFile.io.WriteOut({{ins_index}})\n"
-                    "  StackFile.io.WriteIn({{ins_index}}) <> "
+                    "RegisterFile.io.WriteOut({{ins_index}})\n"
+                    "  RegisterFile.io.WriteIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n"
                     "  {{ins_name}}.io.Out(0).ready := true.B\n\n");
             }
@@ -1802,8 +1824,6 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 DataflowGeneratorPass::PrintDataFlow(ins);
         }
     }
-
-    printCode("}\n");
 }
 
 void DataflowGeneratorPass::HelperPrintLoop(Function &F) {
@@ -1872,7 +1892,8 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // Step4:
     // Printing Memory system and Stackfile
     printHeader("Printing Memory System");
-    PrintStackFile();
+    PrintStackPointer();
+    PrintRegisterFile();
     PrintCacheMem();
 
     // Step5:

@@ -53,6 +53,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::vector<llvm::Instruction *> instruction_gep;
     std::vector<llvm::Instruction *> instruction_load;
     std::vector<llvm::Instruction *> instruction_store;
+    std::vector<llvm::Instruction *> instruction_alloca;
 
     std::map<llvm::Instruction *, uint32_t> instruction_use;
 
@@ -138,7 +139,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintDataFlow(llvm::Instruction &);
     // Get instruction type
 
-    void PrintStackFile();
+    void PrintStackPointer();
+    void PrintRegisterFile();
     void PrintCacheMem();
 
     /**
