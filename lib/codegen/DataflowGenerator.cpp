@@ -594,8 +594,23 @@ void DataflowGeneratorPass::HelperPrintInistInit(Function &F) {
         comment = "  // [BasicBlock]" + BB.getName().str() + ":";
         printCode(comment);
         for (auto &INS : BB) {
+
+            //Check wether the instruction is function call
+            //TODO: Implement function call
+            //TODO: Inline the function call
             llvm::CallSite CS(&INS);
-            if (CS) continue;
+            if (CS){
+                // Printing each instruction
+                string init_test = "\n  //";
+                raw_string_ostream out(init_test);
+                out << INS;
+                printCode("\n  // Function Call: " +
+                        CS->getFunction()->getName().str() +
+                        out.str()+"\n");
+                continue;
+            }
+
+
             PrintInstInit(INS);
         }
         printCode("\n");
