@@ -94,6 +94,10 @@ cl::opt<bool> aaTrace(
         "aa-trace", cl::desc("Alias analysis trace"),
         cl::value_desc("T/F {default = true}"), cl::init(false));
 
+cl::opt<bool> lExtract(
+        "l-ex", cl::desc("Extracting loops"),
+        cl::value_desc("T/F {default = true}"), cl::init(false));
+
 cl::opt<string> 
 outFile("o",
         cl::desc("Xketch output file"),
@@ -353,7 +357,8 @@ int main(int argc, char **argv) {
 
 
     //Extracting for loops
-    extractLoops(*module);
+    if(lExtract)
+        extractLoops(*module);
 
     //Labeling instructions
     labelFunctions(*module);

@@ -136,6 +136,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     // Get instruction type
 
     void PrintStackFile();
+    void PrintCacheMem();
 
     /**
      * Print method gets called right after the pass finishes

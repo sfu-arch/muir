@@ -723,11 +723,6 @@ void DataflowGeneratorPass::PrintBranchIns(Instruction &Ins) {
 
     string result = ins_template.render(ins_define);
 
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
-
     // Printing each instruction
     string init_test = "\n  //";
     raw_string_ostream out(init_test);
@@ -758,11 +753,6 @@ void DataflowGeneratorPass::PrintPHIIns(Instruction &Ins) {
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
 
     string result = ins_template.render(ins_define);
-
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
 
     // Printing each instruction
     string init_test = "\n  //";
@@ -827,11 +817,6 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
 
     string result = ins_template.render(ins_define);
 
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
-
     // Printing each instruction
     string init_test = "\n  //";
     raw_string_ostream out(init_test);
@@ -869,11 +854,6 @@ void DataflowGeneratorPass::PrintLoadIns(Instruction &Ins) {
 
     string result = ins_template.render(ins_define);
 
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
-
     // Printing each instruction
     string init_test = "\n  //";
     raw_string_ostream out(init_test);
@@ -893,8 +873,6 @@ void DataflowGeneratorPass::PrintStoreIns(Instruction &Ins) {
         if (in == &Ins) break;
         index++;
     }
-
-    // TODO change the outs to file
 
     LuaTemplater ins_template;
     string ins_define =
@@ -916,11 +894,6 @@ void DataflowGeneratorPass::PrintStoreIns(Instruction &Ins) {
     ins_template.set("route_id", static_cast<int>(index));
 
     string result = ins_template.render(ins_define);
-
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
 
     // Printing each instruction
     string init_test = "\n  //";
@@ -954,11 +927,6 @@ void DataflowGeneratorPass::PrintSextIns(Instruction &Ins) {
 
     string result = ins_template.render(ins_define);
 
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
-
     // Printing each instruction
     string init_test = "\n  //";
     raw_string_ostream out(init_test);
@@ -990,11 +958,6 @@ void DataflowGeneratorPass::PrintZextIns(Instruction &Ins) {
     ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
 
     string result = ins_template.render(ins_define);
-
-    // TODO change the outs to file
-    // outs() << "\n  //";
-    // Ins.print(outs());
-    // outs() << "\n" << result << "\n";
 
     // Printing each instruction
     string init_test = "\n  //";
@@ -1120,7 +1083,7 @@ void DataflowGeneratorPass::PrintStackFile() {
         "\t\t            (WControl=new "
         "WriteMemoryController(NumOps={{store_num}},BaseSize=2,NumEntries=2))\n"
         "\t\t            (RControl=new "
-        "ReadMemoryController(NumOps={{load_num}},BaseSize=2,NumEntries=2)))";
+        "ReadMemoryController(NumOps={{load_num}},BaseSize=2,NumEntries=2)))\n";
 
     LuaTemplater stack_template;
     stack_template.set("load_num", static_cast<int>(instruction_load.size()));
@@ -1129,6 +1092,27 @@ void DataflowGeneratorPass::PrintStackFile() {
     string result = stack_template.render(command);
     printCode(result);
 }
+
+
+void DataflowGeneratorPass::PrintCacheMem() {
+    string command =
+        "\tval CacheMem = Module(new "
+        "UnifiedController(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}})"
+        "\n"
+        "\t\t            (WControl=new "
+        "WriteMemoryController(NumOps={{store_num}},BaseSize=2,NumEntries=2))\n"
+        "\t\t            (RControl=new "
+        "ReadMemoryController(NumOps={{load_num}},BaseSize=2,NumEntries=2))\n"
+        "\t\t            (RWArbiter=new ReadWriteArbiter()))";
+
+    LuaTemplater stack_template;
+    stack_template.set("load_num", static_cast<int>(instruction_load.size()));
+    stack_template.set("store_num", static_cast<int>(instruction_store.size()));
+
+    string result = stack_template.render(command);
+    printCode(result);
+}
+
 
 void DataflowGeneratorPass::PrintParamObject() {
     string param =
@@ -1859,8 +1843,9 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step5:
     // Printing Memory system and Stackfile
-    printHeader("Printing StackFile");
+    printHeader("Printing Memory System");
     PrintStackFile();
+    PrintCacheMem();
 
     // Step6:
     // Printing Instruction initialization
