@@ -125,6 +125,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintStoreIns(Instruction &);
     void PrintSextIns(Instruction &);
     void PrintZextIns(Instruction &);
+    void PrintAllocaIns(Instruction &);
 
     void PrintParamObject();
 

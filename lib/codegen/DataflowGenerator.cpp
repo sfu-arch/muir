@@ -310,6 +310,8 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
     uint32_t counter = 0;
     for (auto &BB : F) {
         for (auto &INS : BB) {
+
+            //TODO Add support for function calls
             llvm::CallSite CS(&INS);
             if (CS) continue;
             instruction_info[&INS] = {"m_" + to_string(this->count_ins++),
@@ -990,6 +992,42 @@ void DataflowGeneratorPass::PrintZextIns(Instruction &Ins) {
     printCode(out.str() + "\n" + result + "\n");
 }
 
+void DataflowGeneratorPass::PrintAllocaIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    auto ins_cast = dyn_cast<llvm::CastInst>(&Ins);
+    auto DL = Ins.getModule()->getDataLayout();
+
+
+    uint32_t index = 0;
+    for (auto in : instruction_alloca) {
+        if (in == &Ins) break;
+        index++;
+    }
+
+    LuaTemplater ins_template;
+    string ins_define =
+        "  val {{ins_name}} = "
+        "Module(new AllocaNode(NumOuts={{num_out}}, RouteID={{num_rout}}, ID={{ins_id}}))";
+
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    ins_template.set("num_rout", static_cast<int>(index));
+    ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
+
+
+
 void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
     // Check if the instruction type is call site return
     CallSite CS(&Ins);
@@ -1007,10 +1045,8 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintBranchIns(Ins);
     } else if (ins_type == TPHINode) {
         PrintPHIIns(Ins);
-
     } else if (ins_type == TGEP) {
         PrintGepIns(Ins);
-
     } else if (ins_type == TLoad) {
         PrintLoadIns(Ins);
     } else if (ins_type == TStore) {
@@ -1019,7 +1055,10 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintSextIns(Ins);
     } else if (ins_type == TZEXT) {
         PrintZextIns(Ins);
-    } else {
+    } else if (ins_type == TAlloca) {
+        PrintAllocaIns(Ins);
+    }
+    else {
         string ins_define =
             "  //val {{ins_name}} = "
             "Module (new {{ins_type}}"
