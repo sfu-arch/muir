@@ -12,22 +12,21 @@ directory within the package.
 
 Building with CMake
 ==============================================
-1. Clone the demo repository.
+1. Clone the repository.
 
-        git clone https://github.com/nsumner/llvm-demo.git
+        git clone git@csil-git1.cs.surrey.sfu.ca:amoeba/xketch-generator.git
 
 2. Create a new directory for building.
 
-        mkdir demobuild
+        mkdir build
 
 3. Change into the new directory.
 
-        cd demobuild
+        cd build
 
 4. Run CMake with the path to the LLVM source.
 
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=True \
-            -DLLVM_DIR=</path/to/LLVM/build>/lib/cmake/llvm/ ../llvm-demo
+        cmake -DLLVM_DIR=</path/to/LLVM/build>/lib/cmake/llvm/ ../
 
 5. Run make inside the build directory:
 
