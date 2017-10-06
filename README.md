@@ -44,17 +44,14 @@ Running
 
 First suppose that you have a program compiled to bitcode:
 
-    clang -g -c -emit-llvm ../llvm-demo/test/simpletest.c -o calls.bc
+    clang -emit-llvm -m32 -S loop.c -o - | opt -mem2reg -dot-cfg -o loop.bc
 
-Running the dynamic call printer:
+Runing the generator:
 
-    bin/callcounter -dynamic calls.bc -o calls
-    ./calls
+    ./bin/xketch ../test/loop.bc -fn-name=foo -o test-for.scala && llvm-dis final.bc
 
-Running the static call printer:
+    -fn-name:           Target function
+    -l-ex:<false/true>  Extracting the loops of the function
+    -aa-Trace:          Printing memory traces
 
-    bin/callcounter -static calls.bc
 
-or by loading the pass as a plugin for `opt`:
-
-    opt -analyze -load lib/libcallcounter-lib.so -callcounter calls.bc
