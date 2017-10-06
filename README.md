@@ -50,6 +50,7 @@ Runing the generator:
     ./bin/xketch ../test/loop.bc -fn-name=foo -o test-for.scala && llvm-dis final.bc
 
     -fn-name:           Target function
+    -o:                 Generate Xketch file for the target function
     -l-ex:<false/true>  Extracting the loops of the function
     -aa-Trace:          Printing memory traces
 
