@@ -96,7 +96,7 @@ cl::opt<bool> aaTrace(
 
 cl::opt<bool> lExtract(
         "l-ex", cl::desc("Extracting loops"),
-        cl::value_desc("T/F {default = true}"), cl::init(false));
+        cl::value_desc("T/F {default = false}"), cl::init(false));
 
 cl::opt<string> 
 outFile("o",

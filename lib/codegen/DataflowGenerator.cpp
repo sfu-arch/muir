@@ -1368,10 +1368,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "argument\n";
                 if (c == 0)
                     command =
-                        "  {{ins_name}}.io.LeftIO <> io.{{operand_name}}\n\n";
+                        "  {{ins_name}}.io.LeftIO <> io.{{operand_name}}\n";
                 else
                     command =
-                        "  {{ins_name}}.io.RightIO <> io.{{operand_name}}\n\n";
+                        "  {{ins_name}}.io.RightIO <> io.{{operand_name}}\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
@@ -1403,23 +1403,29 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             }
 
             // Print the code
-            printCode(comment + ins_template.render(command) + "\n");
+            printCode(comment + ins_template.render(command));
         }
 
-        else if (ins_type == TCBranchInst && ins.getNumOperands() == 1) {
-            comment = " // Wiring Branch instruction\n";
-            command =
-                "{{ins_name}}.io.CmpIO <> {{operand_name}}.io.Out"
-                "(param.{{ins_name}}_brn_cmp(\"{{operand_name}}\"))\n";
-            ins_template.set("ins_name", instruction_info[&ins].name);
-            ins_template.set(
-                "operand_name",
-                instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
-                    .name);
+        /**
+         * If the instruction is conditional branch
+         */
+        else if (ins_type == TCBranchInst) {
+            //In conditional branch only the first input is data dependence
+            //the rest two inputs are control dependence
+            if (c == 0) {
+                comment = "  // Wiring Branch instruction\n";
+                command =
+                    "  {{ins_name}}.io.CmpIO <> {{operand_name}}.io.Out"
+                    "(param.{{ins_name}}_brn_cmp(\"{{operand_name}}\"))\n";
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name",
+                                 instruction_info[dyn_cast<llvm::Instruction>(
+                                                      ins.getOperand(c))]
+                                     .name);
 
-            printCode(comment + ins_template.render(command));
-        } else if (ins_type == TCBranchInst)
-            continue;
+                printCode(comment + ins_template.render(command));
+            }
+        }
         else if (ins_type == TGEP) {
             auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
             auto tmp_find_arg = find(function_argument.begin(),
@@ -1832,7 +1838,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
         } else {
             ins.dump();
-             assert(!"The instruction is not supported in the dataflow connection phase");
+            assert(!"The instruction is not supported in the dataflow connection phase");
         }
     }
 }
@@ -1846,6 +1852,7 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
 
     for (auto &BB : F) {
         for (auto &ins : BB) {
+            // TODO supporting for function calls
             CallSite CS(&ins);
             if (CS.isCall()) continue;
 
@@ -1856,8 +1863,8 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 // We have already connected the PHI nodes
                 continue;
             else if (InstructionTypeNode(ins) == TReturnInst)
-                // We have to support return in another fashion
                 // TODO connect return instruction
+                // We have to support return in another fashion
                 continue;
             else
                 DataflowGeneratorPass::PrintDataFlow(ins);
