@@ -1410,8 +1410,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * If the instruction is conditional branch
          */
         else if (ins_type == TCBranchInst) {
-            //In conditional branch only the first input is data dependence
-            //the rest two inputs are control dependence
+            // In conditional branch only the first input is data dependence
+            // the rest two inputs are control dependence
             if (c == 0) {
                 comment = "  // Wiring Branch instruction\n";
                 command =
@@ -1426,46 +1426,37 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 printCode(comment + ins_template.render(command));
             }
         }
-        else if (ins_type == TGEP) {
-            auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
-            auto tmp_find_arg = find(function_argument.begin(),
-                                     function_argument.end(), tmp_fun_arg);
 
+        /**
+         * Handeling the GEP instruction
+         * All the GEPs are simplified by
+         * createSeparateConstOffsetFromGEPPass
+         * Therefor, they shouldn't have more than at most three inputs
+         */
+        else if (ins_type == TGEP) {
+            // TODO
             // Check if the GEP has two inputs or one
             // Check if it's the baseaddress or index
             // If the input is function argument
+
+            // First get the instruction
             if (tmp_find_arg != function_argument.end()) {
-                // First get the instruction
                 auto op_ins = ins.getOperand(0);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
 
                 comment =
                     "  // Wiring GEP instruction to the function "
                     "argument\n";
-                if (c == 0) {
-                    command =
-                        "  {{ins_name}}.io.baseAddress <> "
-                        "io.{{operand_name}}\n\n";
-                } else {
-                    command =
-                        "  {{ins_name}}.io.{{ins_input}} <> "
-                        "io.{{operand_name}}\n\n";
-                    // command =
-                    //"  {{ins_name}}.io.{{ins_input}} <> "
-                    //"{{operand_name}}.io.Out"
-                    //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n\n";
-                }
-                // XXX uncomment if needed
-                // command =
-                //"  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
-                //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+
+                command =
+                    "  {{ins_name}}.io.{{ins_input}} <> "
+                    "io.{{operand_name}}\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set(
                     "operand_name",
                     argument_info[dyn_cast<llvm::Argument>(ins.getOperand(c))]
                         .name);
-                // ins_template.set("operand_name", argument_info[op_arg].name);
             }
             // If the input is constant
             else if (operand_const) {
@@ -1500,10 +1491,16 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 ins_template.set("ins_input", "idx1");
             else if (c == 2)
                 ins_template.set("ins_input", "idx2");
+            else
+                assert(!"The GEP instruction is not simplified!");
 
             printCode(comment + ins_template.render(command));
 
-        } else if (ins_type == TLoad) {
+        }
+        /**
+         * Connecting LOAD instructions
+         */
+        else if (ins_type == TLoad) {
             auto operand = ins.getOperand(c);
 
             // Input of the load alwasy comes from GEP instruction
@@ -1578,7 +1575,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             }
             printCode("\n");
 
-        } else if (ins_type == TStore) {
+        }
+        /**
+         * Print Store instructions
+         */
+        else if (ins_type == TStore) {
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
             auto operand = ins.getOperand(c);
 
