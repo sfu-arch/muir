@@ -98,6 +98,11 @@ cl::opt<bool> lExtract(
         "l-ex", cl::desc("Extracting loops"),
         cl::value_desc("T/F {default = false}"), cl::init(false));
 
+
+cl::opt<bool> testCase(
+        "test-file", cl::desc("Printing Test file"),
+        cl::value_desc("T/F {default = True}"), cl::init(true));
+
 cl::opt<string> 
 outFile("o",
         cl::desc("Xketch output file"),

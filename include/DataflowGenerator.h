@@ -62,6 +62,10 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_succ;
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_pred;
 
+    std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveins;
+    std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveouts;
+
+
     llvm::BasicBlock *entry_bb;
 
     // Instruction counters

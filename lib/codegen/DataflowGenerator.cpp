@@ -9,6 +9,7 @@
 #include "luacpptemplater/LuaTemplater.h"
 
 #include <queue>
+#include <set>
 #include <string>
 
 #include "AliasMem.h"
@@ -40,13 +41,30 @@ static SetVector<Loop *> getLoops(LoopInfo &LI) {
         }
         Loops.insert(L);
     }
-
     return Loops;
 }
 
 static string getBaseName(string Path) {
     auto Idx = Path.find_last_of('/');
     return Idx == string::npos ? Path : Path.substr(Idx + 1);
+}
+
+/// definedInCaller - Return true if the specified value is defined in the
+/// function being code extracted, but not in the region being extracted.
+/// These values must be passed in as live-ins to the function.
+bool definedInCaller(const SetVector<BasicBlock *> &Blocks, Value *V) {
+    if (isa<Argument>(V)) return true;
+    if (Instruction *I = dyn_cast<Instruction>(V))
+        if (!Blocks.count(I->getParent())) return true;
+    return false;
+}
+
+/// definedInRegion - Return true if the specified value is defined in the
+/// extracted region.
+bool definedInRegion(const SetVector<BasicBlock *> &Blocks, Value *V) {
+    if (Instruction *I = dyn_cast<Instruction>(V))
+        if (Blocks.count(I->getParent())) return true;
+    return false;
 }
 
 /**
@@ -188,7 +206,6 @@ void DataflowGeneratorPass::printHeader(string header) {
         "   *                   " +
         header + header_final + tmp_line;
     printCode(tmp_line);
-    // out << tmp_line;
 }
 
 // For an analysis pass, runOnModule should perform the actual analysis and
@@ -1716,8 +1733,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 // TODO handle struct type
                 if (alloca_type->isArrayTy()) {
-
-                    //Connecting AllocaIO input
+                    // Connecting AllocaIO input
                     auto num_byte = DL.getTypeAllocSize(alloca_type);
                     command =
                         "  {{ins_name}}.io.allocaInputIO.bits.size      := "
@@ -1730,7 +1746,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "true.B\n\n"
                         "  // Connecting Alloca to Stack\n";
 
-
                     // Connectin Alloca to StackPointer
                     //
                     // Getting Alloca index
@@ -1740,14 +1755,15 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         index++;
                     }
 
-                    command = command + 
-                        "  StackPointer.io.InData({{sp_index}}) <> {{ins_name}}.io.allocaReqIO\n"
-                        "  {{ins_name}}.io.allocaRespIO <> StackPointer.io.OutData({{sp_index}})\n";
+                    command = command +
+                              "  StackPointer.io.InData({{sp_index}}) <> "
+                              "{{ins_name}}.io.allocaReqIO\n"
+                              "  {{ins_name}}.io.allocaRespIO <> "
+                              "StackPointer.io.OutData({{sp_index}})\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("num_byte", static_cast<int>(num_byte));
                     ins_template.set("sp_index", static_cast<int>(index));
-
 
                 } else if (alloca_type->isStructTy())
                     assert(!"We don't support alloca for struct for now!");
@@ -1982,6 +1998,7 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
     auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     if (getLoops(LI).size() == 0)
         printCode("  //Function doesn't have any loop");
+
     else {
         // Printing header part of each loop
         LuaTemplater ins_template;
@@ -2000,6 +2017,39 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
             ins_template.set("ins_name",
                              "loop_L_" + std::to_string(Loc.getLine()));
             printCode(ins_template.render(loop_define));
+
+            // Dtecting live-ins and live-outs
+            std::set<Value *> liveIns;
+            std::set<Value *> liveOuts;
+
+            llvm::SetVector<llvm::BasicBlock *> tmp_bb(L->blocks().begin(),
+                                                       L->blocks().end());
+            for (auto B : L->blocks()) {
+                for (auto &I : *B) {
+                    // Detecting Live-ins
+                    for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
+                        Value *V = *OI;
+
+                        // Detecting instructions
+                        if (Instruction *I = dyn_cast<Instruction>(V)) {
+                            if (!L->contains(I) && definedInCaller(tmp_bb, V)) {
+                                liveIns.insert(V);
+                            }
+                        }
+                        // Detecting function arguments
+                        else if (isa<Argument>(V))
+                            liveIns.insert(V);
+                    }
+
+                    for (auto *U : I.users()) {
+                        if (!definedInRegion(tmp_bb, U)) 
+                            liveOuts.insert(&I);
+                    }
+                }
+            }
+
+            this->loop_liveins[L]  = liveIns;
+            this->loop_liveouts[L] = liveOuts;
         }
     }
 }
@@ -2031,7 +2081,8 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step2: Printing helper param object
     //
-    // This object contains mapping from each instructions to their consequent
+    // This object contains mapping from each instructions to their
+    // consequent
     // instructions and basic blocks
     // Since we have to use indexes to to connect differet modules to getter
     // we use this mapping so that instead of using pure indexes we can use
