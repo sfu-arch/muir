@@ -8,8 +8,8 @@
 
 #include "luacpptemplater/LuaTemplater.h"
 
-#include <string>
 #include <queue>
+#include <string>
 
 #include "AliasMem.h"
 #include "Common.h"
@@ -1503,13 +1503,13 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * Connecting LOAD instructions
          */
         else if (ins_type == TLoad) {
-
-            // Input of the load comes from either GEP instructions or function arguments
+            // Input of the load comes from either GEP instructions or function
+            // arguments
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
 
-            // If the input is function argument then it should get connect to Cache system
+            // If the input is function argument then it should get connect to
+            // Cache system
             if (tmp_find_arg != function_argument.end()) {
-
                 // First get the instruction
                 auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
@@ -1530,8 +1530,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             }
 
             else if (gep_ins) {
-                //TODO Why the second condition?
-                //else if (gep_ins || ins.getOperand(c)->getType()->isPointerTy()) {
+                // TODO Why the second condition?
+                // else if (gep_ins ||
+                // ins.getOperand(c)->getType()->isPointerTy()) {
                 comment =
                     "  // Wiring Load instruction to the parent instruction\n";
                 command =
@@ -1577,8 +1578,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             printCode("\n");
 
         }
-
-
 
         /**
          * Print Store instructions
@@ -1700,53 +1699,53 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
         else if (ins_type == TAlloca) {
             /**
-             * In Alloca instruction we need to compute size of bytes which we asked
+             * In Alloca instruction we need to compute size of bytes which we
+             * asked
              * The first case is the alloca size static
              * TODO The second case is the alloca size dynamic
              */
 
             comment = "  // Wiring Alloca instructions with Static inputs\n";
-            if(c == 0){
-
-                //Get the alloca instruction
+            if (c == 0) {
+                // Get the alloca instruction
                 auto alloca_ins = dyn_cast<llvm::AllocaInst>(&ins);
                 auto alloca_type = alloca_ins->getAllocatedType();
 
                 // Getting datalayout to compute the size of the variables
                 auto DL = ins.getModule()->getDataLayout();
 
-                //TODO handle struct type
-                if(alloca_type->isArrayTy()){
-
+                // TODO handle struct type
+                if (alloca_type->isArrayTy()) {
                     auto num_byte = DL.getTypeAllocSize(alloca_type);
                     command =
-                        "  {{ins_name}}.io.allocaInputIO.bits.size      := 1.U\n"
-                        "  {{ins_name}}.io.allocaInputIO.bits.numByte   := {{num_byte}}.U\n"
-                        "  {{ins_name}}.io.allocaInputIO.bits.predicate := true.B\n"
-                        "  {{ins_name}}.io.allocaInputIO.bits.valid     := true.B\n";
+                        "  {{ins_name}}.io.allocaInputIO.bits.size      := "
+                        "1.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.numByte   := "
+                        "{{num_byte}}.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
+                        "true.B\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("num_byte", static_cast<int>(num_byte));
 
-                }
-                else if(alloca_type->isStructTy())
+                } else if (alloca_type->isStructTy())
                     assert(!"We don't support alloca for struct for now!");
                 else
                     assert(!"Unknown alloca type!");
 
-
-
                 // First get the instruction
-                //comment = "  // Wiring Alloca instructions\n";
+                // comment = "  // Wiring Alloca instructions\n";
 
-                //command = "";
-                //if (c == 0)
-                    //command =
-                        //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-                        //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-                //else
-                    //command = "  {{ins_name}}.io.type <> insType\n";
-                //ins_template.set("ins_name", instruction_info[&ins].name);
+                // command = "";
+                // if (c == 0)
+                // command =
+                //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
+                //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                // else
+                // command = "  {{ins_name}}.io.type <> insType\n";
+                // ins_template.set("ins_name", instruction_info[&ins].name);
                 // ins_template.set(
                 //"operand_name",
                 // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
@@ -1754,8 +1753,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 printCode(comment + ins_template.render(command) + "\n");
 
-            }
-            else
+            } else
                 assert(!"Alloca can not have more than one operand");
         }
 
@@ -1939,6 +1937,41 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
 }
 
 /**
+ * Printing BasicBlock enable signals
+ */
+void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
+    LuaTemplater ins_template;
+    string comment =
+        "  /**\n"
+        "    * Wireing enable signals to the instructions\n"
+        "    */\n"
+        "  //Wiring enable signals\n";
+
+    printCode(comment);
+
+    for (auto &BB : F) {
+        for (auto &ins : BB) {
+            llvm::CallSite CS(&ins);
+            if (CS) continue;
+            string command = "";
+            if (isa<llvm::ReturnInst>(ins))
+                command =
+                    "  //{{ins_name}}.io.enable <> {{bb_name}}.io.Out"
+                    "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
+            else
+                command =
+                    "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
+                    "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
+            ins_template.set("ins_name", instruction_info[&ins].name);
+            ins_template.set("bb_name", basic_block_info[&BB].name);
+            printCode(ins_template.render(command));
+        }
+
+        printCode("\n");
+    }
+}
+
+/**
  * Helper function for printing serial loops
  */
 void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
@@ -2030,7 +2063,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     HelperPrintInistInit(F);
 
     // Step 7:
-    // Intiating the parameters object
+    // Initilizing the parameters object
     printHeader("Initializing Param");
     PrintParamObject();
 
@@ -2038,6 +2071,10 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // Connecting enable signal of BasicBlocks
     printHeader("Connecting BasicBlocks to Predicate Instructions");
     HelperPrintBasicBlockPredicate();
+
+    printHeader("Connecting BasicBlocks to instructions");
+    PrintBasicBlockEnableInstruction(F);
+
     // Connecting BasicBlock masks to their Phi nodes
     HelperPrintBasicBlockPhi();
 
