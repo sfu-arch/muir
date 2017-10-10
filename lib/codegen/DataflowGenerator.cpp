@@ -9,6 +9,7 @@
 #include "luacpptemplater/LuaTemplater.h"
 
 #include <string>
+#include <queue>
 
 #include "AliasMem.h"
 #include "Common.h"
@@ -1502,16 +1503,15 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * Connecting LOAD instructions
          */
         else if (ins_type == TLoad) {
+
             // Input of the load comes from either GEP instructions or function arguments
-
-
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
 
-            // If the input is function argument then it should gets connect to Cache system
+            // If the input is function argument then it should get connect to Cache system
             if (tmp_find_arg != function_argument.end()) {
 
                 // First get the instruction
-                auto op_ins = ins.getOperand(0);
+                auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
 
                 comment =
@@ -1521,7 +1521,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  RegisterFile.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
@@ -1529,13 +1529,15 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 ins_template.set("operand_name", argument_info[op_arg].name);
             }
 
-            else if (gep_ins || ins.getOperand(c)->getType()->isPointerTy()) {
+            else if (gep_ins) {
+                //TODO Why the second condition?
+                //else if (gep_ins || ins.getOperand(c)->getType()->isPointerTy()) {
                 comment =
                     "  // Wiring Load instruction to the parent instruction\n";
                 command =
                     "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
-                    "  {{ins_name}}.io.memResp  <> "
+                    "  {{ins_name}}.io.memResp <> "
                     "RegisterFile.io.ReadOut({{ins_index}})\n"
                     "  RegisterFile.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
@@ -1694,6 +1696,67 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 printCode("\n");
             }
 
+        }
+
+        else if (ins_type == TAlloca) {
+            /**
+             * In Alloca instruction we need to compute size of bytes which we asked
+             * The first case is the alloca size static
+             * TODO The second case is the alloca size dynamic
+             */
+
+            comment = "  // Wiring Alloca instructions with Static inputs\n";
+            if(c == 0){
+
+                //Get the alloca instruction
+                auto alloca_ins = dyn_cast<llvm::AllocaInst>(&ins);
+                auto alloca_type = alloca_ins->getAllocatedType();
+
+                // Getting datalayout to compute the size of the variables
+                auto DL = ins.getModule()->getDataLayout();
+
+                //TODO handle struct type
+                if(alloca_type->isArrayTy()){
+
+                    auto num_byte = DL.getTypeAllocSize(alloca_type);
+                    command =
+                        "  {{ins_name}}.io.allocaInputIO.bits.size      := 1.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.numByte   := {{num_byte}}.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.predicate := true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.valid     := true.B\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("num_byte", static_cast<int>(num_byte));
+
+                }
+                else if(alloca_type->isStructTy())
+                    assert(!"We don't support alloca for struct for now!");
+                else
+                    assert(!"Unknown alloca type!");
+
+
+
+                // First get the instruction
+                //comment = "  // Wiring Alloca instructions\n";
+
+                //command = "";
+                //if (c == 0)
+                    //command =
+                        //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
+                        //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                //else
+                    //command = "  {{ins_name}}.io.type <> insType\n";
+                //ins_template.set("ins_name", instruction_info[&ins].name);
+                // ins_template.set(
+                //"operand_name",
+                // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
+                //.name);
+
+                printCode(comment + ins_template.render(command) + "\n");
+
+            }
+            else
+                assert(!"Alloca can not have more than one operand");
         }
 
         else if (ins_type == TPtrToInt) {
