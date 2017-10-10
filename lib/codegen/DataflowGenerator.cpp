@@ -1008,6 +1008,34 @@ void DataflowGeneratorPass::PrintZextIns(Instruction &Ins) {
     printCode(out.str() + "\n" + result + "\n");
 }
 
+void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    auto ins_cast = dyn_cast<llvm::CastInst>(&Ins);
+    auto DL = Ins.getModule()->getDataLayout();
+
+    LuaTemplater ins_template;
+    string ins_define =
+        "  val {{ins_name}} = "
+        "Module(new RetNode(NumOuts={{num_out}}, ID={{ins_id}}))";
+
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    if (Ins.getNumUses() == 0)
+        ins_template.set("num_out", static_cast<int>(Ins.getNumUses() + 1));
+
+    ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
 void DataflowGeneratorPass::PrintAllocaIns(Instruction &Ins) {
     // Get instruction type
     auto ins_type = InstructionTypeNode(Ins);
@@ -1070,6 +1098,8 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintZextIns(Ins);
     } else if (ins_type == TAlloca) {
         PrintAllocaIns(Ins);
+    } else if (ins_type == TReturnInst) {
+        PrintRetIns(Ins);
     } else {
         string ins_define =
             "  //val {{ins_name}} = "
@@ -1776,6 +1806,27 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 assert(!"Alloca can not have more than one operand");
         }
 
+        else if (ins_type == TReturnInst) {
+            // First get the instruction
+            comment = "  // Wiring return instructions\n";
+            command = "";
+            if (c == 0)
+                command =
+                    "  {{ins_name}}.io.InputIO <> {{operand_name}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
+                    "  io.result <. {{ins_name}}.io.Out(0)\n";
+            else
+                assert(!"Return instruction cannot have more than one input");
+
+            ins_template.set("ins_name", instruction_info[&ins].name);
+            ins_template.set(
+                "operand_name",
+                instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
+                    .name);
+
+            printCode(comment + ins_template.render(command) + "\n");
+        }
+
         else if (ins_type == TPtrToInt) {
             // TODO add tptrtoint
             // First get the instruction
@@ -1945,10 +1996,10 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
             else if (InstructionTypeNode(ins) == TPHINode)
                 // We have already connected the PHI nodes
                 continue;
-            else if (InstructionTypeNode(ins) == TReturnInst)
-                // TODO connect return instruction
-                // We have to support return in another fashion
-                continue;
+            // else if (InstructionTypeNode(ins) == TReturnInst)
+            // TODO connect return instruction
+            // We have to support return in another fashion
+            // continue;
             else
                 DataflowGeneratorPass::PrintDataFlow(ins);
         }
@@ -1973,14 +2024,9 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             llvm::CallSite CS(&ins);
             if (CS) continue;
             string command = "";
-            if (isa<llvm::ReturnInst>(ins))
-                command =
-                    "  //{{ins_name}}.io.enable <> {{bb_name}}.io.Out"
-                    "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
-            else
-                command =
-                    "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
-                    "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
+            command =
+                "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
+                "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
             ins_template.set("ins_name", instruction_info[&ins].name);
             ins_template.set("bb_name", basic_block_info[&BB].name);
             printCode(ins_template.render(command));
@@ -2018,7 +2064,9 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                              "loop_L_" + std::to_string(Loc.getLine()));
             printCode(ins_template.render(loop_define));
 
-            // Dtecting live-ins and live-outs
+            /**
+             * Detecting Live-in and Live-out of each for loop
+             */
             std::set<Value *> liveIns;
             std::set<Value *> liveOuts;
 
@@ -2042,13 +2090,12 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                     }
 
                     for (auto *U : I.users()) {
-                        if (!definedInRegion(tmp_bb, U)) 
-                            liveOuts.insert(&I);
+                        if (!definedInRegion(tmp_bb, U)) liveOuts.insert(&I);
                     }
                 }
             }
 
-            this->loop_liveins[L]  = liveIns;
+            this->loop_liveins[L] = liveIns;
             this->loop_liveouts[L] = liveOuts;
         }
     }
@@ -2134,6 +2181,9 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step 9:
     // Connecting Instructions in dataflow order
+    printHeader("Connecting LoopHeaders");
+    // TODO Connect the loop headers
+    //
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
 
