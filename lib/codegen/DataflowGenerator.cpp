@@ -1716,6 +1716,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 // TODO handle struct type
                 if (alloca_type->isArrayTy()) {
+
+                    //Connecting AllocaIO input
                     auto num_byte = DL.getTypeAllocSize(alloca_type);
                     command =
                         "  {{ins_name}}.io.allocaInputIO.bits.size      := "
@@ -1725,31 +1727,32 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
                         "true.B\n"
                         "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
-                        "true.B\n";
+                        "true.B\n\n"
+                        "  // Connecting Alloca to Stack\n";
+
+
+                    // Connectin Alloca to StackPointer
+                    //
+                    // Getting Alloca index
+                    uint32_t index = 0;
+                    for (auto in : instruction_alloca) {
+                        if (in == &ins) break;
+                        index++;
+                    }
+
+                    command = command + 
+                        "  StackPointer.io.InData({{sp_index}}) <> {{ins_name}}.io.allocaReqIO\n"
+                        "  {{ins_name}}.io.allocaRespIO <> StackPointer.io.OutData({{sp_index}})\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("num_byte", static_cast<int>(num_byte));
+                    ins_template.set("sp_index", static_cast<int>(index));
+
 
                 } else if (alloca_type->isStructTy())
                     assert(!"We don't support alloca for struct for now!");
                 else
                     assert(!"Unknown alloca type!");
-
-                // First get the instruction
-                // comment = "  // Wiring Alloca instructions\n";
-
-                // command = "";
-                // if (c == 0)
-                // command =
-                //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-                //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-                // else
-                // command = "  {{ins_name}}.io.type <> insType\n";
-                // ins_template.set("ins_name", instruction_info[&ins].name);
-                // ins_template.set(
-                //"operand_name",
-                // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
-                //.name);
 
                 printCode(comment + ins_template.render(command) + "\n");
 
