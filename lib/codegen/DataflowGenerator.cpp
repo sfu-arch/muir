@@ -32,6 +32,9 @@ RegisterPass<DataflowGeneratorPass> X("codegen", "Generating chisel code");
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
 
+
+extern cl::opt<string> outFile;
+
 static SetVector<Loop *> getLoops(LoopInfo &LI) {
     SetVector<Loop *> Loops;
 
@@ -224,6 +227,9 @@ bool DataflowGeneratorPass::runOnModule(Module &M) {
 
             // Generating XKETCH file
             generateFunction(F);
+
+            //Generating Test function
+            generateTestFunction(F);
         }
     }
 
@@ -245,6 +251,14 @@ void DataflowGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
  */
 void DataflowGeneratorPass::printCode(string code) {
     this->outCode << code << "\n";
+}
+
+
+/**
+ * Printing the input code
+ */
+void DataflowGeneratorPass::printCode(string code, raw_ostream &out) {
+    out << code << "\n";
 }
 
 /**
@@ -336,6 +350,7 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
     }
 }
 
+
 /**
  * This function generate header part of chisel files.
  * It should contain all the packages which are needed for
@@ -343,7 +358,7 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
  * TODO:
  * \todo: make the imports configurable so that it easy to add a new library
  */
-void DataflowGeneratorPass::generateImportSection() {
+void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
     string command =
         "package dataflow\n"
         "\n"
@@ -366,7 +381,7 @@ void DataflowGeneratorPass::generateImportSection() {
         "import node._\n\n";
 
     // Print to the OUTPUT
-    printCode(command);
+    printCode(command, out);
 }
 
 /**
@@ -2124,7 +2139,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     FillFunctionArg(F);
 
     // Step1: Dump import section of the scala file
-    generateImportSection();
+    generateImportSection(this->outCode);
 
     // Step2: Printing helper param object
     //
@@ -2189,4 +2204,79 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Closing the object
     printCode("}\n");
+}
+
+/**
+ * Generating a template scala file which can be used
+ * for writing test cases
+ */
+void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
+
+    generateImportSection(this->outTest);
+
+    //Printing Tests class
+    LuaTemplater ins_template;
+    string final_command;
+    string command =
+        "class {{class_name}}Tests"
+        "(c: {{module_name}}) extends PeekPokeTester(c) {\n";
+    ins_template.set("class_name", F.getName().str());
+    ins_template.set("module_name", F.getName().str() + "DF");
+    final_command.append(ins_template.render(command));
+
+    printCode(ins_template.render(final_command), this->outTest);
+
+    //Printing comments and the moduel information
+    command = 
+        "\n  // {{module_name}} interface:\n";
+
+    ins_template.set("module_name", F.getName().str());
+
+    final_command = ins_template.render(command);
+
+
+    uint32_t c = 0;
+    for (auto &ag : F.getArgumentList()) {
+        command =
+            "  //    val data_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+        ins_template.set("index", static_cast<int>(c++));
+        final_command.append(ins_template.render(command));
+    }
+
+    final_command.append(
+        "  //    val pred = Decoupled(new Bool())\n"
+        "  //    val start = Input(new Bool())\n");
+
+    if (!F.getReturnType()->isVoidTy()) {
+        final_command.append("  //    val result = Decoupled(new DataBundle)\n");
+    }
+
+    final_command.append(
+        "  //\n\n\n");
+
+    printCode(final_command + "}\n", this->outTest);
+
+    //Printing Tester class
+    //
+    command = 
+        "class {{class_name}}Tester extends FlatSpec with Matchers {\n"
+        "  it should \"Check that {{class_name}} works correctly.\" in {\n"
+        "    // iotester flags:\n"
+        "    // -ll  = log level <Error|Warn|Info|Debug|Trace>\n"
+        "    // -tbn = backend <firrtl|verilator|vcs>\n"
+        "    // -td  = target directory\n"
+        "    // -tts = seed for RNG\n"
+        "    chisel3.iotesters.Driver.execute(\n"
+        "     Array(\n"
+        "       // \"-ll\", \"Info\",\n"
+        "       \"-tbn\", \"verilator\",\n"
+        "       \"-td\", \"test_run_dir\",\n"
+        "       \"-tts\", \"0001\"),\n"
+        "     () => new {{module_name}}() {\n"
+        "     c => new {{module_class}}Tests(c)\n"
+        "    } should be(true)\n"
+        "  }\n}\n";
+
+    printCode(ins_template.render(command), this->outTest);
+
 }

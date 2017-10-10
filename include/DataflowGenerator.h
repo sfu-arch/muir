@@ -4,12 +4,12 @@
 #define STATICCALLCOUNTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/LoopInfo.h"
 
 #include "Common.h"
 #include "NodeType.h"
@@ -36,9 +36,9 @@ struct ArgInfo {
 };
 
 class DataflowGeneratorPass : public llvm::ModulePass {
-
     // Default value is standard out
     llvm::raw_ostream &outCode;
+    llvm::raw_ostream &outTest;
 
     // Function name
     // Basicblock info maps
@@ -65,7 +65,6 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveins;
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveouts;
 
-
     llvm::BasicBlock *entry_bb;
 
     // Instruction counters
@@ -80,20 +79,23 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
-
-
    public:
-
     static char ID;
 
-    DataflowGeneratorPass() : llvm::ModulePass(ID), outCode(llvm::outs()) {}
+    DataflowGeneratorPass()
+        : llvm::ModulePass(ID), outCode(llvm::outs()), outTest(llvm::outs()) {}
 
-    DataflowGeneratorPass(llvm::raw_ostream &out, llvm::StringRef name)
-        : llvm::ModulePass(ID), outCode(out), FunctionName(name) {}
+    DataflowGeneratorPass(llvm::raw_ostream &out, llvm::raw_ostream &test,
+                          llvm::StringRef name)
+        : llvm::ModulePass(ID),
+          outCode(out),
+          outTest(test),
+          FunctionName(name) {}
 
     virtual bool runOnModule(llvm::Module &m) override;
 
-    void printCode(std::string code);
+    void printCode(std::string);
+    void printCode(std::string, llvm::raw_ostream &);
 
     void setOutput(llvm::raw_ostream &);
 
@@ -107,7 +109,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     void PrintHelperObject(llvm::Function &);
     void PrintDatFlowAbstractIO(llvm::Function &);
-    void printHeader(string );
+    void printHeader(string);
 
     void NamingBasicBlock(llvm::Function &);
     void NamingInstruction(llvm::Function &);
@@ -115,7 +117,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     /**
      * Print functions
      */
-    void generateImportSection();
+    void generateImportSection(llvm::raw_ostream &);
     void HelperPrintBBInit(llvm::Function &);
     void PrintBasicBlockInit(llvm::BasicBlock &);
 
@@ -145,6 +147,10 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     void HelperPrintInstructionDF(llvm::Function &);
     void PrintDataFlow(llvm::Instruction &);
+
+    // Printing TESTER function
+    void generateTestFunction(llvm::Function &);
+
     // Get instruction type
 
     void PrintStackPointer();

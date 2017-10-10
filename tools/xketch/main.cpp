@@ -311,7 +311,9 @@ static void codeGenerator(Module &m){
 
 
     std::error_code errc;
-    raw_fd_ostream out(outFile, errc, sys::fs::F_None);
+    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+
+    raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
 
@@ -328,7 +330,7 @@ static void codeGenerator(Module &m){
 
     pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new amem::AliasMem(XKETCHName));
-    pm.add(new codegen::DataflowGeneratorPass(out, XKETCHName));
+    pm.add(new codegen::DataflowGeneratorPass(out, test, XKETCHName));
 
     pm.add(createVerifierPass());
     pm.run(m);
