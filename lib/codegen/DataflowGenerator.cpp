@@ -1497,22 +1497,19 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             printCode(comment + ins_template.render(command));
 
         }
+
         /**
          * Connecting LOAD instructions
          */
         else if (ins_type == TLoad) {
-            auto operand = ins.getOperand(c);
+            // Input of the load comes from either GEP instructions or function arguments
 
-            // Input of the load alwasy comes from GEP instruction
+
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
 
-            // If the input is from function argument
-            auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
-            auto tmp_find_arg = find(function_argument.begin(),
-                                     function_argument.end(), tmp_fun_arg);
-
-            // If the input is function argument
+            // If the input is function argument then it should gets connect to Cache system
             if (tmp_find_arg != function_argument.end()) {
+
                 // First get the instruction
                 auto op_ins = ins.getOperand(0);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
@@ -1559,7 +1556,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             ins_template.set("ins_index", static_cast<int>(pos));
             printCode(comment + ins_template.render(command));
 
-            // Connecting Predecessors
+            /**
+             * Connecting Predecessors
+             */
 
             // Getting AA pass information
             comment = "  //Printing succesor of the current Load instruction\n";
@@ -1576,6 +1575,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             printCode("\n");
 
         }
+
+
+
         /**
          * Print Store instructions
          */

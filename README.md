@@ -43,7 +43,7 @@ Running
 
 First suppose that you have a program compiled to bitcode:
 
-    clang -emit-llvm -m32 -S loop.c -o - | opt -mem2reg -dot-cfg -o loop.bc
+    clang -emit-llvm -g -m32 -S loop.c -o - | opt -mem2reg -dot-cfg -o loop.bc
 
 Runing the generator:
 
