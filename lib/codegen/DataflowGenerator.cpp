@@ -2228,7 +2228,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
 
     //Printing comments and the moduel information
     command = 
-        "\n  // {{module_name}} interface:\n";
+        "\n  /**\n  *  {{module_name}}DF interface:\n  *\n";
 
     ins_template.set("module_name", F.getName().str());
 
@@ -2236,23 +2236,37 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
 
 
     uint32_t c = 0;
+    string init_command = "";
+
     for (auto &ag : F.getArgumentList()) {
         command =
-            "  //    val data_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+            "  *    data_{{index}} = Flipped(Decoupled(new DataBundle))\n";
         ins_template.set("index", static_cast<int>(c++));
         final_command.append(ins_template.render(command));
+
+        command = 
+            "  poke(c.io.data_{{index}}.bits.data, 0.U)\n"
+            "  poke(c.io.data_{{index}}.bits.predicate, false.B)\n"
+            "  poke(c.io.data_{{index}}.bits.valid, false.B)\n"
+            "  poke(c.io.data_{{index}}.valid, false.B)\n\n";
+
+        init_command.append(ins_template.render(command));
     }
 
     final_command.append(
-        "  //    val pred = Decoupled(new Bool())\n"
-        "  //    val start = Input(new Bool())\n");
+        "  *    val pred = Decoupled(new Bool())\n"
+        "  *    val start = Input(new Bool())\n");
 
     if (!F.getReturnType()->isVoidTy()) {
-        final_command.append("  //    val result = Decoupled(new DataBundle)\n");
+        final_command.append("  *    val result = Decoupled(new DataBundle)\n");
     }
 
     final_command.append(
-        "  //\n\n\n");
+        "  */\n\n\n");
+
+    command = "  // Initializing the signals\n\n";
+    final_command.append(command);
+    final_command.append(init_command);
 
     printCode(final_command + "}\n", this->outTest);
 
