@@ -376,6 +376,7 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
         "import interfaces._\n"
         "import regfile._\n"
         "import memory._\n"
+        "import stack._\n"
         "import arbiters._\n"
         "import loop._\n"
         "import node._\n\n";
@@ -1040,7 +1041,12 @@ void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     if (Ins.getNumUses() == 0)
         ins_template.set("num_out", static_cast<int>(Ins.getNumUses() + 1));
 
-    ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
+    if(Ins.getNumUses() == 0)
+        //In cases which there is no consumer for an instruction we
+        //hardwire the number of output to 1
+        ins_template.set("num_out", static_cast<int>(1));
+    else
+        ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
 
     string result = ins_template.render(ins_define);
 
@@ -1198,7 +1204,7 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
 void DataflowGeneratorPass::PrintRegisterFile() {
     string command =
         "\tval RegisterFile = Module(new "
-        "TypeRegisterFile(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}"
+        "TypeStackFile(ID=0,Size=32,NReads={{load_num}},NWrites={{store_num}"
         "})"
         "\n"
         "\t\t            (WControl=new "
@@ -1220,7 +1226,7 @@ void DataflowGeneratorPass::PrintRegisterFile() {
 void DataflowGeneratorPass::PrintStackPointer() {
     string command =
         "\tval StackPointer = Module(new "
-        "Stack(NumOps = {{num_ops}})\n";
+        "Stack(NumOps = {{num_ops}}))\n";
 
     LuaTemplater stack_template;
     stack_template.set("num_ops", static_cast<int>(instruction_alloca.size()));
@@ -1829,7 +1835,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     "  {{ins_name}}.io.InputIO <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
-                    "  io.result <. {{ins_name}}.io.Out(0)\n";
+                    "  io.result <> {{ins_name}}.io.Out(0)\n";
             else
                 assert(!"Return instruction cannot have more than one input");
 
@@ -2253,27 +2259,52 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         init_command.append(ins_template.render(command));
     }
 
+    command =
+        "  poke(c.io.result.ready, false.B)\n\n";
+    init_command.append(command);
+
     final_command.append(
-        "  *    val pred = Decoupled(new Bool())\n"
-        "  *    val start = Input(new Bool())\n");
+        "   *    val pred = Decoupled(new Bool())\n"
+        "   *    val start = Input(new Bool())\n");
 
     if (!F.getReturnType()->isVoidTy()) {
-        final_command.append("  *    val result = Decoupled(new DataBundle)\n");
+        final_command.append("   *    val result = Decoupled(new DataBundle)\n");
     }
 
     final_command.append(
-        "  */\n\n\n");
+        "   */\n\n\n");
 
     command = "  // Initializing the signals\n\n";
     final_command.append(command);
     final_command.append(init_command);
 
-    printCode(final_command + "}\n", this->outTest);
+    command = "  step(1)\n  /**\n  *\n"
+        "  * @todo Add your test cases here\n  *\n"
+        "   * The test harness API allows 4 interactions with the DUT:\n"
+        "   *  1. To set the DUT'S inputs: poke\n"
+        "   *  2. To look at the DUT'S outputs: peek\n"
+        "   *  3. To test one of the DUT's outputs: expect\n"
+        "   *  4. To advance the clock of the DUT: step\n"
+        "   *\n"
+        "   * Conditions:\n"
+        "   *  1. while(peek(c.io.XXX) == UInt(0))\n"
+        "   *  2. for(i <- 1 to 10)\n"
+        "   *  3. for{ i <- 1 to 10\n"
+        "   *          j <- 1 to 10\n"
+        "   *        }\n"
+        "   *\n"
+        "   * Print Statement:\n"
+        "   *    println(s\"Waited $count cycles on gcd inputs $i, $j, giving up\")\n"
+        "   *\n"
+        "   */\n\n";
+
+    printCode(final_command + command + "}\n", this->outTest);
 
     //Printing Tester class
     //
     command = 
         "class {{class_name}}Tester extends FlatSpec with Matchers {\n"
+        "  implicit val p = config.Parameters.root((new MiniConfig).toInstance)\n"
         "  it should \"Check that {{class_name}} works correctly.\" in {\n"
         "    // iotester flags:\n"
         "    // -ll  = log level <Error|Warn|Info|Debug|Trace>\n"
@@ -2286,8 +2317,8 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         "       \"-tbn\", \"verilator\",\n"
         "       \"-td\", \"test_run_dir\",\n"
         "       \"-tts\", \"0001\"),\n"
-        "     () => new {{module_name}}() {\n"
-        "     c => new {{module_class}}Tests(c)\n"
+        "     () => new {{class_name}}DF()) {\n"
+        "     c => new {{class_name}}Tests(c)\n"
         "    } should be(true)\n"
         "  }\n}\n";
 
