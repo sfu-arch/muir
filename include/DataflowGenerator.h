@@ -71,6 +71,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     llvm::BasicBlock *entry_bb;
 
+    //LoopInfo
+    llvm::LoopInfo *LI;
     // Instruction counters
     uint32_t count_ins;
     uint32_t count_binary;
@@ -82,6 +84,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     llvm::StringRef FunctionName;
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+
+    virtual bool doInitialization(llvm::Module &M) override;
 
    public:
     static char ID;
@@ -140,8 +144,9 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     void PrintParamObject();
 
-    void PrintLoopHeader(Function &);
-    void HelperPrintLoop(llvm::Function &);
+    void PrintLoopHeader(llvm::Function &);
+    //void HelperPrintLoop(llvm::Function &);
+    void PrintLoopRegister(llvm::Function &);
 
     void PrintBasicBlockEnableInstruction(llvm::Function &);
     void HelperPrintBasicBlockPredicate();

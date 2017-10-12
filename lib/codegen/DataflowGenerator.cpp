@@ -51,6 +51,20 @@ static string getBaseName(string Path) {
     return Idx == string::npos ? Path : Path.substr(Idx + 1);
 }
 
+
+bool DataflowGeneratorPass::doInitialization(llvm::Module &M) {
+
+    for (auto &F : M) {
+        if (F.isDeclaration()) continue;
+
+        if (F.getName() == this->FunctionName) {
+            this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+        }
+    }
+
+    return false;
+}
+
 /// definedInCaller - Return true if the specified value is defined in the
 /// function being code extracted, but not in the region being extracted.
 /// These values must be passed in as live-ins to the function.
@@ -517,8 +531,9 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
             llvm::CallSite CS(&ins);
             auto br_ins = dyn_cast<llvm::BranchInst>(&ins);
 
-            if (CS) continue;
-            else if( br_ins && br_ins->getNumOperands() == 1 )
+            if (CS)
+                continue;
+            else if (br_ins && br_ins->getNumOperands() == 1)
                 continue;
             else {
                 final_command.clear();
@@ -537,12 +552,11 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                     if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
                         continue;
 
-                    else if (br_ins){
-                        if(br_ins->getNumOperands() == 1 || c >= 1)
-                        continue;
+                    else if (br_ins) {
+                        if (br_ins->getNumOperands() == 1 || c >= 1) continue;
                     }
-                    //else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
-                        //continue;
+                    // else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
+                    // continue;
                     else if (dyn_cast<llvm::Argument>(ins.getOperand(c))) {
                         command = "    \"{{ins_name}}\" -> {{index}},\n";
 
@@ -1383,7 +1397,6 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
         instruction_phi.begin(), instruction_phi.end(),
         [this](Instruction *ins) { DataflowGeneratorPass::PrintPHICon(*ins); });
 
-
     comment =
         "  /**\n"
         "    * Connecting PHI Masks\n"
@@ -1404,7 +1417,6 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
                       });
     }
 }
-
 
 /**
  * Connecting phi node connections
@@ -1445,10 +1457,6 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
         }
     }
 }
-
-
-
-
 
 void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
@@ -1494,11 +1502,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * Check if the edge in LoopEdges
          * This edge count is the loop header
          */
-        auto loop_edge = std::find_if(this->LoopEdges.begin(), 
-                this->LoopEdges.end(),
-                [&operand, &ins](const pair<Value *, Value *>& edge)
-                {return ((edge.second == &ins) && (edge.first == operand));}
-                );
+        auto loop_edge = std::find_if(
+            this->LoopEdges.begin(), this->LoopEdges.end(),
+            [&operand, &ins](const pair<Value *, Value *> &edge) {
+                return ((edge.second == &ins) && (edge.first == operand));
+            });
 
         /**
          * If we find the edge in the container it means that
@@ -1510,7 +1518,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          *  We have split the edge and connect the source to the register file
          *  and register file to the destination
          */
-        if(loop_edge != this->LoopEdges.end()){
+        if (loop_edge != this->LoopEdges.end()) {
             continue;
         }
 
@@ -2175,18 +2183,17 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
  */
 void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
     // Getting loop information
-    auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-    if (getLoops(LI).size() == 0)
+    //auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    if (getLoops(*LI).size() == 0)
         printCode("  //Function doesn't have any loop");
 
     else {
         // Printing header part of each loop
         LuaTemplater ins_template;
 
-        for (auto &L : getLoops(LI)) {
+        for (auto &L : getLoops(*LI)) {
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
-
 
             /**
              * Detecting Live-in and Live-out of each for loop
@@ -2204,20 +2211,23 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
                         // Detecting instructions
                         if (Instruction *Ins = dyn_cast<Instruction>(V)) {
-                            if (!L->contains(Ins) && definedInCaller(tmp_bb, V)) {
-                                liveIns.insert(V);
+                            if (!L->contains(Ins) &&
+                                definedInCaller(tmp_bb, V)) {
+                                //liveIns.insert(V);
+                                this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
                         // Detecting function arguments
-                        else if (isa<Argument>(V)){
+                        else if (isa<Argument>(V)) {
                             liveIns.insert(V);
+                            this->loop_liveins[L].insert(V);
                             this->LoopEdges.insert(std::make_pair(V, &I));
                         }
                     }
 
                     for (auto *U : I.users()) {
-                        if (!definedInRegion(tmp_bb, U)){
+                        if (!definedInRegion(tmp_bb, U)) {
                             liveOuts.insert(U);
                             this->LoopEdges.insert(std::make_pair(&I, U));
                         }
@@ -2225,25 +2235,56 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                 }
             }
 
-            this->loop_liveins[L] = liveIns;
+            //this->loop_liveins[L] = liveIns;
             this->loop_liveouts[L] = liveOuts;
-
 
             // TODO Fix number of inputs and outputs for loop head
             // TODO Do we need output anymore?
             string loop_define =
                 "  val {{ins_name}} = "
-                "Module(new LoopHeader(NumInputs = {{num_inputs}}, NumOuts = {{num_outputs}}, ID "
+                "Module(new LoopHeader(NumInputs = {{num_inputs}}, NumOuts = "
+                "{{num_outputs}}, ID "
                 "= 0)(p))\n";
 
             ins_template.set("ins_name",
                              "loop_L_" + std::to_string(Loc.getLine()));
-            ins_template.set("num_inputs",  static_cast<int>(liveIns.size()));
+            ins_template.set("num_inputs", static_cast<int>(liveIns.size()));
             ins_template.set("num_outputs", static_cast<int>(liveOuts.size()));
 
             printCode(ins_template.render(loop_define));
+        }
+    }
+}
 
+/**
+ * This function connects each loop's live-ins to the
+ * header register file
+ */
+void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
+    // Getting loop information
+    if (getLoops(*LI).size() == 0)
+        printCode("  //Function doesn't have any for loop");
 
+    else {
+        // Printing header part of each loop
+        LuaTemplater ins_template;
+
+        for (auto &L : getLoops(*LI)) {
+            auto Loc = L->getStartLoc();
+            auto Filename = getBaseName(Loc->getFilename().str());
+
+            auto loop_live_in = this->loop_liveins.find(L);
+            errs() << "SIZE: " << this->loop_liveins.size() << "\n";
+            if(loop_live_in != this->loop_liveins.end())
+                errs() << "FOUND\n";
+
+            for( auto p : this->loop_liveins ){
+                errs() << "LIVE: " << p.second.size() << "\n";
+            }
+            //errs() << this->loop_liveins[L].size() << "\n";
+            //for(auto LIN : loop_live_in){
+                //errs() << "FOUND\n";
+            //}
         }
     }
 }
@@ -2443,13 +2484,11 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // Step 9:
     // Connecting Instructions in dataflow order
     printHeader("Connecting LoopHeaders");
+    PrintLoopRegister(F);
     // TODO Connect the loop headers
-    //
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
 
     // Closing the object
     printCode("}\n");
 }
-
-
