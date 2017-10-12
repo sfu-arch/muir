@@ -51,9 +51,7 @@ static string getBaseName(string Path) {
     return Idx == string::npos ? Path : Path.substr(Idx + 1);
 }
 
-
 bool DataflowGeneratorPass::doInitialization(llvm::Module &M) {
-
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
 
@@ -2183,7 +2181,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
  */
 void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
     // Getting loop information
-    //auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    // auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     if (getLoops(*LI).size() == 0)
         printCode("  //Function doesn't have any loop");
 
@@ -2213,14 +2211,12 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         if (Instruction *Ins = dyn_cast<Instruction>(V)) {
                             if (!L->contains(Ins) &&
                                 definedInCaller(tmp_bb, V)) {
-                                //liveIns.insert(V);
                                 this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
                         // Detecting function arguments
                         else if (isa<Argument>(V)) {
-                            liveIns.insert(V);
                             this->loop_liveins[L].insert(V);
                             this->LoopEdges.insert(std::make_pair(V, &I));
                         }
@@ -2228,15 +2224,15 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
                     for (auto *U : I.users()) {
                         if (!definedInRegion(tmp_bb, U)) {
-                            liveOuts.insert(U);
+                            this->loop_liveouts[L].insert(U);
                             this->LoopEdges.insert(std::make_pair(&I, U));
                         }
                     }
                 }
             }
 
-            //this->loop_liveins[L] = liveIns;
-            this->loop_liveouts[L] = liveOuts;
+            // this->loop_liveins[L] = liveIns;
+            //this->loop_liveouts[L] = liveOuts;
 
             // TODO Fix number of inputs and outputs for loop head
             // TODO Do we need output anymore?
@@ -2273,15 +2269,30 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
 
-            auto loop_live_in = this->loop_liveins.find(L);
+            auto loop_live_in  = this->loop_liveins.find(L);
+            auto loop_live_out = this->loop_liveouts.find(L);
 
-            for( auto p : loop_live_in){
-                errs() << "LIVE: " << p.second.size() << "\n";
+            if (loop_live_in != this->loop_liveins.end()) {
+                for (auto p : loop_live_in->second) {
+                    for(auto search_elem : LoopEdges){
+                        if(p == search_elem.first)
+                            //TODO connect the edge
+                            errs() << "EDGE here\n";
+                    }
+                }
             }
-            //errs() << this->loop_liveins[L].size() << "\n";
-            //for(auto LIN : loop_live_in){
-                //errs() << "FOUND\n";
-            //}
+
+
+            if (loop_live_out != this->loop_liveouts.end()) {
+                for (auto p : loop_live_out->second) {
+                    for(auto search_elem : LoopEdges){
+                        if(p == search_elem.second)
+                            //TODO connect the edge
+                            errs() << "EDGE here\n";
+                    }
+                }
+            }
+
         }
     }
 }
