@@ -516,8 +516,8 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         for (auto &ins : bb) {
             llvm::CallSite CS(&ins);
             if (CS) continue;
-            if (dyn_cast<llvm::BranchInst>(&ins))
-                continue;
+            //if (dyn_cast<llvm::BranchInst>(&ins))
+                //continue;
             else {
                 final_command.clear();
 
@@ -534,8 +534,12 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                 for (uint32_t c = 0; c < ins.getNumOperands(); c++) {
                     if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
                         continue;
-                    else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
+
+                    else if (dyn_cast<llvm::BranchInst>(&ins) && c >= 1){
                         continue;
+                    }
+                    //else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
+                        //continue;
                     else if (dyn_cast<llvm::Argument>(ins.getOperand(c))) {
                         command = "    \"{{ins_name}}\" -> {{index}},\n";
 
@@ -1564,7 +1568,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring Branch instruction\n";
                 command =
                     "  {{ins_name}}.io.CmpIO <> {{operand_name}}.io.Out"
-                    "(param.{{ins_name}}_brn_bb(\"{{operand_name}}\"))\n";
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("operand_name",
                                  instruction_info[dyn_cast<llvm::Instruction>(
