@@ -32,7 +32,6 @@ RegisterPass<DataflowGeneratorPass> X("codegen", "Generating chisel code");
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
 
-
 extern cl::opt<string> outFile;
 
 static SetVector<Loop *> getLoops(LoopInfo &LI) {
@@ -228,7 +227,7 @@ bool DataflowGeneratorPass::runOnModule(Module &M) {
             // Generating XKETCH file
             generateFunction(F);
 
-            //Generating Test function
+            // Generating Test function
             generateTestFunction(F);
         }
     }
@@ -252,7 +251,6 @@ void DataflowGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
 void DataflowGeneratorPass::printCode(string code) {
     this->outCode << code << "\n";
 }
-
 
 /**
  * Printing the input code
@@ -349,7 +347,6 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
         }
     }
 }
-
 
 /**
  * This function generate header part of chisel files.
@@ -1041,9 +1038,9 @@ void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     if (Ins.getNumUses() == 0)
         ins_template.set("num_out", static_cast<int>(Ins.getNumUses() + 1));
 
-    if(Ins.getNumUses() == 0)
-        //In cases which there is no consumer for an instruction we
-        //hardwire the number of output to 1
+    if (Ins.getNumUses() == 0)
+        // In cases which there is no consumer for an instruction we
+        // hardwire the number of output to 1
         ins_template.set("num_out", static_cast<int>(1));
     else
         ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
@@ -1213,8 +1210,17 @@ void DataflowGeneratorPass::PrintRegisterFile() {
         "ReadMemoryController(NumOps={{load_num}},BaseSize=2,NumEntries=2)))\n";
 
     LuaTemplater stack_template;
-    stack_template.set("load_num", static_cast<int>(instruction_load.size()));
-    stack_template.set("store_num", static_cast<int>(instruction_store.size()));
+    if (instruction_load.size() == 0)
+        stack_template.set("load_num", static_cast<int>(2));
+    else
+        stack_template.set("load_num",
+                           static_cast<int>(instruction_load.size()));
+
+    if (instruction_store.size() == 0)
+        stack_template.set("store_num", static_cast<int>(2));
+    else
+        stack_template.set("store_num",
+                           static_cast<int>(instruction_store.size()));
 
     string result = stack_template.render(command);
     printCode(result);
@@ -1229,7 +1235,11 @@ void DataflowGeneratorPass::PrintStackPointer() {
         "Stack(NumOps = {{num_ops}}))\n";
 
     LuaTemplater stack_template;
-    stack_template.set("num_ops", static_cast<int>(instruction_alloca.size()));
+    if (instruction_alloca.size() == 0)
+        stack_template.set("num_ops", static_cast<int>(1));
+    else
+        stack_template.set("num_ops",
+                           static_cast<int>(instruction_alloca.size()));
 
     string result = stack_template.render(command);
     printCode(result);
@@ -1248,8 +1258,18 @@ void DataflowGeneratorPass::PrintCacheMem() {
         "\t\t            (RWArbiter=new ReadWriteArbiter()))";
 
     LuaTemplater stack_template;
-    stack_template.set("load_num", static_cast<int>(instruction_load.size()));
-    stack_template.set("store_num", static_cast<int>(instruction_store.size()));
+
+    if (instruction_load.size() == 0)
+        stack_template.set("load_num", static_cast<int>(2));
+    else
+        stack_template.set("load_num",
+                           static_cast<int>(instruction_load.size()));
+
+    if (instruction_store.size() == 0)
+        stack_template.set("store_num", static_cast<int>(2));
+    else
+        stack_template.set("store_num",
+                           static_cast<int>(instruction_store.size()));
 
     string result = stack_template.render(command);
     printCode(result);
@@ -1348,6 +1368,20 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
         "  //Connect PHI node\n";
     printCode(comment);
 
+    if (instruction_phi.size() == 0) outs() << "  //There is no PHI node\n";
+    std::for_each(
+        instruction_phi.begin(), instruction_phi.end(),
+        [this](Instruction *ins) { DataflowGeneratorPass::PrintPHICon(*ins); });
+
+
+    comment =
+        "  /**\n"
+        "    * Connecting PHI Masks\n"
+        "    */\n"
+        "  //Connect PHI node\n";
+
+    printCode(comment);
+
     if (instruction_phi.size() == 0) {
         comment = comment + "  // There is no PHI node";
         printCode(comment);
@@ -1360,6 +1394,51 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
                       });
     }
 }
+
+
+/**
+ * Connecting phi node connections
+ * @param ins Phi instruction
+ */
+void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
+    auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
+    LuaTemplater ins_template;
+
+    // TODO check if the operand is constant, then hand right the signals VERY
+    // IMPORTANT
+    //
+    for (uint32_t c = 0; c < phi_ins->getNumOperands(); c++) {
+        // Getting target
+        auto ins_target = dyn_cast<llvm::Instruction>(phi_ins->getOperand(c));
+        if (ins_target) {
+            string command =
+                "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
+            ins_template.set("phi_name", instruction_info[&ins].name);
+            ins_template.set("ins_name", instruction_info[ins_target].name);
+
+            string result = ins_template.render(command);
+            printCode(result);
+
+        } else {
+            string command =
+                "  //@todo {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
+            ins_template.set("phi_name", instruction_info[&ins].name);
+            // ins_template.set("ins_name", instruction_info[ins_target].name);
+
+            string result = ins_template.render(command);
+            printCode(result);
+
+            // ins.dump();
+            // assert(!"Cannot support constant for the PHIs for now");
+        }
+    }
+}
+
+
+
+
 
 void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
@@ -1485,7 +1564,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring Branch instruction\n";
                 command =
                     "  {{ins_name}}.io.CmpIO <> {{operand_name}}.io.Out"
-                    "(param.{{ins_name}}_brn_cmp(\"{{operand_name}}\"))\n";
+                    "(param.{{ins_name}}_brn_bb(\"{{operand_name}}\"))\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("operand_name",
                                  instruction_info[dyn_cast<llvm::Instruction>(
@@ -2198,6 +2277,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     PrintBasicBlockEnableInstruction(F);
 
     // Connecting BasicBlock masks to their Phi nodes
+    printHeader("Dumping PHI nodes");
     HelperPrintBasicBlockPhi();
 
     // Step 9:
@@ -2216,11 +2296,10 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
  * Generating a template scala file which can be used
  * for writing test cases
  */
-void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
-
+void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     generateImportSection(this->outTest);
 
-    //Printing Tests class
+    // Printing Tests class
     LuaTemplater ins_template;
     string final_command;
     string command =
@@ -2232,14 +2311,12 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
 
     printCode(ins_template.render(final_command), this->outTest);
 
-    //Printing comments and the moduel information
-    command = 
-        "\n  /**\n  *  {{module_name}}DF interface:\n  *\n";
+    // Printing comments and the moduel information
+    command = "\n  /**\n  *  {{module_name}}DF interface:\n  *\n";
 
     ins_template.set("module_name", F.getName().str());
 
     final_command = ins_template.render(command);
-
 
     uint32_t c = 0;
     string init_command = "";
@@ -2250,7 +2327,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         ins_template.set("index", static_cast<int>(c++));
         final_command.append(ins_template.render(command));
 
-        command = 
+        command =
             "  poke(c.io.data_{{index}}.bits.data, 0.U)\n"
             "  poke(c.io.data_{{index}}.bits.predicate, false.B)\n"
             "  poke(c.io.data_{{index}}.bits.valid, false.B)\n"
@@ -2259,8 +2336,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         init_command.append(ins_template.render(command));
     }
 
-    command =
-        "  poke(c.io.result.ready, false.B)\n\n";
+    command = "  poke(c.io.result.ready, false.B)\n\n";
     init_command.append(command);
 
     final_command.append(
@@ -2268,17 +2344,18 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         "   *    val start = Input(new Bool())\n");
 
     if (!F.getReturnType()->isVoidTy()) {
-        final_command.append("   *    val result = Decoupled(new DataBundle)\n");
+        final_command.append(
+            "   *    val result = Decoupled(new DataBundle)\n");
     }
 
-    final_command.append(
-        "   */\n\n\n");
+    final_command.append("   */\n\n\n");
 
     command = "  // Initializing the signals\n\n";
     final_command.append(command);
     final_command.append(init_command);
 
-    command = "  step(1)\n  /**\n  *\n"
+    command =
+        "  step(1)\n  /**\n  *\n"
         "  * @todo Add your test cases here\n  *\n"
         "   * The test harness API allows 4 interactions with the DUT:\n"
         "   *  1. To set the DUT'S inputs: poke\n"
@@ -2294,17 +2371,19 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         "   *        }\n"
         "   *\n"
         "   * Print Statement:\n"
-        "   *    println(s\"Waited $count cycles on gcd inputs $i, $j, giving up\")\n"
+        "   *    println(s\"Waited $count cycles on gcd inputs $i, $j, giving "
+        "up\")\n"
         "   *\n"
         "   */\n\n";
 
     printCode(final_command + command + "}\n", this->outTest);
 
-    //Printing Tester class
+    // Printing Tester class
     //
-    command = 
+    command =
         "class {{class_name}}Tester extends FlatSpec with Matchers {\n"
-        "  implicit val p = config.Parameters.root((new MiniConfig).toInstance)\n"
+        "  implicit val p = config.Parameters.root((new "
+        "MiniConfig).toInstance)\n"
         "  it should \"Check that {{class_name}} works correctly.\" in {\n"
         "    // iotester flags:\n"
         "    // -ll  = log level <Error|Warn|Info|Debug|Trace>\n"
@@ -2323,5 +2402,4 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F){
         "  }\n}\n";
 
     printCode(ins_template.render(command), this->outTest);
-
 }
