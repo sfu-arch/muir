@@ -378,11 +378,12 @@ int main(int argc, char **argv) {
     //Running Alias Analysis pass
     AApassTest(*module);
 
+    //Saving the final modified bc file
+    saveModule(*module, "final.bc");
+
     //Generating Chisel code
     codeGenerator(*module);
 
-    //Saving the final modified bc file
-    saveModule(*module, "final.bc");
 
 
     return 0;

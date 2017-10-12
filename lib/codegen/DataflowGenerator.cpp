@@ -515,9 +515,11 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
     for (auto &bb : F) {
         for (auto &ins : bb) {
             llvm::CallSite CS(&ins);
+            auto br_ins = dyn_cast<llvm::BranchInst>(&ins);
+
             if (CS) continue;
-            //if (dyn_cast<llvm::BranchInst>(&ins))
-                //continue;
+            else if( br_ins && br_ins->getNumOperands() == 1 )
+                continue;
             else {
                 final_command.clear();
 
@@ -535,7 +537,8 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                     if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
                         continue;
 
-                    else if (dyn_cast<llvm::BranchInst>(&ins) && c >= 1){
+                    else if (br_ins){
+                        if(br_ins->getNumOperands() == 1 || c >= 1)
                         continue;
                     }
                     //else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
@@ -736,6 +739,9 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
                 break;
             case CmpInst::Predicate::ICMP_ULE:
                 cmp_ins_op = "ULE";
+                break;
+            case CmpInst::Predicate::ICMP_ULT:
+                cmp_ins_op = "ULT";
                 break;
             default:
                 // Ins.dump();
@@ -1485,9 +1491,33 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         string comment = string();
 
         /**
+         * Check if the edge in LoopEdges
+         * This edge count is the loop header
+         */
+        auto loop_edge = std::find_if(this->LoopEdges.begin(), 
+                this->LoopEdges.end(),
+                [&operand, &ins](const pair<Value *, Value *>& edge)
+                {return ((edge.second == &ins) && (edge.first == operand));}
+                );
+
+        /**
+         * If we find the edge in the container it means that
+         * we have to connect the instruction to latch
+         * We still need to figure out:
+         *  1) The instruction belongs to which loop
+         *  2) The edge is live-in or live-out
+         *
+         *  We have split the edge and connect the source to the register file
+         *  and register file to the destination
+         */
+        if(loop_edge != this->LoopEdges.end()){
+            continue;
+        }
+
+        /**
          * If instruction is Binary or Comparision operator
          */
-        if (ins_type == TBinaryOperator || ins_type == TICmpInst) {
+        else if (ins_type == TBinaryOperator || ins_type == TICmpInst) {
             // If the operand is constant
             if (operand_const) {
                 comment = "  // Wiring constant\n";
@@ -2157,16 +2187,6 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
 
-            // TODO Fix number of inputs and outputs for loop head
-            // TODO Do we need output anymore?
-            string loop_define =
-                "  val {{ins_name}} = "
-                "Module(new LoopHeader(NumInputs = NumInputs, NumOuts = 4, ID "
-                "= 0)(p))\n";
-
-            ins_template.set("ins_name",
-                             "loop_L_" + std::to_string(Loc.getLine()));
-            printCode(ins_template.render(loop_define));
 
             /**
              * Detecting Live-in and Live-out of each for loop
@@ -2183,26 +2203,162 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         Value *V = *OI;
 
                         // Detecting instructions
-                        if (Instruction *I = dyn_cast<Instruction>(V)) {
-                            if (!L->contains(I) && definedInCaller(tmp_bb, V)) {
+                        if (Instruction *Ins = dyn_cast<Instruction>(V)) {
+                            if (!L->contains(Ins) && definedInCaller(tmp_bb, V)) {
                                 liveIns.insert(V);
+                                this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
                         // Detecting function arguments
-                        else if (isa<Argument>(V))
+                        else if (isa<Argument>(V)){
                             liveIns.insert(V);
+                            this->LoopEdges.insert(std::make_pair(V, &I));
+                        }
                     }
 
                     for (auto *U : I.users()) {
-                        if (!definedInRegion(tmp_bb, U)) liveOuts.insert(&I);
+                        if (!definedInRegion(tmp_bb, U)){
+                            liveOuts.insert(U);
+                            this->LoopEdges.insert(std::make_pair(&I, U));
+                        }
                     }
                 }
             }
 
             this->loop_liveins[L] = liveIns;
             this->loop_liveouts[L] = liveOuts;
+
+
+            // TODO Fix number of inputs and outputs for loop head
+            // TODO Do we need output anymore?
+            string loop_define =
+                "  val {{ins_name}} = "
+                "Module(new LoopHeader(NumInputs = {{num_inputs}}, NumOuts = {{num_outputs}}, ID "
+                "= 0)(p))\n";
+
+            ins_template.set("ins_name",
+                             "loop_L_" + std::to_string(Loc.getLine()));
+            ins_template.set("num_inputs",  static_cast<int>(liveIns.size()));
+            ins_template.set("num_outputs", static_cast<int>(liveOuts.size()));
+
+            printCode(ins_template.render(loop_define));
+
+
         }
     }
+}
+
+/**
+ * Generating a template scala file which can be used
+ * for writing test cases
+ */
+void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
+    generateImportSection(this->outTest);
+
+    // Printing Tests class
+    LuaTemplater ins_template;
+    string final_command;
+    string command =
+        "class {{class_name}}Tests"
+        "(c: {{module_name}}) extends PeekPokeTester(c) {\n";
+    ins_template.set("class_name", F.getName().str());
+    ins_template.set("module_name", F.getName().str() + "DF");
+    final_command.append(ins_template.render(command));
+
+    printCode(ins_template.render(final_command), this->outTest);
+
+    // Printing comments and the moduel information
+    command = "\n  /**\n  *  {{module_name}}DF interface:\n  *\n";
+
+    ins_template.set("module_name", F.getName().str());
+
+    final_command = ins_template.render(command);
+
+    uint32_t c = 0;
+    string init_command = "";
+
+    for (auto &ag : F.getArgumentList()) {
+        command =
+            "  *    data_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+        ins_template.set("index", static_cast<int>(c++));
+        final_command.append(ins_template.render(command));
+
+        command =
+            "  poke(c.io.data_{{index}}.bits.data, 0.U)\n"
+            "  poke(c.io.data_{{index}}.bits.predicate, false.B)\n"
+            "  poke(c.io.data_{{index}}.bits.valid, false.B)\n"
+            "  poke(c.io.data_{{index}}.valid, false.B)\n\n";
+
+        init_command.append(ins_template.render(command));
+    }
+
+    command = "  poke(c.io.result.ready, false.B)\n\n";
+    init_command.append(command);
+
+    final_command.append(
+        "   *    val pred = Decoupled(new Bool())\n"
+        "   *    val start = Input(new Bool())\n");
+
+    if (!F.getReturnType()->isVoidTy()) {
+        final_command.append(
+            "   *    val result = Decoupled(new DataBundle)\n");
+    }
+
+    final_command.append("   */\n\n\n");
+
+    command = "  // Initializing the signals\n\n";
+    final_command.append(command);
+    final_command.append(init_command);
+
+    command =
+        "  step(1)"
+        "  var time = 1  //Cycle counter\n  /**\n  *\n"
+        "  * @todo Add your test cases here\n  *\n"
+        "   * The test harness API allows 4 interactions with the DUT:\n"
+        "   *  1. To set the DUT'S inputs: poke\n"
+        "   *  2. To look at the DUT'S outputs: peek\n"
+        "   *  3. To test one of the DUT's outputs: expect\n"
+        "   *  4. To advance the clock of the DUT: step\n"
+        "   *\n"
+        "   * Conditions:\n"
+        "   *  1. while(peek(c.io.XXX) == UInt(0))\n"
+        "   *  2. for(i <- 1 to 10)\n"
+        "   *  3. for{ i <- 1 to 10\n"
+        "   *          j <- 1 to 10\n"
+        "   *        }\n"
+        "   *\n"
+        "   * Print Statement:\n"
+        "   *    println(s\"Waited $count cycles on gcd inputs $i, $j, giving "
+        "up\")\n"
+        "   *\n"
+        "   */\n\n";
+
+    printCode(final_command + command + "}\n", this->outTest);
+
+    // Printing Tester class
+    //
+    command =
+        "class {{class_name}}Tester extends FlatSpec with Matchers {\n"
+        "  implicit val p = config.Parameters.root((new "
+        "MiniConfig).toInstance)\n"
+        "  it should \"Check that {{class_name}} works correctly.\" in {\n"
+        "    // iotester flags:\n"
+        "    // -ll  = log level <Error|Warn|Info|Debug|Trace>\n"
+        "    // -tbn = backend <firrtl|verilator|vcs>\n"
+        "    // -td  = target directory\n"
+        "    // -tts = seed for RNG\n"
+        "    chisel3.iotesters.Driver.execute(\n"
+        "     Array(\n"
+        "       // \"-ll\", \"Info\",\n"
+        "       \"-tbn\", \"verilator\",\n"
+        "       \"-td\", \"test_run_dir\",\n"
+        "       \"-tts\", \"0001\"),\n"
+        "     () => new {{class_name}}DF()) {\n"
+        "     c => new {{class_name}}Tests(c)\n"
+        "    } should be(true)\n"
+        "  }\n}\n";
+
+    printCode(ins_template.render(command), this->outTest);
 }
 
 /**
@@ -2296,114 +2452,4 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     printCode("}\n");
 }
 
-/**
- * Generating a template scala file which can be used
- * for writing test cases
- */
-void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
-    generateImportSection(this->outTest);
 
-    // Printing Tests class
-    LuaTemplater ins_template;
-    string final_command;
-    string command =
-        "class {{class_name}}Tests"
-        "(c: {{module_name}}) extends PeekPokeTester(c) {\n";
-    ins_template.set("class_name", F.getName().str());
-    ins_template.set("module_name", F.getName().str() + "DF");
-    final_command.append(ins_template.render(command));
-
-    printCode(ins_template.render(final_command), this->outTest);
-
-    // Printing comments and the moduel information
-    command = "\n  /**\n  *  {{module_name}}DF interface:\n  *\n";
-
-    ins_template.set("module_name", F.getName().str());
-
-    final_command = ins_template.render(command);
-
-    uint32_t c = 0;
-    string init_command = "";
-
-    for (auto &ag : F.getArgumentList()) {
-        command =
-            "  *    data_{{index}} = Flipped(Decoupled(new DataBundle))\n";
-        ins_template.set("index", static_cast<int>(c++));
-        final_command.append(ins_template.render(command));
-
-        command =
-            "  poke(c.io.data_{{index}}.bits.data, 0.U)\n"
-            "  poke(c.io.data_{{index}}.bits.predicate, false.B)\n"
-            "  poke(c.io.data_{{index}}.bits.valid, false.B)\n"
-            "  poke(c.io.data_{{index}}.valid, false.B)\n\n";
-
-        init_command.append(ins_template.render(command));
-    }
-
-    command = "  poke(c.io.result.ready, false.B)\n\n";
-    init_command.append(command);
-
-    final_command.append(
-        "   *    val pred = Decoupled(new Bool())\n"
-        "   *    val start = Input(new Bool())\n");
-
-    if (!F.getReturnType()->isVoidTy()) {
-        final_command.append(
-            "   *    val result = Decoupled(new DataBundle)\n");
-    }
-
-    final_command.append("   */\n\n\n");
-
-    command = "  // Initializing the signals\n\n";
-    final_command.append(command);
-    final_command.append(init_command);
-
-    command =
-        "  step(1)\n  /**\n  *\n"
-        "  * @todo Add your test cases here\n  *\n"
-        "   * The test harness API allows 4 interactions with the DUT:\n"
-        "   *  1. To set the DUT'S inputs: poke\n"
-        "   *  2. To look at the DUT'S outputs: peek\n"
-        "   *  3. To test one of the DUT's outputs: expect\n"
-        "   *  4. To advance the clock of the DUT: step\n"
-        "   *\n"
-        "   * Conditions:\n"
-        "   *  1. while(peek(c.io.XXX) == UInt(0))\n"
-        "   *  2. for(i <- 1 to 10)\n"
-        "   *  3. for{ i <- 1 to 10\n"
-        "   *          j <- 1 to 10\n"
-        "   *        }\n"
-        "   *\n"
-        "   * Print Statement:\n"
-        "   *    println(s\"Waited $count cycles on gcd inputs $i, $j, giving "
-        "up\")\n"
-        "   *\n"
-        "   */\n\n";
-
-    printCode(final_command + command + "}\n", this->outTest);
-
-    // Printing Tester class
-    //
-    command =
-        "class {{class_name}}Tester extends FlatSpec with Matchers {\n"
-        "  implicit val p = config.Parameters.root((new "
-        "MiniConfig).toInstance)\n"
-        "  it should \"Check that {{class_name}} works correctly.\" in {\n"
-        "    // iotester flags:\n"
-        "    // -ll  = log level <Error|Warn|Info|Debug|Trace>\n"
-        "    // -tbn = backend <firrtl|verilator|vcs>\n"
-        "    // -td  = target directory\n"
-        "    // -tts = seed for RNG\n"
-        "    chisel3.iotesters.Driver.execute(\n"
-        "     Array(\n"
-        "       // \"-ll\", \"Info\",\n"
-        "       \"-tbn\", \"verilator\",\n"
-        "       \"-td\", \"test_run_dir\",\n"
-        "       \"-tts\", \"0001\"),\n"
-        "     () => new {{class_name}}DF()) {\n"
-        "     c => new {{class_name}}Tests(c)\n"
-        "    } should be(true)\n"
-        "  }\n}\n";
-
-    printCode(ins_template.render(command), this->outTest);
-}
