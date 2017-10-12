@@ -2274,11 +2274,8 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
             auto Filename = getBaseName(Loc->getFilename().str());
 
             auto loop_live_in = this->loop_liveins.find(L);
-            errs() << "SIZE: " << this->loop_liveins.size() << "\n";
-            if(loop_live_in != this->loop_liveins.end())
-                errs() << "FOUND\n";
 
-            for( auto p : this->loop_liveins ){
+            for( auto p : loop_live_in){
                 errs() << "LIVE: " << p.second.size() << "\n";
             }
             //errs() << this->loop_liveins[L].size() << "\n";
