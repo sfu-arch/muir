@@ -152,7 +152,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void HelperPrintBasicBlockPredicate();
     void PrintBranchBasicBlockCon(Instruction &);
     void HelperPrintBasicBlockPhi();
-    void PrintPHIMask(llvm::Instruction &);
+    //void PrintPHIMask(llvm::Instruction &);
+    void PrintPHIMask(llvm::Instruction &, uint32_t);
     void PrintPHICon(llvm::Instruction &);
 
     void HelperPrintInstructionDF(llvm::Function &);

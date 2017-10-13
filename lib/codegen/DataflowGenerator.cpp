@@ -503,16 +503,20 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         ins_template.set("ins_name", instruction_info[ins].name);
         final_command.append(ins_template.render(command));
 
-        auto phi_ins = dyn_cast<llvm::PHINode>(ins);
-        for (uint32_t i = 0; i < phi_ins->getNumOperands(); i++) {
-            if (!phi_ins) {
+        //auto phi_ins = dyn_cast<llvm::PHINode>(ins);
+
+        for (uint32_t i = 0; i < ins->getNumOperands(); i++) {
+
+            auto const_op = dyn_cast<llvm::ConstantInt>(ins->getOperand(i));
+
+            if (const_op) {
                 command = "    \"{{const_name}}\" -> {{index}},\n";
-                ins_template.set("ins_name", "const_" + to_string(i));
+                ins_template.set("const_name", "const_" + to_string(i));
             } else {
                 command = "    \"{{ins_name}}\" -> {{index}},\n";
                 ins_template.set("ins_name",
                                  instruction_info[dyn_cast<llvm::Instruction>(
-                                                      phi_ins->getOperand(i))]
+                                                      ins->getOperand(i))]
                                      .name);
             }
 
@@ -542,6 +546,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                 out << ins;
 
                 printCode(out.str());
+
                 command = "  val {{ins_name}}_in = Map( \n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 final_command.append(ins_template.render(command));
@@ -1409,9 +1414,11 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
     }
 
     else {
+        uint32_t index = 0;
         std::for_each(instruction_phi.begin(), instruction_phi.end(),
-                      [this](Instruction *ins) {
-                          DataflowGeneratorPass::PrintPHIMask(*ins);
+                      [this, &index](Instruction *ins) {
+                          DataflowGeneratorPass::PrintPHIMask(*ins, index);
+                          index++;
                       });
     }
 }
@@ -1445,12 +1452,13 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             string comment = "  // Wiring constant\n";
             string command = "";
             command =
-                "  {{phi_name}}.io.InData({{c_num}}).bits.data := {{value}}.U\n"
-                "  {{phi_name}}.io.InData({{c_num}}).bits.predicate := true.B\n"
-                "  {{phi_name}}.io.InData({{c_num}}).valid := true.B\n";
+                "  {{phi_name}}.io.InData(\"{{const_name}}\").bits.data := {{value}}.U\n"
+                "  {{phi_name}}.io.InData(\"{{const_name}}\").bits.predicate := true.B\n"
+                "  {{phi_name}}.io.InData(\"{{const_name}}\").valid := true.B\n";
 
             ins_template.set("phi_name", instruction_info[&ins].name);
-            ins_template.set("c_num", static_cast<int>(c));
+            ins_template.set("const_name", "const_" + to_string(c));
+            //ins_template.set("c_num", static_cast<int>(c));
             ins_template.set(
                 "value", static_cast<int>(operand_const->getSExtValue()));
 
@@ -1466,13 +1474,14 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
     }
 }
 
-void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins) {
+void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins, uint32_t index) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
     LuaTemplater ins_template;
 
-    string command = "  {{phi_name}}.io.Mask <> {{ins_name}}.io.MaskBB(0)\n";
+    string command = "  {{phi_name}}.io.Mask <> {{ins_name}}.io.MaskBB({{bb_index}})\n";
     ins_template.set("phi_name", instruction_info[&ins].name);
     ins_template.set("ins_name", basic_block_info[ins.getParent()].name);
+    ins_template.set("bb_index", static_cast<int>(index));
 
     string result = ins_template.render(command);
     printCode(result);
@@ -2241,21 +2250,18 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                 }
             }
 
-            // this->loop_liveins[L] = liveIns;
-            //this->loop_liveouts[L] = liveOuts;
-
             // TODO Fix number of inputs and outputs for loop head
             // TODO Do we need output anymore?
             string loop_define =
-                "  val {{ins_name}} = "
+                "  val {{loop_name}} = "
                 "Module(new LoopHeader(NumInputs = {{num_inputs}}, NumOuts = "
                 "{{num_outputs}}, ID "
                 "= 0)(p))\n";
 
-            ins_template.set("ins_name",
+            ins_template.set("loop_name",
                              "loop_L_" + std::to_string(Loc.getLine()));
-            ins_template.set("num_inputs", static_cast<int>(liveIns.size()));
-            ins_template.set("num_outputs", static_cast<int>(liveOuts.size()));
+            ins_template.set("num_inputs", static_cast<int>(this->loop_liveins[L].size()));
+            ins_template.set("num_outputs", static_cast<int>(this->loop_liveouts[L].size()));
 
             printCode(ins_template.render(loop_define));
         }
@@ -2282,14 +2288,107 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
             auto loop_live_in  = this->loop_liveins.find(L);
             auto loop_live_out = this->loop_liveouts.find(L);
 
+            //We iterate over live-in of each loop and then find the
+            //source and destination of the values
+            //
+            //The first element is the SRC and it should get connected to
+            //the loop header register file and the loop register file
+            //should get connected to the DEST instruction
+            //
+            //NOTE: Second value is always instructions while the first
+            //value can be either instruction or function argument
             if (loop_live_in != this->loop_liveins.end()) {
+
+                uint32_t live_index = 0;
                 for (auto p : loop_live_in->second) {
+
                     for(auto search_elem : LoopEdges){
-                        if(p == search_elem.first)
-                            //TODO connect the edge
+
+                        if(p == search_elem.first){
+                            
+                            auto operand = search_elem.first;
+
+                            auto target_ins = dyn_cast<llvm::Instruction>(search_elem.second);
+
+                            auto operand_ins = dyn_cast<llvm::Instruction>(operand);
+
+                            // Check if the input is function argument
+                            auto operand_arg = dyn_cast<llvm::Argument>(operand);
+
+                            //If SRC is function argument
+                            // connect SRC to the loop header
+                            if(operand_arg){
+
+                                string comment =
+                                    "  // Connecting function argument to the loop header\n";
+
+                                string command =
+                                        "  {{loop_name}}.io.inputArg({{arg_index}}) <> io.{{operand_name}}\n";
+
+                                ins_template.set("loop_name",
+                                        "loop_L_" + std::to_string(Loc.getLine()));
+                                ins_template.set("arg_index", static_cast<int>(live_index));
+
+                                if (argument_info.find(operand_arg) == argument_info.end()) {
+                                    assert(!"Funcion argument can't be find!\n");
+                                }
+
+                                ins_template.set("operand_name", argument_info[operand_arg].name);
+
+                                // Printing each instruction
+                                string init_test = "  //";
+                                raw_string_ostream out(init_test);
+                                out << *search_elem.first << "\n";
+
+                                //printCode(out.str());
+                                printCode(comment + out.str() + ins_template.render(command));
+
+                                //Now we need to connect the loop header to the second value
+                                if(target_ins){
+
+                                }
+                                else{
+                                    search_elem.second->dump();
+                                    assert(!"Target instruction should be instruction");
+                                }
+
+
+                            }
+                            else if(operand_ins){
+
+                                string comment =
+                                    "  // Connecting instruction to the loop header\n";
+
+                                string command =
+                                        "  {{loop_name}}.io.inputArg({{arg_index}}) <> io.{{operand_name}}\n";
+
+                                ins_template.set("loop_name",
+                                        "loop_L_" + std::to_string(Loc.getLine()));
+                                ins_template.set("arg_index", static_cast<int>(live_index));
+
+                                if (argument_info.find(operand_arg) == argument_info.end()) {
+                                    assert(!"Funcion argument can't be find!\n");
+                                }
+
+                                ins_template.set("operand_name", argument_info[operand_arg].name);
+
+                                // Printing each instruction
+                                string init_test = "  //";
+                                raw_string_ostream out(init_test);
+                                out << *search_elem.first << "\n";
+
+                                //printCode(out.str());
+                                printCode(comment + out.str() + ins_template.render(command));
+                            }
+
+                            live_index++;
                             errs() << "EDGE here\n";
+                            errs() << *search_elem.first << "\n";
+                            errs() << *search_elem.second << "\n";
+                        }
                     }
                 }
+
             }
 
 
