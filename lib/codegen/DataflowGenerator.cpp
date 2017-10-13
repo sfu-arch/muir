@@ -547,12 +547,12 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                 final_command.append(ins_template.render(command));
 
                 for (uint32_t c = 0; c < ins.getNumOperands(); c++) {
+
+                    if (br_ins && (br_ins->getNumOperands() == 1 || c >= 1)) continue;
+
                     if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
                         continue;
 
-                    else if (br_ins) {
-                        if (br_ins->getNumOperands() == 1 || c >= 1) continue;
-                    }
                     // else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
                     // continue;
                     else if (dyn_cast<llvm::Argument>(ins.getOperand(c))) {
@@ -1422,6 +1422,7 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
  */
 void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
+
     LuaTemplater ins_template;
 
     // TODO check if the operand is constant, then hand right the signals VERY
@@ -1430,6 +1431,8 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
     for (uint32_t c = 0; c < phi_ins->getNumOperands(); c++) {
         // Getting target
         auto ins_target = dyn_cast<llvm::Instruction>(phi_ins->getOperand(c));
+        auto operand_const = dyn_cast<llvm::ConstantInt>(ins.getOperand(c));
+
         if (ins_target) {
             string command =
                 "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
@@ -1440,11 +1443,24 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             string result = ins_template.render(command);
             printCode(result);
 
-        } else {
-            string command =
-                "  //@todo {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
-                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
+        } else if(operand_const) {
+            //string command =
+                //"  //@todo {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                //"(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
+
+            string comment = "  // Wiring constant\n";
+            string command = "";
+            command =
+                "  {{phi_name}}.io.InData({{c_num}}).bits.data := {{value}}.U\n"
+                "  {{phi_name}}.io.InData({{c_num}}).bits.predicate := true.B\n"
+                "  {{phi_name}}.io.InData({{c_num}}).valid := true.B\n";
+
             ins_template.set("phi_name", instruction_info[&ins].name);
+            ins_template.set("c_num", static_cast<int>(c));
+            ins_template.set(
+                "value", static_cast<int>(operand_const->getSExtValue()));
+
+
             // ins_template.set("ins_name", instruction_info[ins_target].name);
 
             string result = ins_template.render(command);
