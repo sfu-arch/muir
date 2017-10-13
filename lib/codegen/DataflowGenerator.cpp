@@ -1425,9 +1425,6 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
 
     LuaTemplater ins_template;
 
-    // TODO check if the operand is constant, then hand right the signals VERY
-    // IMPORTANT
-    //
     for (uint32_t c = 0; c < phi_ins->getNumOperands(); c++) {
         // Getting target
         auto ins_target = dyn_cast<llvm::Instruction>(phi_ins->getOperand(c));
@@ -1444,9 +1441,6 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             printCode(result);
 
         } else if(operand_const) {
-            //string command =
-                //"  //@todo {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
-                //"(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
 
             string comment = "  // Wiring constant\n";
             string command = "";
