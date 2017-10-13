@@ -1,9 +1,7 @@
 int foo(unsigned int a, unsigned int b){
-    unsigned int sum;
+    unsigned int sum = 0;
     if(a / 2 == 4)
         sum = a + b;
-    else
-        sum = a - b;
     return sum;
 }
 

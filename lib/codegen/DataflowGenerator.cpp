@@ -2360,9 +2360,9 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     final_command.append(init_command);
 
     command =
-        "  step(1)"
-        "  var time = 1  //Cycle counter\n  /**\n  *\n"
-        "  * @todo Add your test cases here\n  *\n"
+        "  step(1)\n"
+        "  var time = 1  //Cycle counter\n  /**\n   *\n"
+        "   * @todo Add your test cases here\n   *\n"
         "   * The test harness API allows 4 interactions with the DUT:\n"
         "   *  1. To set the DUT'S inputs: poke\n"
         "   *  2. To look at the DUT'S outputs: peek\n"
