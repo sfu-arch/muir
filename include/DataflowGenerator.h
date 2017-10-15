@@ -65,6 +65,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveins;
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveouts;
 
+    std::map<llvm::Value *, uint32_t> ins_loop_header_idx;
+
     //Edges which we need to connect them too loop latch
     // LoopEdge-> <src, dst>
     std::set<std::pair<llvm::Value *, llvm::Value *>> LoopEdges;
