@@ -186,6 +186,19 @@ InstructionType InstructionTypeNode(Instruction &ins) {
     else if (isa<llvm::TruncInst>(ins))
         return common::TTrunc;
 
+#ifdef TAPIR
+    // Cilk Detach Instruction
+    else if (isa<llvm::DetachInst>(ins))
+        return common::Detach;
+
+    // Cilk Reattach Instruction
+    else if (isa<llvm::ReattachInst>(ins))
+        return common::Reattach;
+
+    // Cilk Sync Instruction
+    else if (isa<llvm::SyncInst>(ins))
+        return common::Sync;
+#endif
     // Default case
     // TODO: Other type of instructions are note supported for now!
     ins.dump();
@@ -1142,6 +1155,14 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintZextIns(Ins);
     } else if (ins_type == TAlloca) {
         PrintAllocaIns(Ins);
+#ifdef TAPIR
+    } else if (ins_type == Detach) {
+        PrintDetachIns(Ins);
+    } else if (ins_type == Reattach) {
+        PrintReattachIns(Ins);
+    } else if (ins_type == Sync) {
+        PrintSyncIns(Ins);
+#endif
     } else if (ins_type == TReturnInst) {
         PrintRetIns(Ins);
     } else {
@@ -1171,6 +1192,80 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         printCode(out.str() + "\n" + result + "\n");
     }
 }
+
+#ifdef TAPIR
+void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Detach(ReqBundle={{req_bundle}}, "
+                    "RespBundle={{resp_bundle}}))";
+
+    // TODO - req_bundle and resp_bundle should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("req_bundle", "Uint(32.W)");
+    ins_template.set("resp_bundle", "Uint(32.W)");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
+void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Reattach(RespBundle={{resp_bundle}}))";
+
+    // TODO - resp_bundle should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("resp_bundle", "Uint(32.W)");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
+void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Sync(NumIncr={{num_incr}}, "
+                    "NumIncr={{num_incr}}, "
+                    "MaxCount={{max_count}}))";
+
+    // TODO - num_incr, num_decr, max_count should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("num_incr", "1");
+    ins_template.set("num_decr", "1");
+    ins_template.set("max_count", "255");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+#endif
 
 /**
  * Priniting Basic Blcok definition for each basic block
@@ -2175,6 +2270,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             }
 
             printCode(comment + ins_template.render(command) + "\n");
+#ifdef TAPIR
+        } else if (ins_type == Detach || ins_type == Reattach || ins_type == Sync) {
+            // TODO add Cilk support
+#endif
         } else {
             ins.dump();
             assert(!"The instruction is not supported in the dataflow connection phase");

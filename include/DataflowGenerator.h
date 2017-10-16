@@ -143,7 +143,11 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintZextIns(Instruction &);
     void PrintAllocaIns(Instruction &);
     void PrintRetIns(Instruction &);
-
+#ifdef TAPIR
+    void PrintDetachIns(Instruction &);
+    void PrintReattachIns(Instruction &);
+    void PrintSyncIns(Instruction &);
+#endif
     void PrintParamObject();
 
     void PrintLoopHeader(llvm::Function &);

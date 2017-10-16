@@ -53,6 +53,13 @@ include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
+############## LLVM CONFIGURATION #################
+
+option(TAPIR "Tapir Cilk extension" OFF)
+if(TAPIR)
+    add_definitions(-DTAPIR)
+endif()
+
 ############## FINAL PROJECT CONFIG #################
 
 # And the project header and library paths
