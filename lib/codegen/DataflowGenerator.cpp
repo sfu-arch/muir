@@ -1206,8 +1206,8 @@ void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
 
     // TODO - req_bundle and resp_bundle should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("req_bundle", "Uint(32.W)");
-    ins_template.set("resp_bundle", "Uint(32.W)");
+    ins_template.set("req_bundle", "UInt(32.W)");
+    ins_template.set("resp_bundle", "UInt(32.W)");
 
     string result = ins_template.render(ins_define);
 
@@ -1229,7 +1229,7 @@ void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
 
     // TODO - resp_bundle should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("resp_bundle", "Uint(32.W)");
+    ins_template.set("resp_bundle", "UInt(32.W)");
 
     string result = ins_template.render(ins_define);
 
@@ -1248,7 +1248,7 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     string ins_define =
             "  val {{ins_name}} = "
                     "Module(new Sync(NumIncr={{num_incr}}, "
-                    "NumIncr={{num_incr}}, "
+                    "NumDecr={{num_decr}}, "
                     "MaxCount={{max_count}}))";
 
     // TODO - num_incr, num_decr, max_count should be set properly
