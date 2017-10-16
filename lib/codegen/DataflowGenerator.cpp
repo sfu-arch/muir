@@ -1459,11 +1459,8 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
 
             ins_template.set("phi_name", instruction_info[&ins].name);
             ins_template.set("const_name", "const_" + to_string(c));
-            // ins_template.set("c_num", static_cast<int>(c));
             ins_template.set("value",
                              static_cast<int>(operand_const->getSExtValue()));
-
-            // ins_template.set("ins_name", instruction_info[ins_target].name);
 
             string result = ins_template.render(command);
             printCode(result);
@@ -2451,9 +2448,12 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
             if (loop_live_out != this->loop_liveouts.end()) {
                 for (auto p : loop_live_out->second) {
                     for (auto search_elem : LoopEdges) {
-                        if (p == search_elem.second)
+                        if (p == search_elem.second){
                             // TODO connect the edge
+                            search_elem.first->dump();
+                            search_elem.second->dump();
                             errs() << "Live out here\n";
+                        }
                     }
                 }
             }
