@@ -47,7 +47,7 @@ First suppose that you have a program compiled to bitcode:
 
 Runing the generator:
 
-    ./bin/xketch ../test/loop.bc -fn-name=foo -o test-for.scala && llvm-dis final.bc
+    ./bin/xketch ../test/loop.bc -fn-name=foo -o test-for && llvm-dis final.bc
 
     -fn-name:           Target function
     -o:                 Generate Xketch file for the target function
