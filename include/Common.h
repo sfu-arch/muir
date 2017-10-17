@@ -40,6 +40,8 @@ struct GepTwo {
 // Functions
 void optimizeModule(llvm::Module *);
 
+void PrintFunctionDFG(llvm::Module &);
+
 InstructionType getLLVMOpcodeName(uint32_t OpCode);
 }
 
@@ -95,7 +97,7 @@ class DFGPrinter : public llvm::FunctionPass,
    public:
     static char ID;
 
-    DFGPrinter() : FunctionPass(ID), counter(999999) {}
+    DFGPrinter() : FunctionPass(ID), counter(0) {}
 
     bool doInitialization(llvm::Module &) override;
 

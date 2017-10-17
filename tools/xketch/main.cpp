@@ -384,6 +384,8 @@ int main(int argc, char **argv) {
     //Generating Chisel code
     codeGenerator(*module);
 
+    common::PrintFunctionDFG(*module);
+
 
 
     return 0;

@@ -20,6 +20,9 @@
 using namespace llvm;
 using namespace std;
 
+
+extern cl::opt<string> XKETCHName;
+
 namespace common {
 
 InstructionInfo::InstructionName InstructionInfo::instruction_name_type = {
@@ -45,6 +48,20 @@ void optimizeModule(Module *Mod) {
     legacy::PassManager PM;
     PMB.populateModulePassManager(PM);
     PM.run(*Mod);
+}
+
+void PrintFunctionDFG(llvm::Module &M) {
+    for (auto &F : M) {
+         if (F.isDeclaration()) continue;
+
+         if (F.getName() == XKETCHName) {
+         stripDebugInfo(F);
+         DEBUG(dbgs() << "FUNCTION FOUND\n");
+         //Making a function pass
+         helpers::printDFG(F);
+         
+        }
+    }
 }
 
 }
