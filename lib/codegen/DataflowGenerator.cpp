@@ -338,8 +338,8 @@ void DataflowGeneratorPass::NamingBasicBlock(Function &F) {
     for (auto &BB : F) {
         string tmp_name = BB.getName().str();
 
-        // If the basic block doesn't have name we add "unkonw" prefix
-        if (tmp_name.empty()) tmp_name = "unkonw." + to_string(c++);
+        // If the basic block doesn't have name we add "unknown" prefix
+        if (tmp_name.empty()) tmp_name = "unknown." + to_string(c++);
 
         std::replace(tmp_name.begin(), tmp_name.end(), '.', '_');
         BBInfo t_info = {tmp_name, id_count++};
@@ -1126,6 +1126,85 @@ void DataflowGeneratorPass::PrintAllocaIns(Instruction &Ins) {
     printCode(out.str() + "\n" + result + "\n");
 }
 
+#ifdef TAPIR
+void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Detach(ID = {{ins_id}}, ReqBundle = {{req_bundle}}, "
+                    "RespBundle = {{resp_bundle}})(p))";
+
+    // TODO - req_bundle and resp_bundle should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    ins_template.set("req_bundle", "UInt(32.W)");
+    ins_template.set("resp_bundle", "UInt(32.W)");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
+void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Reattach(ID = {{ins_id}}, "
+                    "RespBundle = {{resp_bundle}})(p))";
+
+    // TODO - resp_bundle should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    ins_template.set("resp_bundle", "UInt(32.W)");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+
+void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
+    // Get instruction type
+    auto ins_type = InstructionTypeNode(Ins);
+
+    LuaTemplater ins_template;
+    string ins_define =
+            "  val {{ins_name}} = "
+                    "Module(new Sync(ID = {{ins_id}}, "
+                    "NumIncr = {{num_incr}}, "
+                    "NumDecr = {{num_decr}}, "
+                    "MaxCount = {{max_count}})(p))";
+
+    // TODO - num_incr, num_decr, max_count should be set properly
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    ins_template.set("num_incr", "1");
+    ins_template.set("num_decr", "1");
+    ins_template.set("max_count", "255");
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+}
+#endif
+
 void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
     // Check if the instruction type is call site return
     CallSite CS(&Ins);
@@ -1193,79 +1272,6 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
     }
 }
 
-#ifdef TAPIR
-void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
-    // Get instruction type
-    auto ins_type = InstructionTypeNode(Ins);
-
-    LuaTemplater ins_template;
-    string ins_define =
-            "  val {{ins_name}} = "
-                    "Module(new Detach(ReqBundle={{req_bundle}}, "
-                    "RespBundle={{resp_bundle}}))";
-
-    // TODO - req_bundle and resp_bundle should be set properly
-    ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("req_bundle", "UInt(32.W)");
-    ins_template.set("resp_bundle", "UInt(32.W)");
-
-    string result = ins_template.render(ins_define);
-
-    // Printing each instruction
-    string init_test = "\n  //";
-    raw_string_ostream out(init_test);
-    out << Ins;
-    printCode(out.str() + "\n" + result + "\n");
-}
-
-void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
-    // Get instruction type
-    auto ins_type = InstructionTypeNode(Ins);
-
-    LuaTemplater ins_template;
-    string ins_define =
-            "  val {{ins_name}} = "
-                    "Module(new Reattach(RespBundle={{resp_bundle}}))";
-
-    // TODO - resp_bundle should be set properly
-    ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("resp_bundle", "UInt(32.W)");
-
-    string result = ins_template.render(ins_define);
-
-    // Printing each instruction
-    string init_test = "\n  //";
-    raw_string_ostream out(init_test);
-    out << Ins;
-    printCode(out.str() + "\n" + result + "\n");
-}
-
-void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
-    // Get instruction type
-    auto ins_type = InstructionTypeNode(Ins);
-
-    LuaTemplater ins_template;
-    string ins_define =
-            "  val {{ins_name}} = "
-                    "Module(new Sync(NumIncr={{num_incr}}, "
-                    "NumDecr={{num_decr}}, "
-                    "MaxCount={{max_count}}))";
-
-    // TODO - num_incr, num_decr, max_count should be set properly
-    ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("num_incr", "1");
-    ins_template.set("num_decr", "1");
-    ins_template.set("max_count", "255");
-
-    string result = ins_template.render(ins_define);
-
-    // Printing each instruction
-    string init_test = "\n  //";
-    raw_string_ostream out(init_test);
-    out << Ins;
-    printCode(out.str() + "\n" + result + "\n");
-}
-#endif
 
 /**
  * Priniting Basic Blcok definition for each basic block
@@ -2723,7 +2729,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step5:
     // Printing BasicBlock definitions
-    printHeader("Printing BasicBlocks");
+    printHeader("Printing Basic Blocks");
     HelperPrintBBInit(F);
 
     // Step6:
@@ -2733,7 +2739,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step6:
     // Printing Instruction initialization
-    printHeader("Printing Insturctions");
+    printHeader("Printing Instructions");
     HelperPrintInistInit(F);
 
     // Step 7:
@@ -2743,10 +2749,10 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Step 8:
     // Connecting enable signal of BasicBlocks
-    printHeader("Connecting BasicBlocks to Predicate Instructions");
+    printHeader("Connecting Basic Blocks to Predicate Instructions");
     HelperPrintBasicBlockPredicate();
 
-    printHeader("Connecting BasicBlocks to instructions");
+    printHeader("Connecting Basic Blocks to instructions");
     PrintBasicBlockEnableInstruction(F);
 
     // Connecting BasicBlock masks to their Phi nodes
