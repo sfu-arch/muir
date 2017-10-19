@@ -92,12 +92,20 @@ class DFGPrinter : public llvm::FunctionPass,
 
     stringstream dot;
     std::map<llvm::Value *, uint64_t> nodes;
-    uint64_t counter;
+    uint64_t counter_ins;
+    uint64_t counter_bb;
+    uint64_t counter_cnst;
+    uint64_t counter_arg;
 
    public:
     static char ID;
 
-    DFGPrinter() : FunctionPass(ID), counter(0) {}
+    DFGPrinter()
+        : FunctionPass(ID),
+          counter_ins(0),
+          counter_bb(0),
+          counter_cnst(0),
+          counter_arg(0) {}
 
     bool doInitialization(llvm::Module &) override;
 
@@ -146,7 +154,8 @@ class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
     }
 };
 
-class GEPAddrCalculation : public ModulePass, public InstVisitor<GEPAddrCalculation> {
+class GEPAddrCalculation : public ModulePass,
+                           public InstVisitor<GEPAddrCalculation> {
     friend class InstVisitor<GEPAddrCalculation>;
 
     // void visitFunction(Function &F);

@@ -107,17 +107,7 @@ bool pdgDump::runOnFunction(Function &F) {
     return false;
 }
 
-namespace helpers{
-
-char DFGPrinter::ID = 0;
-}
-
-bool DFGPrinter::doInitialization(Module &M) {
-    dot.clear();
-    return false;
-}
-
-void DFGPrinter::visitFunction(Function &F) {}
+namespace helpers {
 
 string getOpcodeStr(unsigned int N) {
     switch (N) {
@@ -132,42 +122,22 @@ string getOpcodeStr(unsigned int N) {
     }
 }
 
-void DFGPrinter::visitBasicBlock(BasicBlock &BB) {
-    // DEBUG(outs() << "ENTER! \n");
+char DFGPrinter::ID = 0;
+}
+
+bool DFGPrinter::doInitialization(Module &M) {
+    dot.clear();
+    return false;
+}
+
+void DFGPrinter::visitFunction(Function &F) {
+    auto &nodes = this->nodes;
+
     auto checkCall = [](const Instruction &I, string name) -> bool {
         if (isa<CallInst>(&I) && dyn_cast<CallInst>(&I)->getCalledFunction() &&
             dyn_cast<CallInst>(&I)->getCalledFunction()->getName().startswith(
                 name))
             return true;
-        return false;
-    };
-
-    auto &nodes = this->nodes;
-
-    auto insertNode = [&nodes](Value *V, uint64_t counter) {
-        nodes[V] = counter;
-        if (isa<BasicBlock>(V)) {
-            if (auto *N = dyn_cast<BasicBlock>(V)->getTerminator()->getMetadata(
-                    "BB_UID")) {
-                auto *S = dyn_cast<MDString>(N->getOperand(0));
-                auto id = stoi(S->getString().str());
-                nodes[V] = id;
-                return true;
-            } else {
-                return false;
-            }
-        } else if (isa<Instruction>(V)) {
-            if (auto *N = dyn_cast<Instruction>(V)->getMetadata("UID")) {
-                auto *S = dyn_cast<MDString>(N->getOperand(0));
-                auto id = stoi(S->getString().str());
-                nodes[V] = id;
-                return true;
-            } else {
-                return false;
-            }
-        }
-        // Removed the unreachable check since Args and Constants will
-        // end up here and thats ok.
         return false;
     };
 
@@ -188,12 +158,14 @@ void DFGPrinter::visitBasicBlock(BasicBlock &BB) {
         return after;
     };
 
-    auto subGraphFormat = [&escape_quotes](uint64_t id, string label, string color,
-                                       string ir) -> string {
+    auto subGraphFormat = [&escape_quotes](
+        uint64_t id, string label, string color, string name) -> string {
         stringstream sstr;
-        auto eir = escape_quotes(ir);
+        std::replace(name.begin(), name.end(), '.', '_');
+        auto eir = escape_quotes(name);
         sstr << "    subgraph cluster" << label << id << " {\n"
-            << "    }\n";
+                                                         "        label=\""
+             << name << "\"\n";
         return sstr.str();
     };
 
@@ -201,87 +173,187 @@ void DFGPrinter::visitBasicBlock(BasicBlock &BB) {
                                        string ir) -> string {
         stringstream sstr;
         auto eir = escape_quotes(ir);
-        sstr << id << " [label=\"" << label << "(" << id << ")\", opcode=\""
+        sstr << "        m_" << id << "[label=\"" << label << "(" << id
+             << ")\", opcode=\"" << label << "\", color=" << color << ",ir=\""
+             << eir << "\"];\n";
+        return sstr.str();
+    };
+
+    auto branchFormat = [&escape_quotes](uint64_t id, string label,
+                                         uint64_t num_op, string color,
+                                         string ir) -> string {
+        stringstream sstr;
+        string branch_label;
+
+        auto eir = escape_quotes(ir);
+
+        if (num_op == 1)
+            branch_label =
+                "\"{" + label + "(" + std::to_string(id) + ") \\l|{<s0>T}} \"";
+        else
+            branch_label = "\"{" + label + "(" + std::to_string(id) +
+                           ") \\l|{<s0>T|<s1>F}} \"";
+
+        sstr << "        m_" << id
+             << "[shape=\"record\", label=" << branch_label << ", opcode=\""
              << label << "\", color=" << color << ",ir=\"" << eir << "\"];\n";
         return sstr.str();
     };
 
+    for (auto &ag : F.getArgumentList()) {
+        nodes[&ag] = counter_arg;
 
-
-    if (nodes.count(&BB) == 0) {
-        bool success = insertNode(&BB, counter);
-        if (!success) return;
-        counter++;
-        dot << subGraphFormat(nodes[&BB], "BB", "red", BB.getName().str());
+        dot << "    arg_" << counter_arg << "[label=\"ARG(" << counter_arg
+            << ")\", color=green]\n";
+        counter_arg++;
     }
-    auto BBId = nodes[&BB];
+    for (auto &BB : F) {
+        nodes[&BB] = counter_bb++;
+        dot << subGraphFormat(nodes[&BB], "BB", "red", BB.getName().str());
 
-    //for (auto &I : BB) {
-        //if (checkCall(I, "llvm.dbg")) continue;
+        for (auto &I : BB) {
+            nodes[&I] = counter_ins++;
+            std::string ir;
+            llvm::raw_string_ostream rso(ir);
+            I.print(rso);
 
-        //std::string ir;
-        //llvm::raw_string_ostream rso(ir);
-        //I.print(rso);
+            // If this does not exist in the node map
+            // then create a new entry for it and save
+            // the value of the counter (identifier).
+            if (isa<BranchInst>(&I)) {
+                counter_ins++;
+                dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                                    I.getNumOperands(), "black", rso.str());
+            } else {
+                counter_ins++;
+                dot << nodeFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                                  "black", rso.str());
+            }
+        }
 
-        //// If this does not exist in the node map
-        //// then create a new entry for it and save
-        //// the value of the counter (identifier).
-        //if (nodes.count(&I) == 0) {
-            //bool success = insertNode(&I, counter);
-            //if (!success) continue;
-            //// nodes.insert(make_pair(&I, counter));
-            //counter++;
-            //if (checkCall(I, "__guard_func")) {
-                //dot << nodeFormat(nodes[&I], "G", "red", rso.str());
-            //} else {
-                //dot << nodeFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
-                                  //"black", rso.str());
-            //}
-        //}
-
-        //vector<Value *> Operands;
-        //if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
-            //CallSite CS(&I);
-            //for (unsigned c = 0; c < CS.getNumArgOperands(); c++)
-                //Operands.push_back(CS.getArgument(c));
-        //} else {
-            //for (unsigned c = 0; c < I.getNumOperands(); c++)
-                //Operands.push_back(I.getOperand(c));
-        //}
-
-        //for (auto OI : Operands) {
-            //std::string op;
-            //llvm::raw_string_ostream rso2(op);
-            //OI->print(rso2);
-            //if (nodes.count(OI) == 0) {
-                //insertNode(OI, counter);
-                //counter++;
-                //if (isa<Argument>(OI)) {
-                    //dot << nodeFormat(nodes[OI], "Arg", "blue", rso2.str());
-                    //dot << nodes[OI] << "->" << nodes[&I] << " [color=blue];\n";
-                //} else if (isa<Constant>(OI)) {
-                    //dot << nodeFormat(nodes[OI], "Const", "green", rso2.str());
-                    //dot << nodes[OI] << "->" << nodes[&I]
-                        //<< " [color=green];\n";
-                //} else if (isa<BasicBlock>(OI)) {
-                    //dot << nodeFormat(nodes[OI], "BB", "green",
-                                      //BB.getName().str());
-                    //dot << nodes[&I] << "->" << nodes[OI] << " [color=red];\n";
-                //} else {
-                    //// TODO : This will break later when there are PHINodes
-                    //// for chops.
-                    //llvm_unreachable("unexpected");
-                //}
-            //} else {
-                //dot << nodes[OI] << "->" << nodes[&I] << ";\n";
-            //}
-        //}
-        //// Every Instruction is control depedent on its BB_START
-        //dot << BBId << "->" << nodes[&I] << " [style=dotted];\n";
-    //}
+        dot << "    }\n";
+    }
 }
 
-void DFGPrinter::visitInstruction(Instruction &I) {}
+void DFGPrinter::visitBasicBlock(BasicBlock &BB) {}
+
+void DFGPrinter::visitInstruction(Instruction &I) {
+    // Filling operands container
+    vector<Value *> Operands;
+    if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
+        CallSite CS(&I);
+        for (unsigned c = 0; c < CS.getNumArgOperands(); c++)
+            Operands.push_back(CS.getArgument(c));
+    } else {
+        for (unsigned c = 0; c < I.getNumOperands(); c++)
+            Operands.push_back(I.getOperand(c));
+    }
+
+    auto &nodes = this->nodes;
+
+    auto escape_quotes = [](const string &before) -> string {
+        string after;
+        after.reserve(before.length() + 4);
+
+        for (string::size_type i = 0; i < before.length(); ++i) {
+            switch (before[i]) {
+                case '"':
+                case '\\':
+                    after += '\\';
+                // Fall through.
+                default:
+                    after += before[i];
+            }
+        }
+        return after;
+    };
+
+    auto controlEdge = [&escape_quotes](uint64_t src_id, uint64_t dst_id,
+                                        uint64_t port, string bb_lable,
+                                        uint64_t bb_id, string color) {
+
+        stringstream sstr;
+        sstr << "    m_" << src_id << ":s" << port << " -> m_" << dst_id
+             << "[color=red, style=dotted, lhead=\"cluster" << bb_lable << bb_id
+             << "\"]\n";
+
+        return sstr.str();
+    };
+
+    // auto BB = I.getParent();
+
+    // Check if the insturction is branch
+    // the label needs to have port then
+    if (llvm::isa<llvm::BranchInst>(I)) {
+        uint64_t br_counter = 0;
+        for (auto OI : Operands) {
+            std::string op;
+            llvm::raw_string_ostream rso2(op);
+            OI->print(rso2);
+
+            if (isa<BasicBlock>(OI)) {
+                auto t_bb = dyn_cast<BasicBlock>(OI);
+
+                auto target_instruction = t_bb->getFirstNonPHI();
+
+                dot << controlEdge(nodes[&I], nodes[target_instruction],
+                                   br_counter, "BB", nodes[t_bb], "black");
+                br_counter++;
+            }
+            else{
+                dot << "    "
+                    << "m_" << nodes[OI] << "->"
+                    << "m_" << nodes[&I] << ";\n";
+            }
+        }
+    }
+    //else if(isa<llvm::PHINode>(I)){
+        //uint32_t op_counter = 0;
+        //for(auto OI : Operands){
+           //if (isa<Instruction>(OI)){
+                //dot << "    "
+                    //<< "m_" << nodes[OI] << "->"
+                    //<< "m_" << nodes[&I] << ";\n";
+            //}
+        //}
+    //}
+    else {
+        auto BB = I.getParent();
+
+        for (auto OI : Operands) {
+            std::string op;
+            llvm::raw_string_ostream rso2(op);
+            OI->print(rso2);
+
+            if (isa<Argument>(OI)) {
+                dot << "    "
+                    << "arg_" << nodes[OI] << " ->"
+                    << " m_" << nodes[&I] << " [color=blue];\n";
+            } else if (isa<Constant>(OI)) {
+                auto cnt = dyn_cast<llvm::ConstantInt>(OI);
+                auto cnt_value = cnt->getSExtValue();
+
+                if (nodes.count(OI) == 0) {
+                    nodes[OI] = cnt->getSExtValue();
+                    dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
+                        << cnt->getSExtValue() << "\", color=blue]\n";
+                }
+
+                dot << "    cnst_" << nodes[OI] << "->"
+                    << "m_" << nodes[&I] << " [color=green];\n";
+            } else if (isa<Instruction>(OI)){
+                dot << "    "
+                    << "m_" << nodes[OI] << "->"
+                    << "m_" << nodes[&I] << ";\n";
+            }
+            else {
+                // TODO : This will break later when there are PHINodes
+                // for chops.
+                llvm_unreachable("unexpected");
+            }
+        }
+    }
+}
 
 bool DFGPrinter::doFinalization(Module &M) { return false; }
 
@@ -289,8 +361,8 @@ bool DFGPrinter::runOnFunction(Function &F) {
     ofstream dotfile(("dfg." + F.getName() + ".dot").str().c_str(), ios::out);
     dot << "digraph G {\n";
     dot << "    compound=true;\n"
-        "    labelloc=\"t\"\n";
-    dot << "    label=\""<< F.getName().str() <<"\"\n\n";
+           "    labelloc=\"t\"\n";
+    dot << "    label=\"" << F.getName().str() << "\"\n\n";
     visit(F);
     dot << "}\n";
     dotfile << dot.rdbuf();
@@ -299,12 +371,12 @@ bool DFGPrinter::runOnFunction(Function &F) {
 }
 
 // GEPAddrCalculation Helper class
-namespace helpers{
+namespace helpers {
 
 char GEPAddrCalculation::ID = 0;
 }
 
-void GEPAddrCalculation::visitSExtInst(Instruction &I){
+void GEPAddrCalculation::visitSExtInst(Instruction &I) {
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
 
@@ -333,37 +405,37 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
         // First operand is the pointer the variable
         if (c == 0) {
             op = I.getOperand(c)->getType()->getPointerElementType();
-            //outs() << *I.getOperand(c)->getType()->getPointerElementType()
-                   //<< "\n";
+            // outs() << *I.getOperand(c)->getType()->getPointerElementType()
+            //<< "\n";
 
             // Index zero is pointer type
             // It can be either struct or constant
             if (op->isStructTy()) {
                 auto struct_op = dyn_cast<llvm::StructType>(op);
                 numByte = DL.getTypeAllocSize(struct_op);
-                //outs() << "Size: " << numByte << "\n";
+                // outs() << "Size: " << numByte << "\n";
             } else if (op->isArrayTy()) {
                 auto array_op = dyn_cast<llvm::ArrayType>(op);
                 numByte = DL.getTypeAllocSize(array_op);
-                //outs() << "Size: " << numByte << "\n";
+                // outs() << "Size: " << numByte << "\n";
 
             } else if (op->isFloatTy()) {
                 numByte = DL.getTypeAllocSize(op);
-                //outs() << "Size: " << numByte << "\n";
+                // outs() << "Size: " << numByte << "\n";
             } else if (op->isIntegerTy()) {
                 numByte = DL.getTypeAllocSize(op);
-                //outs() << "Size: " << numByte << "\n";
+                // outs() << "Size: " << numByte << "\n";
             } else if (op->isPointerTy()) {
-                //TODO Fix the pointer computation
+                // TODO Fix the pointer computation
                 numByte = DL.getTypeAllocSize(op);
-                //assert(!"DETECT");
+                // assert(!"DETECT");
             }
         } else {
             auto op_type = I.getOperand(c)->getType();
 
             auto value = dyn_cast<llvm::ConstantInt>(I.getOperand(c));
             if (op_type->isIntegerTy() && value) {
-                //outs() << "Value: " << value->getSExtValue() << "\n";
+                // outs() << "Value: " << value->getSExtValue() << "\n";
 
                 if (c == 2) {
                     if (op->isStructTy()) {
@@ -390,7 +462,8 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                 auto elem_size =
                                     DL.getTypeAllocSize(op_element);
                                 /**
-                                 * If the struct's element is an array we need to:
+                                 * If the struct's element is an array we need
+                                 * to:
                                  * 1. Align the begining element size
                                  * 2. Compute the array's size for end of the
                                  * alignment
@@ -431,8 +504,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                     end_align = start_align + size - 1;
                                 }
 
-                            } else if(operand->isFloatTy()){
-
+                            } else if (operand->isFloatTy()) {
                                 /**
                                  * If the struct's element is scala we only need
                                  * to:
@@ -449,8 +521,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                         size;
                                     end_align = start_align + size - 1;
                                 }
-                            }
-                            else if (operand->isPointerTy()) {
+                            } else if (operand->isPointerTy()) {
                                 /**
                                  * If the struct's element is scala we only need
                                  * to:
@@ -473,8 +544,8 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                 assert(!"Not supported type!\n");
                             }
                         }
-                        //outs() << "Alignment start: " << start_align << "\n";
-                        //outs() << "Alignment end  : " << end_align << "\n";
+                        // outs() << "Alignment start: " << start_align << "\n";
+                        // outs() << "Alignment end  : " << end_align << "\n";
                     } else if (op->isArrayTy()) {
                         auto array_op = dyn_cast<llvm::ArrayType>(op);
                         auto array_size = DL.getTypeAllocSize(array_op);
@@ -482,7 +553,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                             DL.getTypeAllocSize(array_op->getElementType());
 
                         start_align = array_elem_size * value->getSExtValue();
-                        //outs() << "Alignment: " << start_align << "\n";
+                        // outs() << "Alignment: " << start_align << "\n";
                     }
                 }
             }
@@ -502,7 +573,8 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
         auto value2 = dyn_cast<llvm::ConstantInt>(I.getOperand(2));
         if (value1 && value2) {
             common::GepTwo tmp_gep = {value1->getSExtValue(), numByte,
-                                      value2->getSExtValue(), static_cast<int64_t>(start_align)};
+                                      value2->getSExtValue(),
+                                      static_cast<int64_t>(start_align)};
             TwoGepIns[&I] = tmp_gep;
         }
     }
@@ -514,9 +586,6 @@ bool GEPAddrCalculation::runOnModule(Module &M) {
     }
     return false;
 }
-
-
-
 
 /**
  * Function lists
