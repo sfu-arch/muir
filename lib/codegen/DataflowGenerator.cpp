@@ -189,15 +189,15 @@ InstructionType InstructionTypeNode(Instruction &ins) {
 #ifdef TAPIR
     // Cilk Detach Instruction
     else if (isa<llvm::DetachInst>(ins))
-        return common::Detach;
+        return common::TDetach;
 
     // Cilk Reattach Instruction
     else if (isa<llvm::ReattachInst>(ins))
-        return common::Reattach;
+        return common::TReattach;
 
     // Cilk Sync Instruction
     else if (isa<llvm::SyncInst>(ins))
-        return common::Sync;
+        return common::TSync;
 #endif
     // Default case
     // TODO: Other type of instructions are note supported for now!
@@ -308,6 +308,10 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
                 instruction_store.push_back(&Ins);
             else if (ins_type == TAlloca)
                 instruction_alloca.push_back(&Ins);
+#ifdef TAPIR
+            else if (ins_type == TDetach)
+                instruction_detach.push_back(&Ins);
+#endif
         }
     }
 }
@@ -1235,11 +1239,11 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
     } else if (ins_type == TAlloca) {
         PrintAllocaIns(Ins);
 #ifdef TAPIR
-    } else if (ins_type == Detach) {
+    } else if (ins_type == TDetach) {
         PrintDetachIns(Ins);
-    } else if (ins_type == Reattach) {
+    } else if (ins_type == TReattach) {
         PrintReattachIns(Ins);
-    } else if (ins_type == Sync) {
+    } else if (ins_type == TSync) {
         PrintSyncIns(Ins);
 #endif
     } else if (ins_type == TReturnInst) {
@@ -2274,7 +2278,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
             printCode(comment + ins_template.render(command) + "\n");
 #ifdef TAPIR
-        } else if (ins_type == Detach || ins_type == Reattach || ins_type == Sync) {
+        } else if (ins_type == TDetach || ins_type == TReattach || ins_type == TSync) {
             // TODO add Cilk support
 #endif
         } else {

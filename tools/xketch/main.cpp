@@ -322,8 +322,9 @@ static void codeGenerator(Module &m){
     pm.add(llvm::createTailCallEliminationPass());
     pm.add(llvm::createFunctionInliningPass(1));
     pm.add(llvm::createAAResultsWrapperPass());
-
+#ifndef TAPIR
     pm.add(createBreakCriticalEdgesPass());
+#endif
     pm.add(createLoopSimplifyPass());
     pm.add(new DominatorTreeWrapperPass());
     pm.add(new LoopInfoWrapperPass());
@@ -384,9 +385,9 @@ int main(int argc, char **argv) {
     //Generating Chisel code
     codeGenerator(*module);
 
+#ifndef TAPIR
     common::PrintFunctionDFG(*module);
-
-
+#endif
 
     return 0;
 }
