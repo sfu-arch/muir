@@ -386,7 +386,11 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
  */
 void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
     string command =
+#ifdef TAPIR
+        "package concurrent\n"
+#else
         "package dataflow\n"
+#endif
         "\n"
         "import chisel3._\n"
         "import chisel3.util._\n"
@@ -420,8 +424,8 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 
     string comment =
         "/**\n"
-        "  * This Object should be initialize at the first step\n"
-        "  * It contains all the transformation from indecies to their "
+        "  * This Object should be initialized at the first step\n"
+        "  * It contains all the transformation from indices to their "
         "module's name\n"
         "  */\n\n";
     comment = comment + "object Data_" + F.getName().str() + "_FlowParam{\n";
@@ -494,7 +498,57 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         final_command.append("\n  )\n\n");
         printCode(final_command);
     }
+#ifdef TAPIR
+    // Iterate over branches to pick basicblock branch targets
+    typedef map<llvm::BasicBlock *, vector<llvm::Instruction *>>
+            BasickBlockDetach;
+    BasickBlockBranch bb_detach;
+    std::for_each(instruction_detach.begin(), instruction_detach.end(),
+                  [this, &bb_detach](Instruction *ins) {
+                      auto detach_ins = dyn_cast<llvm::DetachInst>(ins);
+                      for (uint32_t i = 0; i < detach_ins->getNumSuccessors();
+                           i++) {
+                          bb_detach[detach_ins->getSuccessor(i)].push_back(ins);
+                      }
 
+                  });
+    for (auto bb_to_detach : bb_detach) {
+        final_command = "";
+        command = "  val {{bb_name}}_pred = Map(\n";
+        ins_template.set("bb_name", basic_block_info[bb_to_detach.first].name);
+        final_command.append(ins_template.render(command));
+        uint32_t c = 0;
+        for (auto ins_bb : bb_to_detach.second) {
+            command = "    \"{{ins_name}}\" -> {{index}},\n";
+            ins_template.set("ins_name", instruction_info[ins_bb].name);
+            ins_template.set("index", static_cast<int>(c++));
+            final_command.append(ins_template.render(command));
+        }
+        final_command = final_command.substr(0, final_command.length() - 2);
+        final_command.append("\n  )\n\n");
+        printCode(final_command);
+    }
+
+    for (auto detach_to_bb : instruction_detach) {
+        // Connecting branch instructions to their basic block
+        final_command.clear();
+        command = "  val {{ins_name}}_brn_bb = Map(\n";
+        ins_template.set("ins_name", instruction_info[detach_to_bb].name);
+        final_command.append(ins_template.render(command));
+
+        auto detach_ins = dyn_cast<llvm::DetachInst>(detach_to_bb);
+        for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
+            command = "    \"{{bb_name}}\" -> {{index}},\n";
+            ins_template.set(
+                    "bb_name", basic_block_info[detach_ins->getSuccessor(i)].name);
+            ins_template.set("index", static_cast<int>(i));
+            final_command.append(ins_template.render(command));
+        }
+        final_command = final_command.substr(0, final_command.length() - 2);
+        final_command.append("\n  )\n\n");
+        printCode(final_command);
+    }
+#endif
     for (auto &bb : F) {
         final_command.clear();
         command = "  val {{bb_name}}_activate = Map(\n";
@@ -1138,14 +1192,15 @@ void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
             "  val {{ins_name}} = "
-                    "Module(new Detach(ID = {{ins_id}}, ReqBundle = {{req_bundle}}, "
-                    "RespBundle = {{resp_bundle}})(p))";
+                    "Module(new Detach(ID = {{ins_id}})(p))";
+//    "Module(new Detach(ID = {{ins_id}}, ReqBundle = {{req_bundle}}, "
+//            "RespBundle = {{resp_bundle}})(p))";
 
     // TODO - req_bundle and resp_bundle should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
-    ins_template.set("req_bundle", "UInt(32.W)");
-    ins_template.set("resp_bundle", "UInt(32.W)");
+//    ins_template.set("req_bundle", "UInt(32.W)");
+//    ins_template.set("resp_bundle", "UInt(32.W)");
 
     string result = ins_template.render(ins_define);
 
@@ -1451,13 +1506,24 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPredicate() {
 
     // Iterate over branch instruction and connect them their BasicBlock
     if (instruction_branch.size() == 0)
-        printCode("\n  // There is no branch insruction\n\n");
+        printCode("\n  // There is no branch instruction\n\n");
     else {
         std::for_each(instruction_branch.begin(), instruction_branch.end(),
                       [this](Instruction *ins) {
                           DataflowGeneratorPass::PrintBranchBasicBlockCon(*ins);
                       });
     }
+#ifdef TAPIR
+    // Iterate over detach instruction and connect them their BasicBlock
+    if (instruction_detach.size() == 0)
+        printCode("\n  // There is no detach instruction\n\n");
+    else {
+        std::for_each(instruction_detach.begin(), instruction_detach.end(),
+                      [this](Instruction *ins) {
+                          DataflowGeneratorPass::PrintDetachBasicBlockCon(*ins);
+                      });
+    }
+#endif
 }
 
 /**
@@ -1491,6 +1557,38 @@ void DataflowGeneratorPass::PrintBranchBasicBlockCon(Instruction &ins) {
     }
 }
 
+#ifdef TAPIR
+/**
+ * Connecting connections between Branches and target BasicBlocks
+ * @param ins input branch instruction
+ */
+void DataflowGeneratorPass::PrintDetachBasicBlockCon(Instruction &ins) {
+    auto detach_ins = dyn_cast<llvm::DetachInst>(&ins);
+
+    LuaTemplater ins_template;
+
+    for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
+        string comment = "  //Connecting {{ins_name}} to {{basic_block}}";
+        string command =
+                "  "
+                        "{{basic_block}}.io.predicateIn(param.{{basic_block}}_pred(\"{{ins_"
+                        "name}}\"))"
+                        " <> "
+                        "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}}\")"
+                        ")\n\n";
+
+        ins_template.set("ins_name", instruction_info[&ins].name);
+        ins_template.set("basic_block",
+                         basic_block_info[detach_ins->getSuccessor(i)].name);
+
+        string result = ins_template.render(comment);
+        printCode(result);
+
+        result = ins_template.render(command);
+        printCode(result);
+    }
+}
+#endif
 void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
     string comment =
         "  /**\n"
