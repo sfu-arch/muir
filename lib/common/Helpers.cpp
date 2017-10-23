@@ -387,7 +387,8 @@ bool DFGPrinter::runOnFunction(Function &F) {
     dot << "digraph G {\n";
     dot << "    compound=true;\n"
            "    labelloc=\"t\"\n";
-    dot << "    label=\"" << F.getName().str() << "\"\n\n";
+    dot << "    label=\"" << F.getName().str() << "\"\n";
+    dot << "    ranksep=1\n\n";
     visit(F);
     dot << "}\n";
     dotfile << dot.rdbuf();
