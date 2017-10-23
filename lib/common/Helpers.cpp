@@ -282,7 +282,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
 
     // auto BB = I.getParent();
 
-    // Check if the insturction is branch
+    // Check if the instruction is branch
     // the label needs to have port then
     if (llvm::isa<llvm::BranchInst>(I)) {
         uint64_t br_counter = 0;
@@ -303,7 +303,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             else{
                 dot << "    "
                     << "m_" << nodes[OI] << "->"
-                    << "m_" << nodes[&I] << ";\n";
+                    << "m_" << nodes[&I] << "[constraint=false];\n";
             }
         }
     }
@@ -317,6 +317,31 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             //}
         //}
     //}
+#ifdef TAPIR
+    else if (llvm::isa<llvm::DetachInst>(I) || llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I) ) {
+        uint64_t br_counter = 0;
+        for (auto OI : Operands) {
+            std::string op;
+            llvm::raw_string_ostream rso2(op);
+            OI->print(rso2);
+
+            if (isa<BasicBlock>(OI)) {
+                auto t_bb = dyn_cast<BasicBlock>(OI);
+
+                auto target_instruction = t_bb->getFirstNonPHI();
+
+                dot << controlEdge(nodes[&I], nodes[target_instruction],
+                                   br_counter, "BB", nodes[t_bb], "black");
+                br_counter++;
+            }
+            else{
+                dot << "    "
+                    << "m_" << nodes[OI] << "->"
+                    << "m_" << nodes[&I] << "[constraint=false];\n";
+            }
+        }
+    }
+#endif
     else {
         auto BB = I.getParent();
 
@@ -328,7 +353,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             if (isa<Argument>(OI)) {
                 dot << "    "
                     << "arg_" << nodes[OI] << " ->"
-                    << " m_" << nodes[&I] << " [color=blue];\n";
+                    << " m_" << nodes[&I] << " [color=blue, constraint=false];\n";
             } else if (isa<Constant>(OI)) {
                 auto cnt = dyn_cast<llvm::ConstantInt>(OI);
                 auto cnt_value = cnt->getSExtValue();
@@ -336,15 +361,15 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                 if (nodes.count(OI) == 0) {
                     nodes[OI] = cnt->getSExtValue();
                     dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
-                        << cnt->getSExtValue() << "\", color=blue]\n";
+                        << cnt->getSExtValue() << "\", color=blue, constraint=false]\n";
                 }
 
                 dot << "    cnst_" << nodes[OI] << "->"
-                    << "m_" << nodes[&I] << " [color=green];\n";
+                    << "m_" << nodes[&I] << " [color=green, constraint=false];\n";
             } else if (isa<Instruction>(OI)){
                 dot << "    "
                     << "m_" << nodes[OI] << "->"
-                    << "m_" << nodes[&I] << ";\n";
+                    << "m_" << nodes[&I] << "[constraint=false];\n";
             }
             else {
                 // TODO : This will break later when there are PHINodes

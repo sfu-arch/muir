@@ -389,9 +389,7 @@ int main(int argc, char **argv) {
     //Generating Chisel code
     codeGenerator(*module);
 
-#ifndef TAPIR
     common::PrintFunctionDFG(*module);
-#endif
 
     return 0;
 }
