@@ -224,6 +224,12 @@ void DFGPrinter::visitFunction(Function &F) {
                 counter_ins++;
                 dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
                                     I.getNumOperands(), "black", rso.str());
+#ifdef TAPIR
+            } else if (llvm::isa<llvm::DetachInst>(I) || llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I)) {
+                    counter_ins++;
+                    dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                                        I.getNumOperands(), "black", rso.str());
+#endif
             } else {
                 counter_ins++;
                 dot << nodeFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
