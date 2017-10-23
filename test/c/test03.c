@@ -1,5 +1,5 @@
 int foo(unsigned int a, unsigned int b, unsigned int n){
-    unsigned int sum = 0;
+    unsigned int sum = a;
     unsigned i;
 
     for(i = 0 ; i < n; i++)

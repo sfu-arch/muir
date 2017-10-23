@@ -628,8 +628,6 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     ins_template.set("module_name", F.getName().str());
     final_command.append(ins_template.render(command));
 
-    // for (uint32_t i = 0; i < F.getNumOperands(); i++) {
-    // for (uint32_t i = 0; i < ; i++) {
     uint32_t c = 0;
     for (auto &ag : F.getArgumentList()) {
         command =
@@ -639,6 +637,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     }
 
     final_command.append(
+        "    val entry = Filpped(Decoupled(new ControlBundle))\n"
         "    val pred = Decoupled(new Bool())\n"
         "    val start = Input(new Bool())\n");
 
