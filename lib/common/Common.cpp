@@ -38,6 +38,11 @@ InstructionInfo::InstructionName InstructionInfo::instruction_name_type = {
     {TBitCast, "TBitCastNode"},
     {TTrunc, "TruncNode"},
     {TAlloca, "AllocaNode"},
+#ifdef TAPIR
+    {TDetach, "Detach"},
+    {TReattach, "Reattach"},
+    {TSync, "Sync"},
+#endif
     {TReturnInst, "RetNode"}};
 
 void optimizeModule(Module *Mod) {

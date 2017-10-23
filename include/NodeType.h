@@ -23,9 +23,9 @@ enum InstructionType {
     TBitCast,
     TTrunc,
 #ifdef TAPIR
-    Detach,
-    Reattach,
-    Sync,
+    TDetach,
+    TReattach,
+    TSync,
 #endif
     TReturnInst,
     TNULL

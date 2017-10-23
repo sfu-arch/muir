@@ -54,7 +54,9 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::vector<llvm::Instruction *> instruction_load;
     std::vector<llvm::Instruction *> instruction_store;
     std::vector<llvm::Instruction *> instruction_alloca;
-
+#ifdef TAPIR
+    std::vector<llvm::Instruction *> instruction_detach;
+#endif
     std::map<llvm::Instruction *, uint32_t> instruction_use;
 
     std::vector<llvm::Argument *> function_argument;
@@ -157,6 +159,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintBasicBlockEnableInstruction(llvm::Function &);
     void HelperPrintBasicBlockPredicate();
     void PrintBranchBasicBlockCon(Instruction &);
+    void PrintDetachBasicBlockCon(Instruction &);
     void HelperPrintBasicBlockPhi();
     //void PrintPHIMask(llvm::Instruction &);
     void PrintPHIMask(llvm::Instruction &, uint32_t);

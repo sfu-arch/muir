@@ -319,11 +319,16 @@ static void codeGenerator(Module &m){
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
+#ifndef TAPIR
+    // Creates duplicate pfor.end and pfor.end.continue blocks
     pm.add(llvm::createTailCallEliminationPass());
+#endif
     pm.add(llvm::createFunctionInliningPass(1));
     pm.add(llvm::createAAResultsWrapperPass());
-
+#ifndef TAPIR
+    // Inserts critical edge block after detach
     pm.add(createBreakCriticalEdgesPass());
+#endif
     pm.add(createLoopSimplifyPass());
     pm.add(new DominatorTreeWrapperPass());
     pm.add(new LoopInfoWrapperPass());
@@ -385,8 +390,6 @@ int main(int argc, char **argv) {
     codeGenerator(*module);
 
     common::PrintFunctionDFG(*module);
-
-
 
     return 0;
 }
