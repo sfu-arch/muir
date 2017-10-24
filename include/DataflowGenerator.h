@@ -64,10 +64,12 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_succ;
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_pred;
 
+    std::vector<llvm::Loop *> loop_container;
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveins;
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveouts;
 
     std::map<llvm::Value *, uint32_t> ins_loop_header_idx;
+    std::map<llvm::Value *, uint32_t> ins_loop_end_idx;
 
     //Edges which we need to connect them too loop latch
     // LoopEdge-> <src, dst>
@@ -132,6 +134,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void generateImportSection(llvm::raw_ostream &);
     void HelperPrintBBInit(llvm::Function &);
     void PrintBasicBlockInit(llvm::BasicBlock &);
+    void PrintBasicBlockInit(llvm::BasicBlock &, llvm::Loop &);
 
     void HelperPrintInistInit(llvm::Function &);
     void PrintInstInit(Instruction &);
