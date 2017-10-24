@@ -381,7 +381,8 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
             // TODO Add support for function calls
             llvm::CallSite CS(&INS);
             if (CS) continue;
-            instruction_info[&INS] = {"m_" + to_string(this->count_ins++),
+            string name = INS.getOpcodeName();
+            instruction_info[&INS] = {name + "_" + to_string(this->count_ins++),
                                       counter++};
         }
     }
