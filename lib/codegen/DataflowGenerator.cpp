@@ -1107,7 +1107,7 @@ void DataflowGeneratorPass::PrintSextIns(Instruction &Ins) {
     string ins_define =
         "  val {{ins_name}} = "
         "Module(new SextNode(SrcW = {{src_width}}, DesW = {{dest_width}}, "
-        "NumOuts={{num_out}})(p))";
+        "NumOuts={{num_out}}))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set(
@@ -1751,11 +1751,12 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
     }
 
     else {
-        uint32_t index = 0;
+        map<BasicBlock *, uint32_t> bb_index;
+        //uint32_t index = 0;
         std::for_each(instruction_phi.begin(), instruction_phi.end(),
-                      [this, &index](Instruction *ins) {
-                          DataflowGeneratorPass::PrintPHIMask(*ins, index);
-                          index++;
+                      [this, &bb_index](Instruction *ins) {
+                          DataflowGeneratorPass::PrintPHIMask(*ins, bb_index);
+                          //index++;
                       });
     }
 }
@@ -1816,7 +1817,8 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
 }
 
 void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins,
-                                         uint32_t index) {
+                                         map<BasicBlock *, uint32_t> &bb_index) {
+                                         //uint32_t index) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
     LuaTemplater ins_template;
 
@@ -1824,7 +1826,7 @@ void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins,
         "  {{phi_name}}.io.Mask <> {{ins_name}}.io.MaskBB({{bb_index}})\n";
     ins_template.set("phi_name", instruction_info[&ins].name);
     ins_template.set("ins_name", basic_block_info[ins.getParent()].name);
-    ins_template.set("bb_index", static_cast<int>(index));
+    ins_template.set("bb_index", static_cast<int>(bb_index[ins.getParent()]++));
 
     string result = ins_template.render(command);
     printCode(result);
@@ -2758,42 +2760,44 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
         LuaTemplater ins_template;
 
         for (auto &L : getLoops(*LI)) {
+            auto sub_loops = L->getSubLoops();
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
 
-            /**
-             * Detecting Live-in and Live-out of each for loop
-             */
-            // std::set<Value *> liveIns;
-            // std::set<Value *> liveOuts;
+            if (sub_loops.size() == 0) {
+                /**
+                 * Detecting Live-in and Live-out of each for loop
+                 */
+                llvm::SetVector<llvm::BasicBlock *> tmp_bb(L->blocks().begin(),
+                                                           L->blocks().end());
+                for (auto B : L->blocks()) {
+                    for (auto &I : *B) {
+                        // Detecting Live-ins
+                        for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
+                            Value *V = *OI;
 
-            llvm::SetVector<llvm::BasicBlock *> tmp_bb(L->blocks().begin(),
-                                                       L->blocks().end());
-            for (auto B : L->blocks()) {
-                for (auto &I : *B) {
-                    // Detecting Live-ins
-                    for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
-                        Value *V = *OI;
-
-                        // Detecting instructions
-                        if (Instruction *Ins = dyn_cast<Instruction>(V)) {
-                            if (!L->contains(Ins) &&
-                                definedInCaller(tmp_bb, V)) {
+                            // Detecting instructions
+                            if (Instruction *Ins = dyn_cast<Instruction>(V)) {
+                                if (!L->contains(Ins) &&
+                                    definedInCaller(tmp_bb, V)) {
+                                    this->loop_liveins[L].insert(V);
+                                    this->LoopEdges.insert(
+                                        std::make_pair(V, &I));
+                                }
+                            }
+                            // Detecting function arguments
+                            else if (isa<Argument>(V)) {
                                 this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
-                        // Detecting function arguments
-                        else if (isa<Argument>(V)) {
-                            this->loop_liveins[L].insert(V);
-                            this->LoopEdges.insert(std::make_pair(V, &I));
-                        }
-                    }
 
-                    for (auto *U : I.users()) {
-                        if (!definedInRegion(tmp_bb, U)) {
-                            this->loop_liveouts[L].insert(U);
-                            this->LoopEdges.insert(std::make_pair(&I, U));
+                        // Detecting live-outs
+                        for (auto *U : I.users()) {
+                            if (!definedInRegion(tmp_bb, U)) {
+                                this->loop_liveouts[L].insert(U);
+                                this->LoopEdges.insert(std::make_pair(&I, U));
+                            }
                         }
                     }
                 }
@@ -2802,44 +2806,52 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
             // Dumping loop start node
             // TODO Fix number of inputs and outputs for loop head
             // TODO Do we need output anymore?
-            string loop_define =
-                "  val {{loop_name}}_start = "
-                "Module(new LoopStart(NumInputs = {{num_inputs}}, NumOuts "
-                "= "
-                "{{num_outputs}}, ID "
-                "= 0)(p))\n";
+            if (this->loop_liveins[L].size()) {
+                string loop_define =
+                    "  val {{loop_name}}_start = "
+                    "Module(new LoopStart(NumInputs = {{num_inputs}}, NumOuts "
+                    "= "
+                    "{{num_outputs}}, ID "
+                    "= 0)(p))\n";
 
-            ins_template.set("loop_name",
-                             "loop_L_" + std::to_string(Loc.getLine()));
-            ins_template.set("num_inputs",
-                             static_cast<int>(this->loop_liveins[L].size()));
+                ins_template.set("loop_name",
+                                 "loop_L_" + std::to_string(Loc.getLine()));
+                ins_template.set(
+                    "num_inputs",
+                    static_cast<int>(this->loop_liveins[L].size()));
 
-            // TODO Change it to an array of outputs
-            ins_template.set("num_outputs",
-                             static_cast<int>(this->loop_liveins[L].size()));
+                // TODO Change it to an array of outputs
+                ins_template.set(
+                    "num_outputs",
+                    static_cast<int>(this->loop_liveins[L].size()));
 
-            printCode(ins_template.render(loop_define));
+                printCode(ins_template.render(loop_define));
+            }
 
-            // Dumping Loop end node
-            // TODO Fix number of inputs and outputs for loop head
-            // TODO Do we need output anymore?
-            loop_define =
-                "  val {{loop_name}}_end   = "
-                "Module(new LoopEnd(NumInputs = {{num_inputs}}, NumOuts "
-                "= "
-                "{{num_outputs}}, ID "
-                "= 0)(p))\n";
+            if (this->loop_liveouts[L].size()) {
+                // Dumping Loop end node
+                // TODO Fix number of inputs and outputs for loop head
+                // TODO Do we need output anymore?
+                string loop_define =
+                    "  val {{loop_name}}_end   = "
+                    "Module(new LoopEnd(NumInputs = {{num_inputs}}, NumOuts "
+                    "= "
+                    "{{num_outputs}}, ID "
+                    "= 0)(p))\n";
 
-            ins_template.set("loop_name",
-                             "loop_L_" + std::to_string(Loc.getLine()));
-            ins_template.set("num_inputs",
-                             static_cast<int>(this->loop_liveouts[L].size()));
+                ins_template.set("loop_name",
+                                 "loop_L_" + std::to_string(Loc.getLine()));
+                ins_template.set(
+                    "num_inputs",
+                    static_cast<int>(this->loop_liveouts[L].size()));
 
-            // TODO Change it to an array of outputs
-            ins_template.set("num_outputs",
-                             static_cast<int>(this->loop_liveouts[L].size()));
+                // TODO Change it to an array of outputs
+                ins_template.set(
+                    "num_outputs",
+                    static_cast<int>(this->loop_liveouts[L].size()));
 
-            printCode(ins_template.render(loop_define));
+                printCode(ins_template.render(loop_define));
+            }
         }
     }
 }
@@ -2883,6 +2895,8 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                             auto target = search_elem.second;
                             auto target_ins =
                                 dyn_cast<llvm::Instruction>(target);
+
+                            auto target_phi = dyn_cast<llvm::PHINode>(target);
 
                             // Saving the index of loop header of corresponding
                             // instruction
@@ -2935,14 +2949,16 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                           ins_template.render(command));
 
                             } else if (operand_ins) {
+                                // If SRC is an instruction
                                 string comment =
                                     "  // Connecting instruction to the "
                                     "loop header\n";
 
                                 string command =
                                     "  "
-                                    "{{loop_name}}.io.inputArg({{arg_index}"
-                                    "}) <> io.{{operand_name}}\n";
+                                    "{{loop_name}}_start.io.inputArg({{arg_"
+                                    "index}"
+                                    "}) <> {{instruction_name}}.io\n";
 
                                 ins_template.set(
                                     "loop_name",
@@ -2950,15 +2966,17 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                 ins_template.set("arg_index",
                                                  static_cast<int>(live_index));
 
-                                if (argument_info.find(operand_arg) ==
-                                    argument_info.end()) {
-                                    assert(
-                                        !"Funcion argument can't be find!\n");
-                                }
-
                                 ins_template.set(
-                                    "operand_name",
-                                    argument_info[operand_arg].name);
+                                    "instruction_name",
+                                    instruction_info[operand_ins].name);
+                                // else if(instruction_info.find(operand_ins))
+                                // if (argument_info.find(operand_arg) ==
+                                // argument_info.end()) {
+                                // target->dump();
+                                // operand->dump();
+                                // assert(
+                                //!"Funcion argument can't be found!\n");
+                                //}
 
                                 // Printing each instruction
                                 string init_test = "  //";
@@ -2994,8 +3012,10 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                 "  "
                                 "{{loop_name}}_end.io.inputArg({{out_index}}) "
                                 "<> "
-                                "{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
-                                "name}}\"))\n";
+                                "{{ins_name}}.io.Out(1)\n";
+                                //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
+                                //"name}}\"))\n";
+                                //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
 
                             ins_template.set(
                                 "loop_name",
