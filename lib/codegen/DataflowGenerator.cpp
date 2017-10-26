@@ -1888,14 +1888,25 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          *      1) Loop
          *      2) index of the loop header
          */
+        //Make a priority_queue for loops
+        auto cmp = [](Loop* left, Loop* right){ return left->getSubLoops().size() > right->getSubLoops().size();};
+        std::priority_queue<Loop*, vector<Loop *>, decltype( cmp ) > order_loops(cmp); 
+        for(auto &L : getLoops(*LI)){
+            order_loops.push(L);
+        }
+
         if (loop_edge != this->LoopEdges.end()) {
-            for (auto &L : getLoops(*LI)) {
+            while(!order_loops.empty()){
+                auto L = order_loops.top();
                 auto Loc = L->getStartLoc();
                 auto Filename = getBaseName(Loc->getFilename().str());
 
                 if (L->contains(&ins) ||
-                    L->contains(dyn_cast<Instruction>(loop_edge->first)))
+                        L->contains(dyn_cast<Instruction>(loop_edge->first))){
                     target_loop = L;
+                    break;
+                }
+                order_loops.pop();
             }
         }
 
