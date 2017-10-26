@@ -2347,10 +2347,43 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     ins_template.set("num_byte", static_cast<int>(num_byte));
                     ins_template.set("sp_index", static_cast<int>(index));
 
+                } else if (alloca_type->isIntegerTy()) {
+                    // Connecting AllocaIO input
+                    auto num_byte = DL.getTypeAllocSize(alloca_type);
+                    command =
+                        "  {{ins_name}}.io.allocaInputIO.bits.size      := "
+                        "1.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.numByte   := "
+                        "{{num_byte}}.U\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
+                        "true.B\n\n"
+                        "  // Connecting Alloca to Stack\n";
+
+                    // Connectin Alloca to StackPointer
+                    //
+                    // Getting Alloca index
+                    uint32_t index = 0;
+                    for (auto in : instruction_alloca) {
+                        if (in == &ins) break;
+                        index++;
+                    }
+
+                    command = command +
+                              "  StackPointer.io.InData({{sp_index}}) <> "
+                              "{{ins_name}}.io.allocaReqIO\n"
+                              "  {{ins_name}}.io.allocaRespIO <> "
+                              "StackPointer.io.OutData({{sp_index}})\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("num_byte", static_cast<int>(num_byte));
+                    ins_template.set("sp_index", static_cast<int>(index));
+
                 } else if (alloca_type->isStructTy())
                     assert(!"We don't support alloca for struct for now!");
                 else
-                    assert(!"Unknown alloca type!");
+                    assert(!"Unknown Alloca type!");
 
                 printCode(comment + ins_template.render(command) + "\n");
 
@@ -2948,7 +2981,6 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                 for (auto p : loop_live_out->second) {
                     for (auto search_elem : LoopEdges) {
                         if (p == search_elem.second) {
-
                             auto target = search_elem.second;
                             auto target_ins =
                                 dyn_cast<llvm::Instruction>(target);
