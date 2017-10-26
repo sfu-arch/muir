@@ -1,5 +1,5 @@
 digraph "CFG for 'main' function" {
 	label="CFG for 'main' function";
 
-	Node0x49102e0 [shape=record,label="{entry:\l  %call = call i8* @foo(i32 5, i32 3)\l  ret i32 0\l}"];
+	Node0x5512e50 [shape=record,label="{entry:\l  %call = call i32 @foo(i32 5, i32 3, i32 2)\l  ret i32 0\l}"];
 }
