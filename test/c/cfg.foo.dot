@@ -1,0 +1,5 @@
+digraph "CFG for 'foo' function" {
+	label="CFG for 'foo' function";
+
+	Node0x490f480 [shape=record,label="{entry:\l  %a.addr = alloca i32, align 4\l  %b.addr = alloca i32, align 4\l  store i32 %a, i32* %a.addr, align 4\l  store i32 %b, i32* %b.addr, align 4\l  %0 = bitcast i32* %a.addr to i8*\l  %1 = bitcast i32* %b.addr to i8*\l  %call = call i8* @Mat(i8* %0, i8* %1)\l  ret i8* %call\l}"];
+}
