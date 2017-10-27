@@ -825,7 +825,7 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
         "Module (new {{ins_type}}"
         "(NumOuts = {{num_out}}, ID = {{ins_id}}, "
         "opCode = \"{{op_code}}\")"
-        "(sign=false)(p))";
+        "(sign={{sign_flag}})(p))";
     LuaTemplater ins_template;
 
     // Get Instruction Type
@@ -833,7 +833,7 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
     ins_template.set("ins_type",
                      InstructionInfo::instruction_name_type[ins_type]);
 
-    // TODO fix instructions with 0 output
+    // If instruction has 0 output
     if (countInsUse(Ins) == 0)
         ins_template.set("num_out", static_cast<int>(1));
     else
@@ -841,6 +841,15 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
 
     // Getting op code
     string cmp_ins_op = "";
+    bool sign = false;
+
+    auto is_sign = [](const bool sign) -> string {
+        if (sign)
+            return "true";
+        else
+            return "false";
+    };
+
     if (ins_type == TICmpInst) {
         auto tmp_ins_pred = dyn_cast<llvm::ICmpInst>(&Ins)->getPredicate();
 
@@ -853,15 +862,19 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
                 break;
             case CmpInst::Predicate::ICMP_SGE:
                 cmp_ins_op = "SGE";
+                sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SGT:
                 cmp_ins_op = "SGT";
+                sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLE:
                 cmp_ins_op = "SLE";
+                sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLT:
                 cmp_ins_op = "SLT";
+                sign = true;
                 break;
             case CmpInst::Predicate::ICMP_UGE:
                 cmp_ins_op = "UGE";
@@ -884,8 +897,11 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
         }
 
         ins_template.set("op_code", cmp_ins_op);
-    } else
+        ins_template.set("sign_flag", is_sign(sign));
+    } else {
         ins_template.set("op_code", Ins.getOpcodeName());
+        ins_template.set("sign_flag", is_sign(sign));
+    }
 
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
 
@@ -2795,8 +2811,8 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
         for (auto &L : getLoops(*LI)) {
             // for (auto ins_loop : loop_instruction_map) {
-            //auto &L = ins_loop.second;
-            //auto I = ins_loop.first;
+            // auto &L = ins_loop.second;
+            // auto I = ins_loop.first;
 
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
@@ -2809,11 +2825,9 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                                                        L->blocks().end());
             for (auto B : L->blocks()) {
                 for (auto &I : *B) {
-
                     auto find_loop = loop_instruction_map.find(&I);
 
-                    if(find_loop->second != L)
-                        continue;
+                    if (find_loop->second != L) continue;
 
                     // Detecting Live-ins
                     for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
@@ -2823,10 +2837,12 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         if (Instruction *Ins = dyn_cast<Instruction>(V)) {
                             if (!L->contains(Ins) &&
                                 definedInCaller(tmp_bb, V)) {
+
                                 this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
+
                         // Detecting function arguments
                         else if (isa<Argument>(V)) {
                             this->loop_liveins[L].insert(V);
@@ -2904,6 +2920,7 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
  */
 void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
     // Getting loop information
+    //
     if (getLoops(*LI).size() == 0)
         printCode("  //Function doesn't have any for loop");
 
@@ -2929,10 +2946,18 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
             // value can be either instruction or function argument
             if (loop_live_in != this->loop_liveins.end()) {
                 uint32_t live_index = 0;
+
+                set<Value *> input_set_liveIn;
+
                 for (auto p : loop_live_in->second) {
                     for (auto search_elem : LoopEdges) {
                         if (p == search_elem.first) {
+
                             auto operand = search_elem.first;
+
+                            if(input_set_liveIn.count(operand) == 0)
+                                input_set_liveIn.insert(operand);
+                            else continue;
 
                             auto target = search_elem.second;
                             auto target_ins =
