@@ -1,6 +1,6 @@
-int foo(unsigned int a, unsigned int b, unsigned int n){
+int foo(unsigned int a, unsigned int b, int n){
     unsigned int sum = a;
-    unsigned i;
+    int i;
 
     for(i = 0 ; i < n; i++)
         sum = (sum+a)*b;

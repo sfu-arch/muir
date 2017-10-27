@@ -1,5 +1,5 @@
 digraph "CFG for 'main' function" {
 	label="CFG for 'main' function";
 
-	Node0x5512e50 [shape=record,label="{entry:\l  %call = call i32 @foo(i32 5, i32 3, i32 2)\l  ret i32 0\l}"];
+	Node0x5cdb5b0 [shape=record,label="{entry:\l  %a = alloca [10 x i32], align 4\l  call void @llvm.dbg.declare(metadata [10 x i32]* %a, metadata !11, metadata\l... !16), !dbg !17\l  %0 = bitcast [10 x i32]* %a to i8*, !dbg !17\l  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 40, i32 4, i1 false), !dbg\l... !17\l  %1 = bitcast i8* %0 to [10 x i32]*, !dbg !17\l  %2 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 1, !dbg !17\l  store i32 1, i32* %2, !dbg !17\l  %3 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 2, !dbg !17\l  store i32 2, i32* %3, !dbg !17\l  %4 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 3, !dbg !17\l  store i32 3, i32* %4, !dbg !17\l  %5 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 4, !dbg !17\l  store i32 4, i32* %5, !dbg !17\l  %arraydecay = getelementptr inbounds [10 x i32], [10 x i32]* %a, i32 0, i32\l... 0, !dbg !18\l  call void @foo(i32* %arraydecay), !dbg !19\l  ret i32 0, !dbg !20\l}"];
 }

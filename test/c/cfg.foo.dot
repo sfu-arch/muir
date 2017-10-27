@@ -1,23 +1,14 @@
 digraph "CFG for 'foo' function" {
 	label="CFG for 'foo' function";
 
-	Node0x54f0410 [shape=record,label="{entry:\l  br label %for.cond\l}"];
-	Node0x54f0410 -> Node0x54f4050;
-	Node0x54f4050 [shape=record,label="{for.cond:                                         \l  %sum.0 = phi i32 [ %a, %entry ], [ %sum.1, %for.inc4 ]\l  %i.0 = phi i32 [ 0, %entry ], [ %inc5, %for.inc4 ]\l  %cmp = icmp ult i32 %i.0, 10\l  br i1 %cmp, label %for.body, label %for.end6\l|{<s0>T|<s1>F}}"];
-	Node0x54f4050:s0 -> Node0x54f45d0;
-	Node0x54f4050:s1 -> Node0x54ef410;
-	Node0x54f45d0 [shape=record,label="{for.body:                                         \l  br label %for.cond1\l}"];
-	Node0x54f45d0 -> Node0x54f4b90;
-	Node0x54f4b90 [shape=record,label="{for.cond1:                                        \l  %sum.1 = phi i32 [ %sum.0, %for.body ], [ %mul, %for.inc ]\l  %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.inc ]\l  %cmp2 = icmp ult i32 %j.0, 10\l  br i1 %cmp2, label %for.body3, label %for.end\l|{<s0>T|<s1>F}}"];
-	Node0x54f4b90:s0 -> Node0x54f50b0;
-	Node0x54f4b90:s1 -> Node0x54f5190;
-	Node0x54f50b0 [shape=record,label="{for.body3:                                        \l  %add = add i32 %sum.1, %a\l  %mul = mul i32 %add, %b\l  br label %for.inc\l}"];
-	Node0x54f50b0 -> Node0x550fd50;
-	Node0x550fd50 [shape=record,label="{for.inc:                                          \l  %inc = add i32 %j.0, 1\l  br label %for.cond1, !llvm.loop !4\l}"];
-	Node0x550fd50 -> Node0x54f4b90;
-	Node0x54f5190 [shape=record,label="{for.end:                                          \l  br label %for.inc4\l}"];
-	Node0x54f5190 -> Node0x5511ac0;
-	Node0x5511ac0 [shape=record,label="{for.inc4:                                         \l  %inc5 = add i32 %i.0, 1\l  br label %for.cond, !llvm.loop !19\l}"];
-	Node0x5511ac0 -> Node0x54f4050;
-	Node0x54ef410 [shape=record,label="{for.end6:                                         \l  ret i32 %sum.0\l}"];
+	Node0x5cba340 [shape=record,label="{entry:\l  call void @llvm.dbg.value(metadata i32* %a, i64 0, metadata !12, metadata\l... !13), !dbg !14\l  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata\l... !13), !dbg !17\l  br label %for.cond, !dbg !18\l}"];
+	Node0x5cba340 -> Node0x5cbd160;
+	Node0x5cbd160 [shape=record,label="{for.cond:                                         \l  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]\l  call void @llvm.dbg.value(metadata i32 %i.0, i64 0, metadata !15, metadata\l... !13), !dbg !17\l  %cmp = icmp ult i32 %i.0, 5, !dbg !19\l  br i1 %cmp, label %for.body, label %for.end, !dbg !22\l|{<s0>T|<s1>F}}"];
+	Node0x5cbd160:s0 -> Node0x5cbd6e0;
+	Node0x5cbd160:s1 -> Node0x5cbd790;
+	Node0x5cbd6e0 [shape=record,label="{for.body:                                         \l  call void @llvm.dbg.value(metadata i32 %i.0, i64 0, metadata !24, metadata\l... !13), !dbg !28\l  call void @llvm.dbg.value(metadata i32* %a, i64 0, metadata !31, metadata\l... !13), !dbg !32\l  %arrayidx.i = getelementptr inbounds i32, i32* %a, i32 %i.0, !dbg !33\l  %0 = load i32, i32* %arrayidx.i, align 4, !dbg !33\l  %mul.i = mul i32 2, %0, !dbg !34\l  %add.i = add i32 %i.0, 5, !dbg !35\l  %arrayidx1.i = getelementptr inbounds i32, i32* %a, i32 %add.i, !dbg !36\l  store i32 %mul.i, i32* %arrayidx1.i, align 4, !dbg !37\l  br label %for.inc, !dbg !38\l}"];
+	Node0x5cbd6e0 -> Node0x5cbf290;
+	Node0x5cbf290 [shape=record,label="{for.inc:                                          \l  %inc = add i32 %i.0, 1, !dbg !39\l  call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !15, metadata\l... !13), !dbg !17\l  br label %for.cond, !dbg !41, !llvm.loop !42\l}"];
+	Node0x5cbf290 -> Node0x5cbd160;
+	Node0x5cbd790 [shape=record,label="{for.end:                                          \l  ret void, !dbg !45\l}"];
 }

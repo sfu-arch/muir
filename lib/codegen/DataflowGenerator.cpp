@@ -861,20 +861,24 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
                 cmp_ins_op = "NE";
                 break;
             case CmpInst::Predicate::ICMP_SGE:
-                cmp_ins_op = "SGE";
-                sign = true;
+                //cmp_ins_op = "SGE";
+                cmp_ins_op = "UGE";
+                //sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SGT:
-                cmp_ins_op = "SGT";
-                sign = true;
+                //cmp_ins_op = "SGT";
+                cmp_ins_op = "UGT";
+                //sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLE:
-                cmp_ins_op = "SLE";
-                sign = true;
+                //cmp_ins_op = "SLE";
+                cmp_ins_op = "ULE";
+                //sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLT:
-                cmp_ins_op = "SLT";
-                sign = true;
+                //cmp_ins_op = "SLT";
+                cmp_ins_op = "ULT";
+                //sign = true;
                 break;
             case CmpInst::Predicate::ICMP_UGE:
                 cmp_ins_op = "UGE";
