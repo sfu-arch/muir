@@ -1752,11 +1752,11 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
 
     else {
         map<BasicBlock *, uint32_t> bb_index;
-        //uint32_t index = 0;
+        // uint32_t index = 0;
         std::for_each(instruction_phi.begin(), instruction_phi.end(),
                       [this, &bb_index](Instruction *ins) {
                           DataflowGeneratorPass::PrintPHIMask(*ins, bb_index);
-                          //index++;
+                          // index++;
                       });
     }
 }
@@ -1816,9 +1816,9 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
     }
 }
 
-void DataflowGeneratorPass::PrintPHIMask(llvm::Instruction &ins,
-                                         map<BasicBlock *, uint32_t> &bb_index) {
-                                         //uint32_t index) {
+void DataflowGeneratorPass::PrintPHIMask(
+    llvm::Instruction &ins, map<BasicBlock *, uint32_t> &bb_index) {
+    // uint32_t index) {
     auto phi_ins = dyn_cast<llvm::PHINode>(&ins);
     LuaTemplater ins_template;
 
@@ -1888,21 +1888,24 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          *      1) Loop
          *      2) index of the loop header
          */
-        //Make a priority_queue for loops
-        auto cmp = [](Loop* left, Loop* right){ return left->getSubLoops().size() > right->getSubLoops().size();};
-        std::priority_queue<Loop*, vector<Loop *>, decltype( cmp ) > order_loops(cmp); 
-        for(auto &L : getLoops(*LI)){
+        // Make a priority_queue for loops
+        auto cmp = [](Loop *left, Loop *right) {
+            return left->getSubLoops().size() > right->getSubLoops().size();
+        };
+        std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)> order_loops(
+            cmp);
+        for (auto &L : getLoops(*LI)) {
             order_loops.push(L);
         }
 
         if (loop_edge != this->LoopEdges.end()) {
-            while(!order_loops.empty()){
+            while (!order_loops.empty()) {
                 auto L = order_loops.top();
                 auto Loc = L->getStartLoc();
                 auto Filename = getBaseName(Loc->getFilename().str());
 
                 if (L->contains(&ins) ||
-                        L->contains(dyn_cast<Instruction>(loop_edge->first))){
+                    L->contains(dyn_cast<Instruction>(loop_edge->first))) {
                     target_loop = L;
                     break;
                 }
@@ -2770,49 +2773,77 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
         // Printing header part of each loop
         LuaTemplater ins_template;
 
+        auto cmp = [](Loop *left, Loop *right) {
+            return left->getSubLoops().size() < right->getSubLoops().size();
+        };
+        std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)> order_loops(
+            cmp);
         for (auto &L : getLoops(*LI)) {
-            auto sub_loops = L->getSubLoops();
+            order_loops.push(L);
+        }
+
+        std::map<Instruction *, Loop *> loop_instruction_map;
+        while (!order_loops.empty()) {
+            auto loop = order_loops.top();
+            for (auto BB : loop->blocks()) {
+                for (auto &I : *BB) {
+                    loop_instruction_map[&I] = loop;
+                }
+            }
+            order_loops.pop();
+        }
+
+        for (auto &L : getLoops(*LI)) {
+            // for (auto ins_loop : loop_instruction_map) {
+            //auto &L = ins_loop.second;
+            //auto I = ins_loop.first;
+
             auto Loc = L->getStartLoc();
             auto Filename = getBaseName(Loc->getFilename().str());
 
-            if (sub_loops.size() == 0) {
-                /**
-                 * Detecting Live-in and Live-out of each for loop
-                 */
-                llvm::SetVector<llvm::BasicBlock *> tmp_bb(L->blocks().begin(),
-                                                           L->blocks().end());
-                for (auto B : L->blocks()) {
-                    for (auto &I : *B) {
-                        // Detecting Live-ins
-                        for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
-                            Value *V = *OI;
+            // if (sub_loops.size() == 0) {
+            /**
+             * Detecting Live-in and Live-out of each for loop
+             */
+            llvm::SetVector<llvm::BasicBlock *> tmp_bb(L->blocks().begin(),
+                                                       L->blocks().end());
+            for (auto B : L->blocks()) {
+                for (auto &I : *B) {
 
-                            // Detecting instructions
-                            if (Instruction *Ins = dyn_cast<Instruction>(V)) {
-                                if (!L->contains(Ins) &&
-                                    definedInCaller(tmp_bb, V)) {
-                                    this->loop_liveins[L].insert(V);
-                                    this->LoopEdges.insert(
-                                        std::make_pair(V, &I));
-                                }
-                            }
-                            // Detecting function arguments
-                            else if (isa<Argument>(V)) {
+                    auto find_loop = loop_instruction_map.find(&I);
+
+                    if(find_loop->second != L)
+                        continue;
+
+                    // Detecting Live-ins
+                    for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
+                        Value *V = *OI;
+
+                        // Detecting instructions
+                        if (Instruction *Ins = dyn_cast<Instruction>(V)) {
+                            if (!L->contains(Ins) &&
+                                definedInCaller(tmp_bb, V)) {
                                 this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
                         }
+                        // Detecting function arguments
+                        else if (isa<Argument>(V)) {
+                            this->loop_liveins[L].insert(V);
+                            this->LoopEdges.insert(std::make_pair(V, &I));
+                        }
+                    }
 
-                        // Detecting live-outs
-                        for (auto *U : I.users()) {
-                            if (!definedInRegion(tmp_bb, U)) {
-                                this->loop_liveouts[L].insert(U);
-                                this->LoopEdges.insert(std::make_pair(&I, U));
-                            }
+                    // Detecting live-outs
+                    for (auto *U : I.users()) {
+                        if (!definedInRegion(tmp_bb, U)) {
+                            this->loop_liveouts[L].insert(U);
+                            this->LoopEdges.insert(std::make_pair(&I, U));
                         }
                     }
                 }
             }
+            //}
 
             // Dumping loop start node
             // TODO Fix number of inputs and outputs for loop head
@@ -3024,9 +3055,9 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                 "{{loop_name}}_end.io.inputArg({{out_index}}) "
                                 "<> "
                                 "{{ins_name}}.io.Out(1)\n";
-                                //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
-                                //"name}}\"))\n";
-                                //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
+                            //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
+                            //"name}}\"))\n";
+                            //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
 
                             ins_template.set(
                                 "loop_name",
