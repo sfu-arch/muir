@@ -1127,7 +1127,7 @@ void DataflowGeneratorPass::PrintSextIns(Instruction &Ins) {
     string ins_define =
         "  val {{ins_name}} = "
         "Module(new SextNode(SrcW = {{src_width}}, DesW = {{dest_width}}, "
-        "NumOuts={{num_out}}))";
+        "NumOuts={{num_out}})(p))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set(
@@ -2153,7 +2153,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
