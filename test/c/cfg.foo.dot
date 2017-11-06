@@ -1,5 +1,0 @@
-digraph "CFG for 'foo' function" {
-	label="CFG for 'foo' function";
-
-	Node0x5415390 [shape=record,label="{entry:\l  %sum = alloca [2 x i32], align 4\l  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32 0\l  store i32 %a, i32* %arrayidx, align 4\l  %arrayidx1 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32 1\l  store i32 %b, i32* %arrayidx1, align 4\l  %arrayidx2 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32 0\l  %0 = load i32, i32* %arrayidx2, align 4\l  %arrayidx3 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32 1\l  %1 = load i32, i32* %arrayidx3, align 4\l  %add = add nsw i32 %0, %1\l  ret i32 %add\l}"];
-}

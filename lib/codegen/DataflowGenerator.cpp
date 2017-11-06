@@ -428,7 +428,7 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
 
 /**
  * This function dumps helper object which maps all
- * the instrucitons, basic block and arguments to their indexes
+ * the instructions, basic block and arguments to their indexes
  */
 void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
     LuaTemplater ins_template;
@@ -1280,13 +1280,12 @@ void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Reattach(ID = {{ins_id}}, "
-        "RespBundle = {{resp_bundle}})(p))";
+        "Module(new Reattach(NumInputs={{num_in}}, ID = {{ins_id}})(p))";
 
     // TODO - resp_bundle should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("num_in", static_cast<int>(1));
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
-    ins_template.set("resp_bundle", "UInt(32.W)");
 
     string result = ins_template.render(ins_define);
 
@@ -2136,7 +2135,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // function
             // arguments
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
-
+            auto foo = ins.getOperand(c);
             // If the input is function argument then it should get connect
             // to
             // Cache system
@@ -3311,6 +3310,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // TODO Connect the loop headers
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
+
 
     // Closing the object
     printCode("}\n");

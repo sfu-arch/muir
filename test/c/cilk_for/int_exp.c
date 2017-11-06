@@ -1,14 +1,16 @@
 #include <stdio.h>
+#include <cilk/cilk.h>
 
-unsigned int_exp(unsigned m, unsigned exp ) {
-  unsigned result = m;
+unsigned int_exp(unsigned *m, unsigned exp ) {
+  //  cilk_for (unsigned i = 0; i < exp; ++i) {
   for (unsigned i = 0; i < exp; ++i) {
-    m *= m;
+    *m *= *m;
   }
-  return m;
+  return *m;
 }
 
 int main() {
   unsigned f;
-  f=int_exp(2,5);
+  unsigned m = 2;
+  f=int_exp(&m,5);
 }
