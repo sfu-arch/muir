@@ -1924,7 +1924,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 auto Loc = L->getStartLoc();
                 auto Filename = getBaseName(Loc->getFilename().str());
 
-                if (L->contains(&ins) ||
+                if(dyn_cast<Argument>(loop_edge->first))
+                    break;
+                else if (L->contains(&ins) ||
                     L->contains(dyn_cast<Instruction>(loop_edge->first))) {
                     target_loop = L;
                     break;
@@ -1937,7 +1939,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * If instruction is Binary or Comparision operator
          */
         if (ins_type == TBinaryOperator || ins_type == TICmpInst) {
-            // If the operand is constant
+            //If the operand comes from a loop
             if (target_loop != nullptr) {
                 auto Loc = target_loop->getStartLoc();
 
@@ -1960,6 +1962,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
 
+            // If the operand is constant
             } else if (operand_const) {
                 comment = "  // Wiring constant\n";
                 command = "";
@@ -2140,7 +2143,35 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // If the input is function argument then it should get connect
             // to
             // Cache system
-            if (tmp_find_arg != function_argument.end()) {
+            if (target_loop != nullptr) {
+                //Find loop information
+                auto Loc = target_loop->getStartLoc();
+
+                // First get the instruction
+                auto op_ins = ins.getOperand(c);
+                auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+                comment =
+                    "  // Wiring Load instruction to the loop latch\n";
+
+                command =
+                    "  {{ins_name}}.io.GepAddr <>"
+                    " {{loop_name}}_start.io.outputArg({{loop_index}})\n"
+                    "  {{ins_name}}.io.memResp <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
+                    "{{ins_name}}.io.memReq\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("loop_name",
+                                 "loop_L_" + std::to_string(Loc.getLine()));
+                ins_template.set(
+                    "loop_index",
+                    static_cast<int>(this->ins_loop_header_idx[&ins]));
+
+
+            }
+            else if (tmp_find_arg != function_argument.end()) {
                 // First get the instruction
                 auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
@@ -2154,7 +2185,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  CacheMem.io.ReadIn({{ins_index}}) <> "
-                    "{{ins_name}}.io.memReq\n\n";
+                    "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("operand_name", argument_info[op_arg].name);
@@ -2934,7 +2965,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
 
         for (auto &L : getLoops(*LI)) {
             auto Loc = L->getStartLoc();
-            auto Filename = getBaseName(Loc->getFilename().str());
+            //auto Filename = getBaseName(Loc->getFilename().str());
 
             auto loop_live_in = this->loop_liveins.find(L);
             auto loop_live_out = this->loop_liveouts.find(L);
