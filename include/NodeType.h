@@ -22,6 +22,9 @@ enum InstructionType {
     TPtrToInt,
     TBitCast,
     TTrunc,
+    TSelect,
+    TFpext,
+    TFPTrunc,
 #ifdef TAPIR
     TDetach,
     TReattach,

@@ -55,6 +55,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::vector<llvm::Instruction *> instruction_load;
     std::vector<llvm::Instruction *> instruction_store;
     std::vector<llvm::Instruction *> instruction_alloca;
+    std::vector<llvm::Instruction *> instruction_select;
 #ifdef TAPIR
     std::vector<llvm::Instruction *> instruction_detach;
 #endif
@@ -75,6 +76,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     //Edges which we need to connect them too loop latch
     // LoopEdge-> <src, dst>
     std::set<std::pair<llvm::Value *, llvm::Value *>> LoopEdges;
+
+    std::map<llvm::Instruction*, std::pair<llvm::Value *, llvm::Value *>> JumpIns;
 
     llvm::BasicBlock *entry_bb;
 

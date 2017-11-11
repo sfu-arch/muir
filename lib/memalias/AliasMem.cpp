@@ -273,7 +273,7 @@ bool AliasMem::runOnModule(Module &M) {
         }
     }
 
-    assert(Map.size() == 1 && "Only one extracted function at the moment");
+    //assert(Map.size() == 1 && "Only one extracted function at the moment");
 
     /**
      * We relax this limitation and process all the callsites

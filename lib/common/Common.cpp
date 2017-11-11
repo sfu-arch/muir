@@ -38,6 +38,8 @@ InstructionInfo::InstructionName InstructionInfo::instruction_name_type = {
     {TBitCast, "TBitCastNode"},
     {TTrunc, "TruncNode"},
     {TAlloca, "AllocaNode"},
+    {TSelect, "Select"},
+    {TFpext, "TFpext"},
 #ifdef TAPIR
     {TDetach, "Detach"},
     {TReattach, "Reattach"},
