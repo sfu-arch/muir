@@ -195,6 +195,12 @@ InstructionType InstructionTypeNode(Instruction &ins) {
     // Truncate instruction
     else if (isa<llvm::TruncInst>(ins))
         return common::TTrunc;
+    else if (isa<llvm::SelectInst>(ins))
+        return common::TSelect;
+    else if (isa<llvm::FPExtInst>(ins))
+        return common::TFpext;
+    else if (isa<llvm::FPTruncInst>(ins))
+        return common::TFPTrunc;
 
 #ifdef TAPIR
     // Cilk Detach Instruction
@@ -318,6 +324,55 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
                 instruction_store.push_back(&Ins);
             else if (ins_type == TAlloca)
                 instruction_alloca.push_back(&Ins);
+            else if (ins_type == TFpext) {
+                // find source and destination
+                Value *src;
+                Value *dst;
+                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+                        src = Ins.getOperand(i);
+                }
+
+                for (auto u : Ins.users()) {
+                    dst = u;
+                }
+                this->JumpIns.insert(
+                    std::make_pair(&Ins, std::make_pair(src, dst)));
+
+            } else if (ins_type == TSelect) {
+                Value *src;
+                Value *dst;
+                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+                        src = Ins.getOperand(i);
+                }
+
+                for (auto u : Ins.users()) {
+                    dst = u;
+                }
+                this->JumpIns.insert(
+                    std::make_pair(&Ins, std::make_pair(src, dst)));
+
+                instruction_select.push_back(&Ins);
+                errs() << "Doesn't handle select instruction\n";
+
+            } else if (ins_type == TBitCast) {
+                Value *src;
+                Value *dst;
+                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+                        src = Ins.getOperand(i);
+                }
+
+                for (auto u : Ins.users()) {
+                    dst = u;
+                }
+                this->JumpIns.insert(
+                    std::make_pair(&Ins, std::make_pair(src, dst)));
+
+                instruction_select.push_back(&Ins);
+            }
+
 #ifdef TAPIR
             else if (ins_type == TDetach)
                 instruction_detach.push_back(&Ins);
@@ -861,24 +916,24 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
                 cmp_ins_op = "NE";
                 break;
             case CmpInst::Predicate::ICMP_SGE:
-                //cmp_ins_op = "SGE";
+                // cmp_ins_op = "SGE";
                 cmp_ins_op = "UGE";
-                //sign = true;
+                // sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SGT:
-                //cmp_ins_op = "SGT";
+                // cmp_ins_op = "SGT";
                 cmp_ins_op = "UGT";
-                //sign = true;
+                // sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLE:
-                //cmp_ins_op = "SLE";
+                // cmp_ins_op = "SLE";
                 cmp_ins_op = "ULE";
-                //sign = true;
+                // sign = true;
                 break;
             case CmpInst::Predicate::ICMP_SLT:
-                //cmp_ins_op = "SLT";
+                // cmp_ins_op = "SLT";
                 cmp_ins_op = "ULT";
-                //sign = true;
+                // sign = true;
                 break;
             case CmpInst::Predicate::ICMP_UGE:
                 cmp_ins_op = "UGE";
@@ -1924,10 +1979,13 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 auto Loc = L->getStartLoc();
                 auto Filename = getBaseName(Loc->getFilename().str());
 
-                if(dyn_cast<Argument>(loop_edge->first))
+                // TODO Fix and handel the function argument
+                // It's broken and I'm just skiping for now
+                if (dyn_cast<Argument>(loop_edge->first))
                     break;
+
                 else if (L->contains(&ins) ||
-                    L->contains(dyn_cast<Instruction>(loop_edge->first))) {
+                         L->contains(dyn_cast<Instruction>(loop_edge->first))) {
                     target_loop = L;
                     break;
                 }
@@ -1939,7 +1997,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * If instruction is Binary or Comparision operator
          */
         if (ins_type == TBinaryOperator || ins_type == TICmpInst) {
-            //If the operand comes from a loop
+            // If the operand comes from a loop
             if (target_loop != nullptr) {
                 auto Loc = target_loop->getStartLoc();
 
@@ -1962,7 +2020,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
 
-            // If the operand is constant
+                // If the operand is constant
             } else if (operand_const) {
                 comment = "  // Wiring constant\n";
                 command = "";
@@ -2144,15 +2202,14 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // to
             // Cache system
             if (target_loop != nullptr) {
-                //Find loop information
+                // Find loop information
                 auto Loc = target_loop->getStartLoc();
 
                 // First get the instruction
                 auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
 
-                comment =
-                    "  // Wiring Load instruction to the loop latch\n";
+                comment = "  // Wiring Load instruction to the loop latch\n";
 
                 command =
                     "  {{ins_name}}.io.GepAddr <>"
@@ -2169,9 +2226,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
 
-
-            }
-            else if (tmp_find_arg != function_argument.end()) {
+            } else if (tmp_find_arg != function_argument.end()) {
                 // First get the instruction
                 auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
@@ -2489,25 +2544,36 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 printCode(comment + ins_template.render(command) + "\n");
 
             } else {
-                // First get the instruction
-                comment = "  // Wiring return instructions\n";
-                command = "";
-                if (c == 0)
-                    command =
-                        "  {{ins_name}}.io.InputIO <> {{operand_name}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
-                        "  io.result <> {{ins_name}}.io.Out(0)\n";
-                else
-                    assert(
-                        !"Return instruction cannot have more than one input");
+                // Check wether Ret instruction return result
+                if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
+                    // First get the instruction
+                    comment = "  // Wiring return instructions\n";
+                    command = "";
+                    if (c == 0)
+                        command =
+                            "  {{ins_name}}.io.InputIO <> "
+                            "{{operand_name}}.io.Out"
+                            "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
+                            "  io.result <> {{ins_name}}.io.Out(0)\n";
+                    else
+                        assert(
+                            !"Return instruction cannot have more than one input");
 
-                ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("operand_name",
-                                 instruction_info[dyn_cast<llvm::Instruction>(
-                                                      ins.getOperand(c))]
-                                     .name);
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set(
+                        "operand_name",
+                        instruction_info[dyn_cast<llvm::Instruction>(
+                                             ins.getOperand(c))]
+                            .name);
 
-                printCode(comment + ins_template.render(command) + "\n");
+                    printCode(comment + ins_template.render(command) + "\n");
+                } else {
+                    command = "  io.result <> {{ins_name}}.io.Out(0)\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+
+                    printCode(comment + ins_template.render(command) + "\n");
+                }
             }
         }
 
@@ -2530,41 +2596,67 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
             printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TBitCast) {
+            errs() << "BitCast\n";
+            auto edge = JumpIns[&ins];
+            edge.first->dump();
+            edge.second->dump();
             // TODO add tptrtoint
             // First get the instruction
-            comment = "  // Wiring instructions\n";
-            command = "";
-            if (c == 0)
-                command =
-                    "  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-            else
-                command = "  {{ins_name}}.io.type <> insType\n";
-            ins_template.set("ins_name", instruction_info[&ins].name);
+            // comment = "  // Wiring instructions\n";
+            // command = "";
+            // if (c == 0)
+            // command =
+            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
+            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+            // else
+            // command = "  {{ins_name}}.io.type <> insType\n";
+            // ins_template.set("ins_name", instruction_info[&ins].name);
             // ins_template.set(
             //"operand_name",
             // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
             //.name);
 
-            printCode(comment + ins_template.render(command) + "\n");
+            // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TTrunc) {
+            errs() << "TTrunc\n";
             // TODO add tptrtoint
             // First get the instruction
-            comment = "  // Wiring instructions\n";
-            command = "";
-            if (c == 0)
-                command =
-                    "  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-            else
-                command = "  {{ins_name}}.io.type <> insType\n";
-            ins_template.set("ins_name", instruction_info[&ins].name);
+            // comment = "  // Wiring instructions\n";
+            // command = "";
+            // if (c == 0)
+            // command =
+            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
+            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+            // else
+            // command = "  {{ins_name}}.io.type <> insType\n";
+            // ins_template.set("ins_name", instruction_info[&ins].name);
             // ins_template.set(
             //"operand_name",
             // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
             //.name);
 
-            printCode(comment + ins_template.render(command) + "\n");
+            // printCode(comment + ins_template.render(command) + "\n");
+        } else if (ins_type == TFpext) {
+            // TODO add tptrtoint
+            // First get the instruction
+            auto edge = JumpIns[&ins];
+            edge.first->dump();
+            edge.second->dump();
+            // comment = "  // Wiring instructions\n";
+            // command = "";
+            // if (c == 0)
+            // command =
+            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
+            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+            // else
+            // command = "  {{ins_name}}.io.type <> insType\n";
+            // ins_template.set("ins_name", instruction_info[&ins].name);
+            // ins_template.set(
+            //"operand_name",
+            // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
+            //.name);
+
+            // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TSEXT) {
             // First get the instruction
             auto op_ins = ins.getOperand(0);
@@ -2708,6 +2800,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
     for (auto &BB : F) {
         for (auto &ins : BB) {
             llvm::CallSite CS(&ins);
+            if (dyn_cast<llvm::BitCastInst>(&ins)) continue;
             if (CS) continue;
             string command = "";
             command =
@@ -2872,7 +2965,6 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         if (Instruction *Ins = dyn_cast<Instruction>(V)) {
                             if (!L->contains(Ins) &&
                                 definedInCaller(tmp_bb, V)) {
-
                                 this->loop_liveins[L].insert(V);
                                 this->LoopEdges.insert(std::make_pair(V, &I));
                             }
@@ -2965,7 +3057,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
 
         for (auto &L : getLoops(*LI)) {
             auto Loc = L->getStartLoc();
-            //auto Filename = getBaseName(Loc->getFilename().str());
+            // auto Filename = getBaseName(Loc->getFilename().str());
 
             auto loop_live_in = this->loop_liveins.find(L);
             auto loop_live_out = this->loop_liveouts.find(L);
@@ -2987,12 +3079,12 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                 for (auto p : loop_live_in->second) {
                     for (auto search_elem : LoopEdges) {
                         if (p == search_elem.first) {
-
                             auto operand = search_elem.first;
 
-                            if(input_set_liveIn.count(operand) == 0)
+                            if (input_set_liveIn.count(operand) == 0)
                                 input_set_liveIn.insert(operand);
-                            else continue;
+                            else
+                                continue;
 
                             auto target = search_elem.second;
                             auto target_ins =
