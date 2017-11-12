@@ -195,10 +195,14 @@ InstructionType InstructionTypeNode(Instruction &ins) {
     // Truncate instruction
     else if (isa<llvm::TruncInst>(ins))
         return common::TTrunc;
+
+    // Select instruction
     else if (isa<llvm::SelectInst>(ins))
         return common::TSelect;
+
     else if (isa<llvm::FPExtInst>(ins))
         return common::TFpext;
+
     else if (isa<llvm::FPTruncInst>(ins))
         return common::TFPTrunc;
 
@@ -324,54 +328,54 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
                 instruction_store.push_back(&Ins);
             else if (ins_type == TAlloca)
                 instruction_alloca.push_back(&Ins);
-            else if (ins_type == TFpext) {
-                // find source and destination
-                Value *src;
-                Value *dst;
-                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
-                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
-                        src = Ins.getOperand(i);
-                }
+// else if (ins_type == TFpext) {
+//// find source and destination
+// Value *src;
+// Value *dst;
+// for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+// if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+// src = Ins.getOperand(i);
+//}
 
-                for (auto u : Ins.users()) {
-                    dst = u;
-                }
-                this->JumpIns.insert(
-                    std::make_pair(&Ins, std::make_pair(src, dst)));
+// for (auto u : Ins.users()) {
+// dst = u;
+//}
+// this->JumpIns.insert(
+// std::make_pair(&Ins, std::make_pair(src, dst)));
 
-            } else if (ins_type == TSelect) {
-                Value *src;
-                Value *dst;
-                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
-                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
-                        src = Ins.getOperand(i);
-                }
+//} else if (ins_type == TSelect) {
+// Value *src;
+// Value *dst;
+// for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+// if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+// src = Ins.getOperand(i);
+//}
 
-                for (auto u : Ins.users()) {
-                    dst = u;
-                }
-                this->JumpIns.insert(
-                    std::make_pair(&Ins, std::make_pair(src, dst)));
+// for (auto u : Ins.users()) {
+// dst = u;
+//}
+// this->JumpIns.insert(
+// std::make_pair(&Ins, std::make_pair(src, dst)));
 
-                instruction_select.push_back(&Ins);
-                errs() << "Doesn't handle select instruction\n";
+// instruction_select.push_back(&Ins);
+// errs() << "Doesn't handle select instruction\n";
 
-            } else if (ins_type == TBitCast) {
-                Value *src;
-                Value *dst;
-                for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
-                    if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
-                        src = Ins.getOperand(i);
-                }
+//} else if (ins_type == TBitCast) {
+// Value *src;
+// Value *dst;
+// for (uint32_t i = 0; i < Ins.getNumOperands(); i++) {
+// if (dyn_cast<llvm::Instruction>(Ins.getOperand(i)))
+// src = Ins.getOperand(i);
+//}
 
-                for (auto u : Ins.users()) {
-                    dst = u;
-                }
-                this->JumpIns.insert(
-                    std::make_pair(&Ins, std::make_pair(src, dst)));
+// for (auto u : Ins.users()) {
+// dst = u;
+//}
+// this->JumpIns.insert(
+// std::make_pair(&Ins, std::make_pair(src, dst)));
 
-                instruction_select.push_back(&Ins);
-            }
+// instruction_select.push_back(&Ins);
+//}
 
 #ifdef TAPIR
             else if (ins_type == TDetach)
@@ -938,6 +942,9 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
             case CmpInst::Predicate::ICMP_UGE:
                 cmp_ins_op = "UGE";
                 break;
+            case CmpInst::Predicate::ICMP_UGT:
+                cmp_ins_op = "UGT";
+                break;
             case CmpInst::Predicate::ICMP_ULE:
                 cmp_ins_op = "ULE";
                 break;
@@ -951,6 +958,7 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
                 raw_string_ostream out(init_test);
                 out << Ins;
                 printCode(out.str() + "\n");
+                Ins.dump();
                 assert(!"Unkonw CMP operand");
                 break;
         }
@@ -1421,9 +1429,10 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintRetIns(Ins);
     } else {
         string ins_define =
-            "  //val {{ins_name}} = "
+            "  // @todo the node need to be implimented\n"
+            "  val {{ins_name}} = "
             "Module (new {{ins_type}}"
-            "(ID = {{ins_id}})(p))";
+            "(NumOuts = 1, ID = {{ins_id}})(p))";
         LuaTemplater ins_template;
 
         // Get Instruction Type
@@ -1925,6 +1934,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         auto operand = ins.getOperand(c);
         auto operand_ins = dyn_cast<llvm::Instruction>(ins.getOperand(c));
         auto operand_const = dyn_cast<llvm::ConstantInt>(ins.getOperand(c));
+        auto operand_constFloat = dyn_cast<llvm::ConstantFP>(ins.getOperand(c));
 
         // Check if the input is function argument
         auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
@@ -2020,7 +2030,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
 
                 // If the operand is constant
-            } else if (operand_const) {
+            } else if (operand_const || operand_constFloat) {
                 comment = "  // Wiring constant\n";
                 command = "";
                 if (c == 0) {
@@ -2040,8 +2050,15 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.RightIO.valid := true.B\n";
                 }
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set(
-                    "value", static_cast<int>(operand_const->getSExtValue()));
+                if (operand_const)
+                    ins_template.set(
+                        "value",
+                        static_cast<int>(operand_const->getSExtValue()));
+                else if (operand_constFloat)
+                    ins_template.set(
+                        "value",0);
+                        // TODO write the exact float number
+                        //static_cast<int>(operand_constFloat->getvalu));
 
             }
             // Else if the operand is function argument
@@ -2596,9 +2613,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TBitCast) {
             errs() << "BitCast\n";
-            auto edge = JumpIns[&ins];
-            edge.first->dump();
-            edge.second->dump();
+            // auto edge = JumpIns[&ins];
+            // edge.first->dump();
+            // edge.second->dump();
+            // errs() << "End\n";
             // TODO add tptrtoint
             // First get the instruction
             // comment = "  // Wiring instructions\n";
@@ -2616,8 +2634,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             //.name);
 
             // printCode(comment + ins_template.render(command) + "\n");
-        } else if (ins_type == TTrunc) {
-            errs() << "TTrunc\n";
+        } else if (ins_type == TTrunc || ins_type == TFPTrunc) {
+            DEBUG(errs() << "TTrunc\n");
+            // auto edge = JumpIns[&ins];
+            // DEBUG(edge.first->dump());
+            // DEBUG(edge.second->dump());
+            // DEBUG(errs() << "END\n");
             // TODO add tptrtoint
             // First get the instruction
             // comment = "  // Wiring instructions\n";
@@ -2638,24 +2660,26 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         } else if (ins_type == TFpext) {
             // TODO add tptrtoint
             // First get the instruction
-            auto edge = JumpIns[&ins];
-            edge.first->dump();
-            edge.second->dump();
+            // DEBUG(errs() << "TFpext\n");
+            // auto edge = JumpIns[&ins];
+            // DEBUG(edge.first->dump());
+            // DEBUG(edge.second->dump());
+            // DEBUG(errs() << "END\n");
             // comment = "  // Wiring instructions\n";
             // command = "";
-            // if (c == 0)
-            // command =
-            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+            if (c == 0)
+                command =
+                    "  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
             // else
             // command = "  {{ins_name}}.io.type <> insType\n";
-            // ins_template.set("ins_name", instruction_info[&ins].name);
-            // ins_template.set(
-            //"operand_name",
-            // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
-            //.name);
+            ins_template.set("ins_name", instruction_info[&ins].name);
+            ins_template.set(
+                "operand_name",
+                instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
+                    .name);
 
-            // printCode(comment + ins_template.render(command) + "\n");
+            printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TSEXT) {
             // First get the instruction
             auto op_ins = ins.getOperand(0);
@@ -3433,7 +3457,6 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // TODO Connect the loop headers
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
-
 
     // Closing the object
     printCode("}\n");

@@ -518,7 +518,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                  */
                                 size = DL.getTypeAllocSize(operand);
 
-                            } else if (operand->isIntegerTy()) {
+                            } else if (operand->isIntegerTy() || operand->isDoubleTy()) {
                                 /**
                                  * If the struct's element is scala we only need
                                  * to:
@@ -571,7 +571,8 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                     end_align = start_align + size - 1;
                                 }
                             } else {
-                                outs() << *operand << "\n";
+                                errs() << "TYPE: ";
+                                errs() << *operand << "\n";
                                 I.dump();
                                 assert(!"Not supported type!\n");
                             }

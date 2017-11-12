@@ -80,8 +80,13 @@ bool GEPSplitter::runOnFunction(Function &F) {
                         FirstIndexIsZero
                         ? GEP->getOperand(0)
                         : GetElementPtrInst::Create(
-                                GEP->getResultElementType(), GEP->getOperand(0),
-                                GEP->getOperand(1), "tmp", GEP);
+                                GEP->getSourceElementType(),
+                                GEP->getOperand(0),
+                                GEP->getOperand(1),
+                                "tmp", GEP);
+                        //: GetElementPtrInst::Create(
+                                //GEP->getResultElementType(), GEP->getOperand(0),
+                                //GEP->getOperand(1), "tmp", GEP);
 //                                GEP->getPointerOperandType(), GEP->getOperand(0),
 
                 // All remaining indices get expanded with a 3-operand GEP with

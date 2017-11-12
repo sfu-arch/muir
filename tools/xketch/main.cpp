@@ -73,6 +73,7 @@
 #include "AliasMem.h"
 #include "TargetLoopExtractor.h"
 #include "DataflowGenerator.h"
+#include "GEPSplitter.h"
 
 using namespace llvm;
 using std::string;
@@ -319,6 +320,7 @@ static void codeGenerator(Module &m){
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
+    pm.add(new gepsplitter::GEPSplitter(XKETCHName));
 #ifndef TAPIR
     // Creates duplicate pfor.end and pfor.end.continue blocks
     pm.add(llvm::createTailCallEliminationPass());
