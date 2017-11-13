@@ -401,6 +401,25 @@ void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
 }
 
 /**
+ * Iterating over function arguments and fill the target function's argument
+ * container
+ * with the arguments and their information
+ */
+void DataflowGeneratorPass::FillGlobalVar(llvm::Module &M) {
+    uint32_t c = 0;
+    for(auto &g_var : M.getGlobalList()){
+        //g_var.dump();
+        module_global.push_back(&g_var);
+        GlobalInfo temp_glob = {"glob_" + to_string(c), static_cast<uint32_t>(c)};
+        global_info[&g_var] = temp_glob;
+        c++;
+    }
+}
+
+
+
+
+/**
  * Naming each basic block of the target function
  * starting from index 0
  */
@@ -479,6 +498,7 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
         "import stack._\n"
         "import arbiters._\n"
         "import loop._\n"
+        "import accel.{CacheReq, CacheRespT}\n"
         "import node._\n\n";
 
     // Print to the OUTPUT
@@ -764,10 +784,20 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         final_command.append(ins_template.render(command));
     }
 
+
+    c = 0;
+    for (auto &gl : F.getParent()->getGlobalList()) {
+        command =
+            "    val glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+        ins_template.set("index", static_cast<int>(c++));
+        final_command.append(ins_template.render(command));
+    }
+
     final_command.append(
         "    val entry  = Flipped(Decoupled(new ControlBundle))\n"
-        "    val pred = Decoupled(new Bool())\n"
-        "    val start = Input(new Bool())\n");
+        "    val start = Input(new Bool())\n\n"
+        "    val CacheResp = Flipped(Valid(new CacheRespT))\n"
+        "    val CacheReq = Decoupled(new CacheReq)\n");
 
     if (!F.getReturnType()->isVoidTy()) {
         final_command.append("    val result = Decoupled(new DataBundle)\n");
@@ -1623,7 +1653,9 @@ void DataflowGeneratorPass::PrintCacheMem() {
         "WriteMemoryController(NumOps={{store_num}},BaseSize=2,NumEntries=2))\n"
         "\t\t            (RControl=new "
         "ReadMemoryController(NumOps={{load_num}},BaseSize=2,NumEntries=2))\n"
-        "\t\t            (RWArbiter=new ReadWriteArbiter()))";
+        "\t\t            (RWArbiter=new ReadWriteArbiter()))\n\n"
+        "  io.CacheReq <> CacheMem.io.CacheReq\n"
+        "  CacheMem.io.CacheResp <> io.CacheResp\n";
 
     LuaTemplater stack_template;
 
@@ -1935,6 +1967,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         auto operand_ins = dyn_cast<llvm::Instruction>(ins.getOperand(c));
         auto operand_const = dyn_cast<llvm::ConstantInt>(ins.getOperand(c));
         auto operand_constFloat = dyn_cast<llvm::ConstantFP>(ins.getOperand(c));
+        auto operand_null =
+            dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
+        auto operand_global = dyn_cast<llvm::GlobalValue>(ins.getOperand(c));
 
         // Check if the input is function argument
         auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
@@ -2030,7 +2065,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
 
                 // If the operand is constant
-            } else if (operand_const || operand_constFloat) {
+            } else if (operand_const || operand_constFloat || operand_null) {
                 comment = "  // Wiring constant\n";
                 command = "";
                 if (c == 0) {
@@ -2054,11 +2089,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     ins_template.set(
                         "value",
                         static_cast<int>(operand_const->getSExtValue()));
-                else if (operand_constFloat)
-                    ins_template.set(
-                        "value",0);
-                        // TODO write the exact float number
-                        //static_cast<int>(operand_constFloat->getvalu));
+                else if (operand_constFloat || operand_null)
+                    ins_template.set("value", 0);
 
             }
             // Else if the operand is function argument
@@ -2213,6 +2245,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // function
             // arguments
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
+            auto bit_ins = dyn_cast<llvm::BitCastInst>(ins.getOperand(c));
             auto foo = ins.getOperand(c);
             // If the input is function argument then it should get connect
             // to
@@ -2262,7 +2295,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 ins_template.set("operand_name", argument_info[op_arg].name);
             }
 
-            else if (gep_ins) {
+            else if (gep_ins || bit_ins) {
                 // TODO Why the second condition?
                 // else if (gep_ins ||
                 // ins.getOperand(c)->getType()->isPointerTy()) {
@@ -2273,8 +2306,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2282,6 +2315,21 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                  instruction_info[dyn_cast<llvm::Instruction>(
                                                       ins.getOperand(c))]
                                      .name);
+            } else if (operand_global) {
+                // TODO handel global values as well
+                comment =
+                    "  // Wiring Load instruction to the parent "
+                    "instruction\n";
+                command =
+                    "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
+                    "  {{ins_name}}.io.memResp <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
+                    "{{ins_name}}.io.memReq\n\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name",global_info[operand_global].name);
+
             } else {
                 ins.dump();
                 assert(!"Wrong load input");
@@ -2337,16 +2385,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     command =
                         "  {{ins_name}}.io.GepAddr <> "
                         "io.{{operand_name}}\n";
-                    //"  {{ins_name}}.io.memResp  <> "
-                    //"RegisterFile.io.WriteOut({{ins_index}})\n"
-                    //"  RegisterFile.io.WriteIn({{ins_index}}) <> "
-                    //"{{ins_name}}.io.memReq\n\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      argument_info[op_arg].name);
 
-                } else {
+                } else if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
                     comment =
                         "  // Wiring Store instruction to the parent "
                         "instruction\n";
@@ -2361,6 +2405,34 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                              ins.getOperand(c))]
                             .name);
                 }
+                else if(operand_global){
+
+                    comment =
+                        "  // Wiring Store instruction to the parent "
+                        "instruction\n";
+                    command =
+                        "  {{ins_name}}.io.GepAddr <> "
+                        "io.{{operand_name}}\n";
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("operand_name",global_info[operand_global].name);
+                }
+                
+                else {
+                    comment =
+                        "  // Wiring Store instruction to the parent "
+                        "instruction\n";
+                    // command =
+                    //"  {{ins_name}}.io.GepAddr <> ";
+                    command =
+                        "  {{ins_name}}.io.GepAddr.bits.data      := "
+                        "0.U\n"
+                        "  {{ins_name}}.io.GepAddr.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.GepAddr.bits.valid     := "
+                        "true.B\n\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                }
             } else {
                 // If the input is function argument
                 if (tmp_find_arg != function_argument.end()) {
@@ -2373,14 +2445,25 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     //"  // Wiring Store instruction to the function "
                     //"argument\n";
                     command =
-                        "  {{ins_name}}.io.GepAddr <> "
-                        "io.{{operand_name}}\n";
-                    command =
                         "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      argument_info[op_arg].name);
-                } else {
+                }
+
+                else if (operand_global) {
+                    // TODO handel global values as well
+                    comment =
+                        "  // Wiring Store instruction to the parent "
+                        "instruction\n";
+                    command =
+                        "  {{ins_name}}.io.inData.bits.data <> io.{{operand_name}}\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("operand_name", global_info[operand_global].name);
+                }
+
+                else {
                     // If the store input comes from an instruction
                     // comment =
                     //"  // Wiring Store instruction to the parent
@@ -2402,8 +2485,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 // command.append("Amirali\n");
                 command.append(
                     "  {{ins_name}}.io.memResp  <> "
-                    "RegisterFile.io.WriteOut({{ins_index}})\n"
-                    "  RegisterFile.io.WriteIn({{ins_index}}) <> "
+                    "CacheMem.io.WriteOut({{ins_index}})\n"
+                    "  CacheMem.io.WriteIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n"
                     "  {{ins_name}}.io.Out(0).ready := true.B\n\n");
             }
@@ -2613,25 +2696,34 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TBitCast) {
             errs() << "BitCast\n";
-            // auto edge = JumpIns[&ins];
-            // edge.first->dump();
-            // edge.second->dump();
-            // errs() << "End\n";
-            // TODO add tptrtoint
-            // First get the instruction
-            // comment = "  // Wiring instructions\n";
-            // command = "";
-            // if (c == 0)
-            // command =
-            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-            // else
-            // command = "  {{ins_name}}.io.type <> insType\n";
-            // ins_template.set("ins_name", instruction_info[&ins].name);
-            // ins_template.set(
-            //"operand_name",
-            // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
-            //.name);
+
+            // If the input is function argument
+            if (tmp_find_arg != function_argument.end()) {
+                // First get the instruction
+                auto op_ins = ins.getOperand(c);
+                auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+                comment = "";
+                if (c == 0)
+                    command =
+                        "  {{ins_name}}.io.Input <> "
+                        "io.{{operand_name}}\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name", argument_info[op_arg].name);
+            } else {
+                if (c == 0)
+                    command =
+                        "  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name",
+                                 instruction_info[dyn_cast<llvm::Instruction>(
+                                                      ins.getOperand(c))]
+                                     .name);
+            }
+
+            printCode(comment + ins_template.render(command) + "\n");
 
             // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TTrunc || ins_type == TFPTrunc) {
@@ -2659,20 +2751,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TFpext) {
             // TODO add tptrtoint
-            // First get the instruction
-            // DEBUG(errs() << "TFpext\n");
-            // auto edge = JumpIns[&ins];
-            // DEBUG(edge.first->dump());
-            // DEBUG(edge.second->dump());
-            // DEBUG(errs() << "END\n");
-            // comment = "  // Wiring instructions\n";
-            // command = "";
+            errs() << "FPext\n";
             if (c == 0)
                 command =
                     "  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-            // else
-            // command = "  {{ins_name}}.io.type <> insType\n";
             ins_template.set("ins_name", instruction_info[&ins].name);
             ins_template.set(
                 "operand_name",
@@ -2680,6 +2763,74 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     .name);
 
             printCode(comment + ins_template.render(command) + "\n");
+        } else if (ins_type == TSelect) {
+            errs() << "Select\n";
+
+            // If the input is function argument
+            if (tmp_find_arg != function_argument.end()) {
+                // First get the instruction
+                auto op_ins = ins.getOperand(c);
+                auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+                comment = "";
+                if (c == 1)
+                    command =
+                        "  {{ins_name}}.io.Input1 <> "
+                        "io.{{operand_name}}\n";
+                else if (c == 2)
+                    command =
+                        "  {{ins_name}}.io.Input2 <> "
+                        "io.{{operand_name}}\n";
+
+                ins_template.set("operand_name", argument_info[op_arg].name);
+            }
+
+            else if (operand_const || operand_constFloat) {
+                comment = "  // Wiring constant\n";
+                command = "";
+                if (c == 1) {
+                    command =
+                        "  {{ins_name}}.io.Input1.bits.data := "
+                        "{{value}}.U\n"
+                        "  {{ins_name}}.io.Input1.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.Input1.valid := true.B\n";
+
+                } else if (c == 2) {
+                    command =
+                        "  {{ins_name}}.io.Input2.bits.data := "
+                        "{{value}}.U\n"
+                        "  {{ins_name}}.io.Input2.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.Input2.valid := true.B\n";
+                }
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                if (operand_const)
+                    ins_template.set(
+                        "value",
+                        static_cast<int>(operand_const->getSExtValue()));
+                else if (operand_constFloat)
+                    ins_template.set("value", 0);
+            } else {
+                if (c == 1)
+                    command =
+                        "  {{ins_name}}.io.Input1 <> {{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                else if (c == 2)
+                    command =
+                        "  {{ins_name}}.io.Input2 <> {{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+
+                ins_template.set("operand_name",
+                                 instruction_info[dyn_cast<llvm::Instruction>(
+                                                      ins.getOperand(c))]
+                                     .name);
+            }
+
+            ins_template.set("ins_name", instruction_info[&ins].name);
+
+            printCode(comment + ins_template.render(command) + "\n");
+
         } else if (ins_type == TSEXT) {
             // First get the instruction
             auto op_ins = ins.getOperand(0);
@@ -3301,6 +3452,24 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         init_command.append(ins_template.render(command));
     }
 
+
+    c = 0;
+    for (auto &gl : F.getParent()->getGlobalList()) {
+        command =
+            "  *    glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+        ins_template.set("index", static_cast<int>(c++));
+        final_command.append(ins_template.render(command));
+
+        command =
+            "  poke(c.io.glob_{{index}}.bits.data, 0.U)\n"
+            "  poke(c.io.glob_{{index}}.bits.predicate, false.B)\n"
+            "  poke(c.io.glob_{{index}}.bits.valid, false.B)\n"
+            "  poke(c.io.glob_{{index}}.valid, false.B)\n\n";
+
+        init_command.append(ins_template.render(command));
+    }
+
+
     command = "  poke(c.io.result.ready, false.B)\n\n";
     init_command.append(command);
 
@@ -3392,6 +3561,9 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     FillInstructionContainers(F);
     // Filling function arguments
     FillFunctionArg(F);
+
+    // Filling glboal variables
+    FillGlobalVar(*F.getParent());
 
     // Step1: Dump import section of the scala file
     generateImportSection(this->outCode);

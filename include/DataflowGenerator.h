@@ -36,6 +36,11 @@ struct ArgInfo {
     uint32_t id;
 };
 
+struct GlobalInfo {
+    std::string name;
+    uint32_t id;
+};
+
 class DataflowGeneratorPass : public llvm::ModulePass {
     // Default value is standard out
     llvm::raw_ostream &outCode;
@@ -46,6 +51,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::BasicBlock *, BBInfo> basic_block_info;
     std::map<llvm::Instruction *, InsInfo> instruction_info;
     std::map<llvm::Argument *, ArgInfo> argument_info;
+    std::map<llvm::GlobalValue*, GlobalInfo> global_info;
 
     std::vector<llvm::Instruction *> instruction_branch;
     std::vector<llvm::Instruction *> instruction_compute;
@@ -62,6 +68,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::map<llvm::Instruction *, uint32_t> instruction_use;
 
     std::vector<llvm::Argument *> function_argument;
+    std::vector<llvm::GlobalValue *> module_global;
 
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_succ;
     std::map<llvm::Instruction *, std::vector<llvm::Instruction *>> mem_pred;
@@ -124,6 +131,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
      */
     void FillInstructionContainers(llvm::Function &);
     void FillFunctionArg(llvm::Function &);
+    void FillGlobalVar(llvm::Module &);
 
     void PrintHelperObject(llvm::Function &);
     void PrintDatFlowAbstractIO(llvm::Function &);
