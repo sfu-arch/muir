@@ -337,10 +337,21 @@ static void codeGenerator(Module &m){
 
     pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new amem::AliasMem(XKETCHName));
+    pm.add(new helpers::InstCounter(XKETCHName));
     pm.add(new codegen::DataflowGeneratorPass(out, test, XKETCHName));
 
     pm.add(createVerifierPass());
     pm.run(m);
+
+    //auto replaceExt = [](string &s, const string &newExt) {
+        //string::size_type i = s.rfind('.', s.length());
+        //if (i != string::npos) {
+            //s.replace(i + 1, newExt.length(), newExt);
+        //}
+    //};
+
+    //replaceExt(inPath, "chisel.bc");
+    //saveModule(m, inPath);
 }
 
 /**
@@ -386,11 +397,14 @@ int main(int argc, char **argv) {
     AApassTest(*module);
 
     //Saving the final modified bc file
-    saveModule(*module, "final.bc");
+    //saveModule(*module, "final.bc");
 
     //Generating Chisel code
     codeGenerator(*module);
 
+    saveModule(*module, "final.bc");
+
+    //common::PrintFunctionDFG(*module);
     //common::PrintFunctionDFG(*module);
 
     return 0;

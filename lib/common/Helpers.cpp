@@ -21,6 +21,7 @@ using helpers::LabelUID;
 using helpers::pdgDump;
 using helpers::DFGPrinter;
 using helpers::GEPAddrCalculation;
+using helpers::InstCounter;
 
 /**
  * Helper classes
@@ -225,10 +226,11 @@ void DFGPrinter::visitFunction(Function &F) {
                 dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
                                     I.getNumOperands(), "black", rso.str());
 #ifdef TAPIR
-            } else if (llvm::isa<llvm::DetachInst>(I) || llvm::isa<llvm::SyncInst>(I)) {
-                    counter_ins++;
-                    dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
-                                        I.getNumOperands(), "black", rso.str());
+            } else if (llvm::isa<llvm::DetachInst>(I) ||
+                       llvm::isa<llvm::SyncInst>(I)) {
+                counter_ins++;
+                dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                                    I.getNumOperands(), "black", rso.str());
 #endif
             } else {
                 counter_ins++;
@@ -305,26 +307,26 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                 dot << controlEdge(nodes[&I], nodes[target_instruction],
                                    br_counter, "BB", nodes[t_bb], "black");
                 br_counter++;
-            }
-            else{
+            } else {
                 dot << "    "
                     << "m_" << nodes[OI] << "->"
                     << "m_" << nodes[&I] << "[constraint=false];\n";
             }
         }
     }
-    //else if(isa<llvm::PHINode>(I)){
-        //uint32_t op_counter = 0;
-        //for(auto OI : Operands){
-           //if (isa<Instruction>(OI)){
-                //dot << "    "
-                    //<< "m_" << nodes[OI] << "->"
-                    //<< "m_" << nodes[&I] << ";\n";
-            //}
-        //}
-    //}
+// else if(isa<llvm::PHINode>(I)){
+// uint32_t op_counter = 0;
+// for(auto OI : Operands){
+// if (isa<Instruction>(OI)){
+// dot << "    "
+//<< "m_" << nodes[OI] << "->"
+//<< "m_" << nodes[&I] << ";\n";
+//}
+//}
+//}
 #ifdef TAPIR
-    else if (llvm::isa<llvm::DetachInst>(I) || llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I) ) {
+    else if (llvm::isa<llvm::DetachInst>(I) ||
+             llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I)) {
         uint64_t br_counter = 0;
         for (auto OI : Operands) {
             std::string op;
@@ -339,8 +341,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                 dot << controlEdge(nodes[&I], nodes[target_instruction],
                                    br_counter, "BB", nodes[t_bb], "black");
                 br_counter++;
-            }
-            else{
+            } else {
                 dot << "    "
                     << "m_" << nodes[OI] << "->"
                     << "m_" << nodes[&I] << "[constraint=false];\n";
@@ -359,7 +360,8 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             if (isa<Argument>(OI)) {
                 dot << "    "
                     << "arg_" << nodes[OI] << " ->"
-                    << " m_" << nodes[&I] << " [color=blue, constraint=false];\n";
+                    << " m_" << nodes[&I]
+                    << " [color=blue, constraint=false];\n";
             } else if (isa<Constant>(OI)) {
                 auto cnt = dyn_cast<llvm::ConstantInt>(OI);
                 auto cnt_value = cnt->getSExtValue();
@@ -367,17 +369,18 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                 if (nodes.count(OI) == 0) {
                     nodes[OI] = cnt->getSExtValue();
                     dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
-                        << cnt->getSExtValue() << "\", color=blue, constraint=false]\n";
+                        << cnt->getSExtValue()
+                        << "\", color=blue, constraint=false]\n";
                 }
 
                 dot << "    cnst_" << nodes[OI] << "->"
-                    << "m_" << nodes[&I] << " [color=green, constraint=false];\n";
-            } else if (isa<Instruction>(OI)){
+                    << "m_" << nodes[&I]
+                    << " [color=green, constraint=false];\n";
+            } else if (isa<Instruction>(OI)) {
                 dot << "    "
                     << "m_" << nodes[OI] << "->"
                     << "m_" << nodes[&I] << "[constraint=false];\n";
-            }
-            else {
+            } else {
                 // TODO : This will break later when there are PHINodes
                 // for chops.
                 llvm_unreachable("unexpected");
@@ -518,7 +521,8 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                  */
                                 size = DL.getTypeAllocSize(operand);
 
-                            } else if (operand->isIntegerTy() || operand->isDoubleTy()) {
+                            } else if (operand->isIntegerTy() ||
+                                       operand->isDoubleTy()) {
                                 /**
                                  * If the struct's element is scala we only need
                                  * to:
@@ -616,6 +620,32 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
 bool GEPAddrCalculation::runOnModule(Module &M) {
     for (auto &ff : M) {
         if (ff.getName() == this->function_name) visit(&ff);
+    }
+    return false;
+}
+
+namespace helpers {
+
+char InstCounter::ID = 0;
+// static RegisterPass<pdgDump> X(
+//"InstructionCounter", "Counting number of instructions at each BasicBlock");
+}
+
+bool InstCounter::doInitialization(Module &M) { return false; }
+
+bool InstCounter::doFinalization(Module &M) { return false; }
+
+bool InstCounter::runOnModule(Module &M) {
+    for (auto &ff : M) {
+        if (ff.getName() == this->function_name) {
+            for (auto &bb : ff) {
+                for (auto &Ins : bb) {
+                    CallSite CS(&Ins);
+                    if (CS.isCall()) continue;
+                    this->BasicBlockCnt[&bb]++;
+                }
+            }
+        }
     }
     return false;
 }

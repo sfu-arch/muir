@@ -125,9 +125,13 @@ inline uint32_t countPred(BasicBlock &BB) {
  */
 inline uint32_t countInsUse(Instruction &Ins) {
     uint32_t count = 0;
-    for (auto ins_it = Ins.use_begin(), e_it = Ins.use_end(); ins_it != e_it;
-         ins_it++)
+    for (auto ins_it : Ins.users()) {
+        llvm::CallSite CS(ins_it);
+        if (CS) continue;
+
         count++;
+    }
+
     return count;
 }
 
@@ -287,6 +291,7 @@ void DataflowGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<llvm::LoopInfoWrapperPass>();
     AU.addRequired<helpers::GEPAddrCalculation>();
     AU.addRequired<amem::AliasMem>();
+    AU.addRequired<helpers::InstCounter>();
     AU.setPreservesAll();
 }
 
@@ -407,17 +412,15 @@ void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
  */
 void DataflowGeneratorPass::FillGlobalVar(llvm::Module &M) {
     uint32_t c = 0;
-    for(auto &g_var : M.getGlobalList()){
-        //g_var.dump();
+    for (auto &g_var : M.getGlobalList()) {
+        // g_var.dump();
         module_global.push_back(&g_var);
-        GlobalInfo temp_glob = {"glob_" + to_string(c), static_cast<uint32_t>(c)};
+        GlobalInfo temp_glob = {"glob_" + to_string(c),
+                                static_cast<uint32_t>(c)};
         global_info[&g_var] = temp_glob;
         c++;
     }
 }
-
-
-
 
 /**
  * Naming each basic block of the target function
@@ -559,6 +562,9 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         final_command.append(ins_template.render(command));
         uint32_t c = 0;
         for (auto ins_bb : bb_to_branch.second) {
+            llvm::CallSite CS(ins_bb);
+            if (CS) continue;
+
             command = "    \"{{ins_name}}\" -> {{index}},\n";
             ins_template.set("ins_name", instruction_info[ins_bb].name);
             ins_template.set("index", static_cast<int>(c++));
@@ -570,6 +576,9 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
     }
 
     for (auto branch_to_bb : instruction_branch) {
+        llvm::CallSite CS(branch_to_bb);
+        if (CS) continue;
+
         // Connecting branch instructions to their basic block
         final_command.clear();
         command = "  val {{ins_name}}_brn_bb = Map(\n";
@@ -647,6 +656,9 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 
         uint32_t c = 0;
         for (auto &ins : bb) {
+            llvm::CallSite CS(&ins);
+            if (CS) continue;
+
             command = "    \"{{ins_name}}\" -> {{index}},\n";
             ins_template.set("ins_name", instruction_info[&ins].name);
             ins_template.set("index", static_cast<int>(c++));
@@ -784,7 +796,6 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         final_command.append(ins_template.render(command));
     }
 
-
     c = 0;
     for (auto &gl : F.getParent()->getGlobalList()) {
         command =
@@ -853,7 +864,7 @@ void DataflowGeneratorPass::HelperPrintInistInit(Function &F) {
     auto loop_header_bb = getBBHeader(*LI);
 
     for (auto &BB : F) {
-        comment = "  // [BasicBlock]" + BB.getName().str() + ":";
+        comment = "  // [BasicBlock]  " + BB.getName().str() + ":";
         printCode(comment);
         for (auto &INS : BB) {
             // Check wether the instruction is function call
@@ -1088,9 +1099,16 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
         ins_template.set("ins_name", instruction_info[&Ins].name);
         ins_template.set("ins_out", static_cast<int>(countInsUse(Ins)));
         ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
-        ins_template.set(
-            "num_byte",
-            static_cast<int>(gep_pass_ctx.SingleGepIns[&Ins].numByte));
+
+        auto gep_value = gep_pass_ctx.SingleGepIns.find(&Ins);
+
+        if (gep_value != gep_pass_ctx.SingleGepIns.end())
+            ins_template.set(
+                "num_byte",
+                static_cast<int>(gep_pass_ctx.SingleGepIns[&Ins].numByte));
+        else
+            // TODO Fix the GEP computation in non cases
+            ins_template.set("num_byte", 1);
 
     } else if (Ins.getNumOperands() == 3) {
         ins_define =
@@ -1104,6 +1122,24 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
         ins_template.set("ins_name", instruction_info[&Ins].name);
         ins_template.set("ins_out", static_cast<int>(countInsUse(Ins)));
         ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+
+        auto gep_value = gep_pass_ctx.TwoGepIns.find(&Ins);
+
+        if (gep_value != gep_pass_ctx.TwoGepIns.end()) {
+            ins_template.set(
+                "num_byte1",
+                static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte1));
+
+            ins_template.set(
+                "num_byte2",
+                static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte2));
+
+        } else {
+            ins_template.set("num_byte1", 1);
+
+            ins_template.set("num_byte2", 1);
+        }
+
         ins_template.set(
             "num_byte1",
             static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte1));
@@ -1112,7 +1148,7 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
             static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte2));
 
     } else {
-        Ins.dump();
+        DEBUG(Ins.dump());
 
         // Printing each instruction
         string init_test = "\n  //";
@@ -1462,7 +1498,7 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
             "  // @todo the node need to be implimented\n"
             "  val {{ins_name}} = "
             "Module (new {{ins_type}}"
-            "(NumOuts = 1, ID = {{ins_id}})(p))";
+            "(NumOuts = {{num_use}}, ID = {{ins_id}})(p))";
         LuaTemplater ins_template;
 
         // Get Instruction Type
@@ -1471,6 +1507,7 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         ins_template.set("ins_type",
                          InstructionInfo::instruction_name_type[ins_type]);
         ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+        ins_template.set("num_use", static_cast<int>(Ins.getNumUses()));
 
         string result = ins_template.render(ins_define);
 
@@ -1490,6 +1527,8 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
  * Priniting Basic Blcok definition for each basic block
  */
 void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
+    auto &ins_cnt_pass_ctx = getAnalysis<helpers::InstCounter>();
+
     uint32_t phi_c = CountPhiNode(BB);
     string bb_define;
     string result;
@@ -1508,7 +1547,10 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
         else
             bb_template.set("num_target", static_cast<int>(countPred(BB)));
 
-        bb_template.set("num_ins", static_cast<int>(BB.getInstList().size()));
+        bb_template.set("num_ins",
+                        static_cast<int>(ins_cnt_pass_ctx.BasicBlockCnt[&BB]));
+        // bb_template.set("num_ins",
+        // static_cast<int>(BB.getInstList().size()));
         bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
 
         result = bb_template.render(bb_define);
@@ -2328,7 +2370,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("operand_name",global_info[operand_global].name);
+                ins_template.set("operand_name",
+                                 global_info[operand_global].name);
 
             } else {
                 ins.dump();
@@ -2404,9 +2447,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         instruction_info[dyn_cast<llvm::Instruction>(
                                              ins.getOperand(c))]
                             .name);
-                }
-                else if(operand_global){
-
+                } else if (operand_global) {
                     comment =
                         "  // Wiring Store instruction to the parent "
                         "instruction\n";
@@ -2414,9 +2455,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.GepAddr <> "
                         "io.{{operand_name}}\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name",global_info[operand_global].name);
+                    ins_template.set("operand_name",
+                                     global_info[operand_global].name);
                 }
-                
+
                 else {
                     comment =
                         "  // Wiring Store instruction to the parent "
@@ -2457,10 +2499,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  // Wiring Store instruction to the parent "
                         "instruction\n";
                     command =
-                        "  {{ins_name}}.io.inData.bits.data <> io.{{operand_name}}\n";
+                        "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name", global_info[operand_global].name);
+                    ins_template.set("operand_name",
+                                     global_info[operand_global].name);
                 }
 
                 else {
@@ -3435,7 +3478,9 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     final_command = ins_template.render(command);
 
     uint32_t c = 0;
-    string init_command = "";
+    string init_command =
+        "  poke(c.io.entry.bits.control, false.B)\n"
+        "  poke(c.io.entry.valid, false.B)\n\n";
 
     for (auto &ag : F.getArgumentList()) {
         command =
@@ -3452,7 +3497,6 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         init_command.append(ins_template.render(command));
     }
 
-
     c = 0;
     for (auto &gl : F.getParent()->getGlobalList()) {
         command =
@@ -3468,7 +3512,6 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
 
         init_command.append(ins_template.render(command));
     }
-
 
     command = "  poke(c.io.result.ready, false.B)\n\n";
     init_command.append(command);

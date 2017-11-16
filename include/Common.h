@@ -195,6 +195,27 @@ class GEPAddrCalculation : public ModulePass,
         AU.setPreservesAll();
     }
 };
+
+class InstCounter : public llvm::ModulePass{
+
+   public:
+    static char ID;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    std::map<llvm::BasicBlock *, uint64_t> BasicBlockCnt;
+
+    InstCounter(llvm::StringRef fn) : llvm::ModulePass(ID), function_name(fn) {}
+
+    bool doInitialization(llvm::Module &) override;
+    bool doFinalization(llvm::Module &) override;
+    bool runOnModule(llvm::Module &) override;
+
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
 }
 
 #endif
