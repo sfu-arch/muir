@@ -3008,7 +3008,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
     LuaTemplater ins_template;
     string comment =
         "  /**\n"
-        "    * Wireing enable signals to the instructions\n"
+        "    * Wiring enable signals to the instructions\n"
         "    */\n"
         "  //Wiring enable signals\n";
 
@@ -3017,7 +3017,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
     for (auto &BB : F) {
         for (auto &ins : BB) {
             llvm::CallSite CS(&ins);
-            if (dyn_cast<llvm::BitCastInst>(&ins)) continue;
+            //if (dyn_cast<llvm::BitCastInst>(&ins)) continue;
             if (CS) continue;
             string command = "";
             command =
