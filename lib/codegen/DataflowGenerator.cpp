@@ -1498,7 +1498,7 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
             "  // @todo the node need to be implimented\n"
             "  val {{ins_name}} = "
             "Module (new {{ins_type}}"
-            "(NumOuts = {{num_use}}, ID = {{ins_id}})(p))";
+            "(NumOuts = {{num_use}}, ID = {{ins_id}}))";
         LuaTemplater ins_template;
 
         // Get Instruction Type
@@ -3265,8 +3265,10 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
     // Getting loop information
     //
-    if (getLoops(*LI).size() == 0)
+    if (getLoops(*LI).size() == 0){
+        errs() << "No LOOP!\n";
         printCode("  //Function doesn't have any for loop");
+    }
 
     else {
         // Printing header part of each loop
