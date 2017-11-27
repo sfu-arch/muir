@@ -38,6 +38,29 @@ libraries in lib/.
 Note, building with a tool like ninja can be done by adding `-G Ninja` to
 the cmake invocation and running ninja instead of make.
 
+Tapir Support
+==============================================
+For Tapir's Cilk extensions:
+
+1. Clone the Tapir repository.
+
+        cd <your repository>
+        git clone --recursive https://github.com/sfu-arch/Tapir-Meta.git
+        cd Tapir-Meta/
+        ./build.sh
+        source ./setup-env.sh
+        
+2. Change into the generator build directory
+
+        cd <your repository>/xketch-generator/build
+
+3. Run CMake with the path to 
+
+        cmake -DLLVM_DIR=<your repository>/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ../
+
+You may need to re-run Tapir-Meta/setup-env.sh before running the
+generator executable if you start a new shell.
+
 Running
 ==============================================
 
