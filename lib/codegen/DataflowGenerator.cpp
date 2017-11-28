@@ -488,12 +488,11 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
         "import chisel3.util._\n"
         "import chisel3.Module\n"
         "import chisel3.testers._\n"
-        "import chisel3.iotesters.{ChiselFlatSpec, Driver, "
-        "OrderedDecoupledHWIOTester, PeekPokeTester}\n"
+        "import chisel3.iotesters._\n"
         "import org.scalatest.{FlatSpec, Matchers}\n"
         "import muxes._\n"
         "import config._\n"
-        "import control.{BasicBlockNoMaskNode, BasicBlockNode}\n"
+        "import control._\n"
         "import util._\n"
         "import interfaces._\n"
         "import regfile._\n"
@@ -501,7 +500,7 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
         "import stack._\n"
         "import arbiters._\n"
         "import loop._\n"
-        "import accel.{CacheReq, CacheRespT}\n"
+        "import accel._\n"
         "import node._\n\n";
 
     // Print to the OUTPUT
@@ -3464,8 +3463,19 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     LuaTemplater ins_template;
     string final_command;
     string command =
+        "class CacheWrapper()(implicit p: Parameters) extends {{module_name}}()(p)\n"
+        "  with CacheParams {\n\n"
+        "  // Instantiate the AXI Cache\n"
+        "  val cache = Module(new Cache)\n"
+        "  //cache.io.cpu.req <> io.CacheReq\n"
+        "  CacheMem.io.CacheResp <> cache.io.cpu.resp\n"
+        "  cache.io.cpu.abort := false.B\n"
+        "  // Instantiate a memory model with AXI slave interface for cache\n"
+        "  val memModel = Module(new NastiMemSlave)\n"
+        "  memModel.io.nasti <> cache.io.nasti\n\n}\n\n"
         "class {{class_name}}Tests"
-        "(c: {{module_name}}) extends PeekPokeTester(c) {\n";
+        "(c: CacheWrapper) extends PeekPokeTester(c) {\n";
+        //"(c: {{module_name}}) extends PeekPokeTester(c) {\n";
     ins_template.set("class_name", F.getName().str());
     ins_template.set("module_name", F.getName().str() + "DF");
     final_command.append(ins_template.render(command));
@@ -3577,12 +3587,37 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "       \"-tbn\", \"verilator\",\n"
         "       \"-td\", \"test_run_dir\",\n"
         "       \"-tts\", \"0001\"),\n"
-        "     () => new {{class_name}}DF()) {\n"
+        "     () => new CacheWrapper()) {\n"
         "     c => new {{class_name}}Tests(c)\n"
         "    } should be(true)\n"
         "  }\n}\n";
 
     printCode(ins_template.render(command), this->outTest);
+}
+
+void DataflowGeneratorPass::printEndingModule(llvm::Function &F){
+
+    // Printing Tests class
+    LuaTemplater ins_template;
+    string command =
+        "import java.io.{File, FileWriter}\n"
+        "object {{class_name}}Main extends App {}\n"
+        "  val dir = new File(\"RTL/{{class_name}}\") ; dir.mkdirs\n"
+        "  implicit val p = config.Parameters.root((new MiniConfig).toInstance)\n"
+        "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new {{module_name}}()))\n\n"
+        "  val verilogFile = new File(dir, s\"${chirrtl.main}.v\")\n"
+        "  val verilogWriter = new FileWriter(verilogFile)\n"
+        "  val compileResult = (new firrtl.VerilogCompiler).compileAndEmit(firrtl.CircuitState(chirrtl, firrtl.ChirrtlForm))\n"
+        "  val compiledStuff = compileResult.getEmittedCircuit\n"
+        "  verilogWriter.write(compiledStuff.value)\n"
+        "  verilogWriter.close()\n}\n";
+    ins_template.set("class_name", F.getName().str());
+    ins_template.set("module_name", F.getName().str() + "DF");
+    //final_command.append(ins_template.render(command));
+
+    printCode(ins_template.render(command));
+    //printCode(ins_template.render(command), this->outTest);
+
 }
 
 /**
@@ -3677,4 +3712,6 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
 
     // Closing the object
     printCode("}\n");
+
+    printEndingModule(F);
 }

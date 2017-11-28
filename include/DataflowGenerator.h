@@ -193,6 +193,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintRegisterFile();
     void PrintCacheMem();
 
+    void printEndingModule(llvm::Function &);
+
     /**
      * Print method gets called right after the pass finishes
      */
