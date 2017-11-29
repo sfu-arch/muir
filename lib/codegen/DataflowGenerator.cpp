@@ -2414,7 +2414,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             auto tmp_find_arg = find(function_argument.begin(),
                                      function_argument.end(), tmp_fun_arg);
 
-            if (c == 0) {
+            if (c == 0)
+            {
                 // If the input is function argument
                 if (tmp_find_arg != function_argument.end()) {
                     // First get the instruction
@@ -2422,71 +2423,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     auto op_arg = dyn_cast<llvm::Argument>(op_ins);
 
                     comment =
-                        "  // Wiring Store instruction to the function "
-                        "argument\n";
+                            "  // Wiring Store instruction to the function argument\n";
                     command =
-                        "  {{ins_name}}.io.GepAddr <> "
-                        "io.{{operand_name}}\n";
-
-                    ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name",
-                                     argument_info[op_arg].name);
-
-                } else if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
-                    comment =
-                        "  // Wiring Store instruction to the parent "
-                        "instruction\n";
-                    command =
-                        "  {{ins_name}}.io.GepAddr <> "
-                        "{{operand_name}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))";
-                    ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set(
-                        "operand_name",
-                        instruction_info[dyn_cast<llvm::Instruction>(
-                                             ins.getOperand(c))]
-                            .name);
-                } else if (operand_global) {
-                    comment =
-                        "  // Wiring Store instruction to the parent "
-                        "instruction\n";
-                    command =
-                        "  {{ins_name}}.io.GepAddr <> "
-                        "io.{{operand_name}}\n";
-                    ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set("operand_name",
-                                     global_info[operand_global].name);
-                }
-
-                else {
-                    comment =
-                        "  // Wiring Store instruction to the parent "
-                        "instruction\n";
-                    // command =
-                    //"  {{ins_name}}.io.GepAddr <> ";
-                    command =
-                        "  {{ins_name}}.io.GepAddr.bits.data      := "
-                        "0.U\n"
-                        "  {{ins_name}}.io.GepAddr.bits.predicate := "
-                        "true.B\n"
-                        "  {{ins_name}}.io.GepAddr.bits.valid     := "
-                        "true.B\n\n";
-
-                    ins_template.set("ins_name", instruction_info[&ins].name);
-                }
-            } else {
-                // If the input is function argument
-                if (tmp_find_arg != function_argument.end()) {
-                    // First get the instruction
-                    auto op_ins = ins.getOperand(c);
-                    auto op_arg = dyn_cast<llvm::Argument>(op_ins);
-
-                    comment = "";
-                    // comment =
-                    //"  // Wiring Store instruction to the function "
-                    //"argument\n";
-                    command =
-                        "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
+                            "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      argument_info[op_arg].name);
@@ -2495,10 +2434,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 else if (operand_global) {
                     // TODO handel global values as well
                     comment =
-                        "  // Wiring Store instruction to the parent "
-                        "instruction\n";
+                            "  // Wiring Store instruction to global value\n";
                     command =
-                        "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
+                            "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
@@ -2507,30 +2445,86 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 else {
                     // If the store input comes from an instruction
-                    // comment =
-                    //"  // Wiring Store instruction to the parent
-                    // instruction\n";
+                    comment =
+                            "  // Wiring Store instruction to the parent instruction\n";
                     comment = "";
                     command =
-                        "  {{ins_name}}.io.inData <> "
-                        "{{operand_name}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                            "  {{ins_name}}.io.inData <> "
+                                    "{{operand_name}}.io.Out"
+                                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set(
-                        "operand_name",
-                        instruction_info[dyn_cast<llvm::Instruction>(
-                                             ins.getOperand(c))]
-                            .name);
+                            "operand_name",
+                            instruction_info[dyn_cast<llvm::Instruction>(
+                                    ins.getOperand(c))]
+                                    .name);
                 }
 
+            } else {
+                // If the input is function argument
+                if (tmp_find_arg != function_argument.end()) {
+                    // First get the instruction
+                    auto op_ins = ins.getOperand(c);
+                    auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+                    comment =
+                            "  // Wiring Store instruction to the function "
+                                    "argument\n";
+                    command =
+                            "  {{ins_name}}.io.GepAddr <> "
+                                    "io.{{operand_name}}\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("operand_name",
+                                     argument_info[op_arg].name);
+
+                } else if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
+                    comment =
+                            "  // Wiring Store instruction to the parent "
+                                    "instruction\n";
+                    command =
+                            "  {{ins_name}}.io.GepAddr <> "
+                                    "{{operand_name}}.io.Out"
+                                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set(
+                            "operand_name",
+                            instruction_info[dyn_cast<llvm::Instruction>(
+                                    ins.getOperand(c))]
+                                    .name);
+                } else if (operand_global) {
+                    comment =
+                            "  // Wiring Store instruction to the global "
+                                    "value\n";
+                    command =
+                            "  {{ins_name}}.io.GepAddr <> "
+                                    "io.{{operand_name}}\n";
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set("operand_name",
+                                     global_info[operand_global].name);
+                }
+                else {
+                    comment =
+                            "  // Wiring Store instruction to the parent "
+                                    "instruction\n";
+                    command =
+                            "  {{ins_name}}.io.GepAddr.bits.data      := "
+                                    "0.U\n"
+                                    "  {{ins_name}}.io.GepAddr.bits.predicate := "
+                                    "true.B\n"
+                                    "  {{ins_name}}.io.GepAddr.bits.valid     := "
+                                    "true.B\n";
+
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                }
                 // command.append("Amirali\n");
                 command.append(
-                    "  {{ins_name}}.io.memResp  <> "
-                    "CacheMem.io.WriteOut({{ins_index}})\n"
-                    "  CacheMem.io.WriteIn({{ins_index}}) <> "
-                    "{{ins_name}}.io.memReq\n"
-                    "  {{ins_name}}.io.Out(0).ready := true.B\n\n");
+                        "  {{ins_name}}.io.memResp  <> "
+                                "CacheMem.io.WriteOut({{ins_index}})\n"
+                                "  CacheMem.io.WriteIn({{ins_index}}) <> "
+                                "{{ins_name}}.io.memReq\n"
+                                "  {{ins_name}}.io.Out(0).ready := true.B\n");
             }
 
             ptrdiff_t pos = distance(
@@ -2588,6 +2582,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
                         "true.B\n"
                         "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.valid          := "
                         "true.B\n\n"
                         "  // Connecting Alloca to Stack\n";
 
@@ -3601,7 +3597,7 @@ void DataflowGeneratorPass::printEndingModule(llvm::Function &F){
     LuaTemplater ins_template;
     string command =
         "import java.io.{File, FileWriter}\n"
-        "object {{class_name}}Main extends App {}\n"
+        "object {{class_name}}Main extends App {\n"
         "  val dir = new File(\"RTL/{{class_name}}\") ; dir.mkdirs\n"
         "  implicit val p = config.Parameters.root((new MiniConfig).toInstance)\n"
         "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new {{module_name}}()))\n\n"
