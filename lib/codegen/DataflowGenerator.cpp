@@ -3531,7 +3531,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     LuaTemplater ins_template;
     string final_command;
     string command =
-        "class CacheWrapper()(implicit p: Parameters) extends "
+        "class {{class_name}}CacheWrapper()(implicit p: Parameters) extends "
         "{{module_name}}()(p)\n"
         "  with CacheParams {\n\n"
         "  // Instantiate the AXI Cache\n"
@@ -3542,8 +3542,8 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "  // Instantiate a memory model with AXI slave interface for cache\n"
         "  val memModel = Module(new NastiMemSlave)\n"
         "  memModel.io.nasti <> cache.io.nasti\n\n}\n\n"
-        "class {{class_name}}Tests"
-        "(c: CacheWrapper) extends PeekPokeTester(c) {\n";
+        "class {{class_name}}Test01"
+        "(c: {{class_name}}CacheWrapper) extends PeekPokeTester(c) {\n";
     //"(c: {{module_name}}) extends PeekPokeTester(c) {\n";
     ins_template.set("class_name", F.getName().str());
     ins_template.set("module_name", F.getName().str() + "DF");
@@ -3656,8 +3656,8 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "       \"-tbn\", \"verilator\",\n"
         "       \"-td\", \"test_run_dir\",\n"
         "       \"-tts\", \"0001\"),\n"
-        "     () => new CacheWrapper()) {\n"
-        "     c => new {{class_name}}Tests(c)\n"
+        "     () => new {{class_name}}CacheWrapper()) {\n"
+        "     c => new {{class_name}}Test01(c)\n"
         "    } should be(true)\n"
         "  }\n}\n";
 
