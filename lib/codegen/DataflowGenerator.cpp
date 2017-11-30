@@ -3085,7 +3085,8 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             auto Loc = loop->getStartLoc();
             for (auto li : this->loop_liveins[loop]) {
                 string ex_define =
-                    "  {{loop_name}}_start.io.enableSignal({{en_index}}) <> "
+                    //"  {{loop_name}}_start.io.enableSignal({{en_index}}) <> "
+                    "  {{loop_name}}_liveIN_{{en_index}}.io.enable <> "
                     "{{bb_name}}.io.Out({{con_index}})";
                 LuaTemplater ex_template;
 
@@ -3108,7 +3109,8 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             for (auto li : this->loop_liveins[loop]) {
                 LuaTemplater ex_template;
                 string ex_define =
-                    "  {{loop_name}}_start.io.Finish({{en_index}}) <> "
+                    //"  {{loop_name}}_start.io.Finish({{en_index}}) <> "
+                    "  {{loop_name}}_liveIN_{{en_index}}.io.Finish <> "
                     "{{bb_name}}_expand.io.Out({{label_index}})";
 
                 ex_template.set("loop_name",
@@ -3378,10 +3380,11 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                     "the loop header\n";
 
                                 string command =
+                                    //"{{loop_name}}_start.io.inputArg({{arg_"
+                                    //"index}"
                                     "  "
-                                    "{{loop_name}}_start.io.inputArg({{arg_"
-                                    "index}"
-                                    "}) <> io.{{operand_name}}\n";
+                                    "{{loop_name}}_liveIN_{{arg_index}}.io.InData"
+                                    " <> io.{{operand_name}}\n";
 
                                 ins_template.set(
                                     "loop_name",
