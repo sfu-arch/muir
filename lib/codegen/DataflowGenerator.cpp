@@ -2403,6 +2403,22 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 ins_template.set("operand_name",
                                  global_info[operand_global].name);
 
+            } else if (operand_ins) {
+
+                comment =
+                    "  // Wiring Load instruction to another instruction\n";
+
+                command =
+                    //TODO fix the Out(0) index
+                    "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out(0)\n"
+                    "  {{ins_name}}.io.memResp <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
+                    "{{ins_name}}.io.memReq\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name", instruction_info[operand_ins].name);
+
             } else {
                 ins.dump();
                 assert(!"Wrong load input");
@@ -3383,7 +3399,8 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                     //"{{loop_name}}_start.io.inputArg({{arg_"
                                     //"index}"
                                     "  "
-                                    "{{loop_name}}_liveIN_{{arg_index}}.io.InData"
+                                    "{{loop_name}}_liveIN_{{arg_index}}.io."
+                                    "InData"
                                     " <> io.{{operand_name}}\n";
 
                                 ins_template.set(
