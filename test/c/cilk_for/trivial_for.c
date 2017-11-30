@@ -7,7 +7,7 @@ unsigned trivial_for() {
     //for (int i = 0; i < 5; ++i) {
     j=i-1;
   }
-  return 1;
+  return j;
 }
 
 int main() {
