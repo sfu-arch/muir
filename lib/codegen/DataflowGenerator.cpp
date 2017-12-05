@@ -2237,8 +2237,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 comment = "  // Wiring GEP instruction to the loop header\n";
 
-                // int idx = 0;
-
                 command =
                     //"  {{ins_name}}.io.LeftIO <>"
                     //"{{loop_name}}_liveIN_{{loop_index}}.io.Out(0)\n";
