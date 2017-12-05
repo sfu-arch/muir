@@ -678,9 +678,23 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         // auto phi_ins = dyn_cast<llvm::PHINode>(ins);
 
         for (uint32_t i = 0; i < ins->getNumOperands(); i++) {
+            auto operand = ins->getOperand(i);
             auto const_op = dyn_cast<llvm::ConstantInt>(ins->getOperand(i));
 
-            if (const_op) {
+            if (dyn_cast<llvm::Argument>(operand)) {
+                command = "    \"{{ins_name}}\" -> {{index}},\n";
+
+                ptrdiff_t pos = distance(
+                    function_argument.begin(),
+                    find(function_argument.begin(), function_argument.end(),
+                         dyn_cast<llvm::Argument>(operand)));
+
+                string arg_name = "data_" + to_string(static_cast<int>(pos));
+                ins_template.set("ins_name", arg_name);
+                ins_template.set("index", static_cast<int>(i));
+            }
+
+            else if (const_op) {
                 command = "    \"{{const_name}}\" -> {{index}},\n";
                 ins_template.set("const_name", "const_" + to_string(i));
             } else {
@@ -1940,10 +1954,111 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
 
     for (uint32_t c = 0; c < phi_ins->getNumOperands(); c++) {
         // Getting target
+        auto operand = phi_ins->getOperand(c);
         auto ins_target = dyn_cast<llvm::Instruction>(phi_ins->getOperand(c));
         auto operand_const = dyn_cast<llvm::ConstantInt>(ins.getOperand(c));
 
-        if (ins_target) {
+        // Check if the input is function argument
+        auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
+        auto tmp_find_arg = find(function_argument.begin(),
+                                 function_argument.end(), tmp_fun_arg);
+
+        Loop *target_loop = nullptr;
+
+        /**
+         * Check if the edge in LoopEdges
+         * This edge count is the loop header
+         */
+        auto loop_edge = std::find_if(
+            this->LoopEdges.begin(), this->LoopEdges.end(),
+            [&operand, &ins](const pair<Value *, Value *> &edge) {
+                return ((edge.second == &ins) && (edge.first == operand));
+            });
+
+        /**
+         * If we find the edge in the container it means that
+         * we have to connect the instruction to latch
+         * We still need to figure out:
+         *  1) The instruction belongs to which loop
+         *  2) The edge is live-in or live-out
+         *
+         *  We have split the edge and connect the source to the register file
+         *  and register file to the destination
+         *
+         *  Now we have to replace the SRC connection with appropriate loop
+         *  header
+         *  We need to find two things:
+         *      1) Loop
+         *      2) index of the loop header
+         */
+        // Make a priority_queue for loops
+        auto cmp = [](Loop *left, Loop *right) {
+            return left->getSubLoops().size() > right->getSubLoops().size();
+        };
+        std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)> order_loops(
+            cmp);
+        for (auto &L : getLoops(*LI)) {
+            order_loops.push(L);
+        }
+
+        if (loop_edge != this->LoopEdges.end()) {
+            while (!order_loops.empty()) {
+                auto L = order_loops.top();
+                auto Loc = L->getStartLoc();
+                auto Filename = getBaseName(Loc->getFilename().str());
+
+                // TODO Fix and handel the function argument
+                // It's broken and I'm just skiping for now
+                if (dyn_cast<Argument>(loop_edge->first)) {
+                    target_loop = L;
+                    break;
+                }
+
+                else if (L->contains(&ins) ||
+                         L->contains(dyn_cast<Instruction>(loop_edge->first))) {
+                    target_loop = L;
+                    break;
+                }
+                order_loops.pop();
+            }
+        }
+
+        if (target_loop != nullptr) {
+            auto Loc = target_loop->getStartLoc();
+
+            string comment = "  // Wiring Live in to PHI node\n";
+
+            string command =
+                "  {{phi_name}}.io.InData({{index}}) <> "
+                "{{loop_name}}_liveIN_{{loop_index}}.io.Out(0)\n";
+
+            ins_template.set("phi_name", instruction_info[&ins].name);
+            ins_template.set("index", static_cast<int>(c));
+            ins_template.set("loop_name",
+                             "loop_L_" + std::to_string(Loc.getLine()));
+            ins_template.set("loop_index",
+                             static_cast<int>(this->ins_loop_header_idx[&ins]));
+
+            printCode(comment);
+            printCode(ins_template.render(command));
+
+
+
+        } else if (tmp_find_arg != function_argument.end()) {
+            auto op_ins = ins.getOperand(c);
+            auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+            string command =
+                "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                "(\"{{ins_name}}\")) <> io.{{operand_name}}\n";
+
+            ins_template.set("phi_name", instruction_info[&ins].name);
+            ins_template.set("ins_name", argument_info[op_arg].name);
+            ins_template.set("operand_name", argument_info[op_arg].name);
+
+            printCode(ins_template.render(command));
+
+        } else if (ins_target) {
             string command =
                 "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
                 "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
