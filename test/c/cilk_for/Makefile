@@ -11,7 +11,7 @@ all: trivial_for.ll int_exp.ll
 
 %.scala: %.ll
 	../../../build/bin/xketch -fn-name=$* $< -o $*
-	mv dfg.$*.dot $*.dot
+	mv -f dfg.$*.dot $*.dot 2> /dev/null ; true
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
