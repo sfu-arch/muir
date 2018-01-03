@@ -1,7 +1,10 @@
 CC=clang
+XKETCH=../../../build/bin/xketch
 CFLAGS=-g -emit-llvm -m32 -S -o -
+SOURCES=$(shell ls *.c)
+SCALA=$(SOURCES:%.c=%.scala)
 
-all: trivial_for.ll int_exp.ll
+all: $(SCALA)
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
@@ -10,11 +13,11 @@ all: trivial_for.ll int_exp.ll
 	llvm-dis $<
 
 %.scala: %.ll
-	../../../build/bin/xketch -fn-name=$* $< -o $*
-	mv -f dfg.$*.dot $*.dot 2> /dev/null ; true
+	$(XKETCH) -fn-name=$* $< -o $*
+	mv -f dfg.$*.dot $*.dot 2>/dev/null; true
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
 
 clean:
-	rm -f *.bc *.ll *.dot *~
+	rm -f *.bc *.ll *.dot *.scala *~
