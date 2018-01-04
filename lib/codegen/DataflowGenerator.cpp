@@ -3696,7 +3696,6 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         command =
             "  poke(c.io.data_{{index}}.bits.data, 0.U)\n"
             "  poke(c.io.data_{{index}}.bits.predicate, false.B)\n"
-            "  poke(c.io.data_{{index}}.bits.valid, false.B)\n"
             "  poke(c.io.data_{{index}}.valid, false.B)\n\n";
 
         init_command.append(ins_template.render(command));
@@ -3712,7 +3711,6 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         command =
             "  poke(c.io.glob_{{index}}.bits.data, 0.U)\n"
             "  poke(c.io.glob_{{index}}.bits.predicate, false.B)\n"
-            "  poke(c.io.glob_{{index}}.bits.valid, false.B)\n"
             "  poke(c.io.glob_{{index}}.valid, false.B)\n\n";
 
         init_command.append(ins_template.render(command));
@@ -3737,8 +3735,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     final_command.append(init_command);
 
     command =
-        "  step(1)\n"
-        "  var time = 1  //Cycle counter\n  /**\n   *\n"
+        "/**\n   *\n"
         "   * @todo Add your test cases here\n   *\n"
         "   * The test harness API allows 4 interactions with the DUT:\n"
         "   *  1. To set the DUT'S inputs: poke\n"
@@ -3758,7 +3755,15 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "giving "
         "up\")\n"
         "   *\n"
-        "   */\n\n";
+        "   */\n\n"
+        "  // Example to just increment clock 150 times\n"
+        "  step(1)\n"
+        "  var time = 1  //Cycle counter\n"
+        "  while (time < 150) {\n"
+        "   time += 1\n"
+        "   step(1)\n"
+        "   println(s\"Cycle: $time\")\n"
+        "  }\n\n";
 
     printCode(final_command + command + "}\n", this->outTest);
 
