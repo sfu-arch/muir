@@ -174,8 +174,8 @@ void DFGPrinter::visitFunction(Function &F) {
                                        string ir) -> string {
         stringstream sstr;
         auto eir = escape_quotes(ir);
-        sstr << "        m_" << id << "[label=\"" << label << "(" << id
-             << ")\", opcode=\"" << label << "\", color=" << color << ",ir=\""
+        sstr << "        m_" << id << "[label=\"" << label
+             << "\", opcode=\"" << label << "\", color=" << color << ",ir=\""
              << eir << "\"];\n";
         return sstr.str();
     };
@@ -190,10 +190,10 @@ void DFGPrinter::visitFunction(Function &F) {
 
         if (num_op == 1)
             branch_label =
-                "\"{" + label + "(" + std::to_string(id) + ") \\l|{<s0>T}} \"";
+                "\"{" + label + " \\l|{<s0>T}} \"";
         else
-            branch_label = "\"{" + label + "(" + std::to_string(id) +
-                           ") \\l|{<s0>T|<s1>F}} \"";
+            branch_label = "\"{" + label +
+                           " \\l|{<s0>T|<s1>F}} \"";
 
         sstr << "        m_" << id
              << "[shape=\"record\", label=" << branch_label << ", opcode=\""
@@ -221,20 +221,22 @@ void DFGPrinter::visitFunction(Function &F) {
             // If this does not exist in the node map
             // then create a new entry for it and save
             // the value of the counter (identifier).
+            auto scalaLabel = cast<MDString>(I.getMetadata("ScalaLabel")->getOperand(0))->getString();
+
             if (isa<BranchInst>(&I)) {
                 counter_ins++;
-                dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                dot << branchFormat(nodes[&I], scalaLabel.str(),
                                     I.getNumOperands(), "black", rso.str());
 #ifdef TAPIR
             } else if (llvm::isa<llvm::DetachInst>(I) ||
                        llvm::isa<llvm::SyncInst>(I)) {
                 counter_ins++;
-                dot << branchFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                dot << branchFormat(nodes[&I], scalaLabel.str(),
                                     I.getNumOperands(), "black", rso.str());
 #endif
             } else {
                 counter_ins++;
-                dot << nodeFormat(nodes[&I], getOpcodeStr(I.getOpcode()),
+                dot << nodeFormat(nodes[&I], scalaLabel.str(),
                                   "black", rso.str());
             }
         }
