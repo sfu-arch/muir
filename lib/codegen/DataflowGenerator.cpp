@@ -814,10 +814,17 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
 
     c = 0;
     for (auto &gl : F.getParent()->getGlobalList()) {
-        command =
-            "    val glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
-        ins_template.set("index", static_cast<int>(c++));
-        final_command.append(ins_template.render(command));
+        for (User *U : gl.users()) {
+            if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                if (Inst->getFunction() == &F) {
+                    command =
+                            "    val glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+                    ins_template.set("index", static_cast<int>(c++));
+                    final_command.append(ins_template.render(command));
+                    break;
+                }
+            }
+        }
     }
 
     final_command.append(
@@ -3614,12 +3621,12 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                             // instruction
                             if (target_ins)
                                 this->ins_loop_end_idx[target] = live_index;
-
+                            // TODO Fix Me: Currently hard wired to io.Out(0). Shouldn't it have its own output?
                             string live_out_conn =
                                 "  "
                                 "{{loop_name}}_end.io.inputArg({{out_index}}) "
                                 "<> "
-                                "{{ins_name}}.io.Out(1)\n";
+                                "{{ins_name}}.io.Out(0)\n";
                             //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
                             //"name}}\"))\n";
                             //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
@@ -3706,17 +3713,24 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
 
     c = 0;
     for (auto &gl : F.getParent()->getGlobalList()) {
-        command =
-            "  *    glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
-        ins_template.set("index", static_cast<int>(c++));
-        final_command.append(ins_template.render(command));
+        for (User *U : gl.users()) {
+            if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                if (Inst->getFunction() == &F) {
+                    command =
+                            "  *    glob_{{index}} = Flipped(Decoupled(new DataBundle))\n";
+                    ins_template.set("index", static_cast<int>(c++));
+                    final_command.append(ins_template.render(command));
 
-        command =
-            "  poke(c.io.glob_{{index}}.bits.data, 0.U)\n"
-            "  poke(c.io.glob_{{index}}.bits.predicate, false.B)\n"
-            "  poke(c.io.glob_{{index}}.valid, false.B)\n\n";
+                    command =
+                            "  poke(c.io.glob_{{index}}.bits.data, 0.U)\n"
+                                    "  poke(c.io.glob_{{index}}.bits.predicate, false.B)\n"
+                                    "  poke(c.io.glob_{{index}}.valid, false.B)\n\n";
 
-        init_command.append(ins_template.render(command));
+                    init_command.append(ins_template.render(command));
+                    break;
+                }
+            }
+        }
     }
 
     command = "  poke(c.io.result.ready, false.B)\n\n";

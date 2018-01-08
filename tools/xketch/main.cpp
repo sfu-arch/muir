@@ -404,7 +404,7 @@ int main(int argc, char **argv) {
 
     saveModule(*module, "final.bc");
 
-    common::PrintFunctionDFG(*module);
+//    common::PrintFunctionDFG(*module);
 
     return 0;
 }
