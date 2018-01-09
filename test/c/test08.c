@@ -10,5 +10,5 @@ unsigned test08(unsigned j) {
 
 int main() {
   int result = test08(100);
-  //  printf("%d\n",result);
+  printf("%d\n",result);
 }
