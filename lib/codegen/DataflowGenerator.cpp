@@ -2109,14 +2109,17 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
         if (target_loop != nullptr) {
             auto Loc = target_loop->getStartLoc();
 
+            auto op_ins = ins.getOperand(c);
+            auto op_arg = dyn_cast<llvm::Argument>(op_ins);
             string comment = "  // Wiring Live in to PHI node\n";
 
             string command =
-                "  {{phi_name}}.io.InData({{index}}) <> "
-                "{{loop_name}}_liveIN_{{loop_index}}.io.Out(0)\n";
-
+                "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in(\"{{operand_name}}\")) <> "
+                "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                "(param.{{operand_name}}_out(\"{{phi_name}}\"))\n";
             ins_template.set("phi_name", instruction_info[&ins].name);
             ins_template.set("index", static_cast<int>(c));
+            ins_template.set("operand_name", argument_info[op_arg].name);
             ins_template.set("loop_name",
                              "loop_L_" + std::to_string(Loc.getLine()));
             ins_template.set("loop_index",
@@ -2144,7 +2147,8 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
         } else if (ins_target) {
             string command =
                 "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
-                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out(0)\n";
+                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out"
+                "(param.{{ins_name}}_out(\"{{phi_name}}\"))\n";
             ins_template.set("phi_name", instruction_info[&ins].name);
             ins_template.set("ins_name", instruction_info[ins_target].name);
 
