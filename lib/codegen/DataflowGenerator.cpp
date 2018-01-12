@@ -720,7 +720,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
         for (auto &ins : bb) {
             llvm::CallSite CS(&ins);
             auto br_ins = dyn_cast<llvm::BranchInst>(&ins);
-
+            bool emptyMap = true;
             if (CS)
                 continue;
             else if (br_ins && br_ins->getNumOperands() == 1)
@@ -735,7 +735,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 
                 printCode(out.str());
 
-                command = "  val {{ins_name}}_in = Map( \n";
+                command = "  val {{ins_name}}_in = Map(\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 final_command.append(ins_template.render(command));
 
@@ -749,6 +749,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                     // else if (dyn_cast<llvm::BranchInst>(ins.getOperand(c)))
                     // continue;
                     else if (dyn_cast<llvm::Argument>(ins.getOperand(c))) {
+                        emptyMap = false;
                         command = "    \"{{ins_name}}\" -> {{index}},\n";
 
                         ptrdiff_t pos = distance(
@@ -773,6 +774,7 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 //                        ins_template.set("index", static_cast<int>(c));
                         final_command.append(ins_template.render(command));
                     } else {
+                        emptyMap = false;
                         command = "    \"{{ins_name}}\" -> {{index}},\n";
                         ins_template.set(
                             "ins_name",
@@ -788,8 +790,9 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                         final_command.append(ins_template.render(command));
                     }
                 }
-                final_command =
-                    final_command.substr(0, final_command.length() - 2);
+                // Remove last comma
+                if (!emptyMap)
+                  final_command =final_command.substr(0, final_command.length() - 2);
                 final_command.append("\n  )\n\n");
                 printCode(final_command);
             }
@@ -2491,8 +2494,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.GepAddr <>"
                     " {{loop_name}}_start.io.outputArg({{loop_index}})\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2514,8 +2517,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2533,8 +2536,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2550,8 +2553,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     "  {{ins_name}}.io.GepAddr <> io.{{operand_name}}\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2566,8 +2569,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     // TODO fix the Out(0) index
                     "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out(0)\n"
                     "  {{ins_name}}.io.memResp <> "
-                    "RegisterFile.io.ReadOut({{ins_index}})\n"
-                    "  RegisterFile.io.ReadIn({{ins_index}}) <> "
+                    "CacheMem.io.ReadOut({{ins_index}})\n"
+                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2722,8 +2725,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 // command.append("Amirali\n");
                 command.append(
                     "  {{ins_name}}.io.memResp  <> "
-                    "RegisterFile.io.WriteOut({{ins_index}})\n"
-                    "  RegisterFile.io.WriteIn({{ins_index}}) <> "
+                    "CacheMem.io.WriteOut({{ins_index}})\n"
+                    "  CacheMem.io.WriteIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n"
                     "  {{ins_name}}.io.Out(0).ready := true.B\n");
             }
@@ -3708,7 +3711,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "  with CacheParams {\n\n"
         "  // Instantiate the AXI Cache\n"
         "  val cache = Module(new Cache)\n"
-        "  //cache.io.cpu.req <> io.CacheReq\n"
+        "  cache.io.cpu.req <> CacheMem.io.CacheReq\n"
         "  CacheMem.io.CacheResp <> cache.io.cpu.resp\n"
         "  cache.io.cpu.abort := false.B\n"
         "  // Instantiate a memory model with AXI slave interface for cache\n"

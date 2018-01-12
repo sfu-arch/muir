@@ -365,19 +365,19 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                     << " m_" << nodes[&I]
                     << " [color=blue, constraint=false];\n";
             } else if (isa<Constant>(OI)) {
-                auto cnt = dyn_cast<llvm::ConstantInt>(OI);
-                auto cnt_value = cnt->getSExtValue();
+                if(auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
+                    auto cnt_value = cnt->getSExtValue();
+                    if (nodes.count(OI) == 0) {
+                        nodes[OI] = cnt->getSExtValue();
+                        dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
+                            << cnt->getSExtValue()
+                            << "\", color=blue, constraint=false]\n";
+                    }
 
-                if (nodes.count(OI) == 0) {
-                    nodes[OI] = cnt->getSExtValue();
-                    dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
-                        << cnt->getSExtValue()
-                        << "\", color=blue, constraint=false]\n";
+                    dot << "    cnst_" << nodes[OI] << "->"
+                        << "m_" << nodes[&I]
+                        << " [color=green, constraint=false];\n";
                 }
-
-                dot << "    cnst_" << nodes[OI] << "->"
-                    << "m_" << nodes[&I]
-                    << " [color=green, constraint=false];\n";
             } else if (isa<Instruction>(OI)) {
                 dot << "    "
                     << "m_" << nodes[OI] << "->"

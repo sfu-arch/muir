@@ -4,6 +4,8 @@ CFLAGS=-g -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
 
+.PRECIOUS: %.ll
+
 all: $(SCALA)
 
 %.bc: %.c
