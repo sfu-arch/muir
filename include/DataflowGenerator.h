@@ -66,6 +66,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::vector<llvm::Instruction *> instruction_detach;
 #endif
     std::map<llvm::Instruction *, uint32_t> instruction_use;
+    std::map<llvm::Argument *, uint32_t> argument_use;
 
     std::vector<llvm::Argument *> function_argument;
     std::vector<llvm::GlobalValue *> module_global;

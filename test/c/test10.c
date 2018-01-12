@@ -4,7 +4,7 @@ unsigned test10(unsigned *a, unsigned *b, unsigned *c) {
   for (unsigned i = 0; i < 5; ++i) {
     c[i]=a[i]+b[i];
   }
-  return 0;
+  return 1;
 }
 
 int main() {
