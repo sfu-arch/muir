@@ -459,9 +459,6 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
     uint32_t counter = 0;
     for (auto &BB : F) {
         for (auto &INS : BB) {
-            // TODO Add support for function calls
-            llvm::CallSite CS(&INS);
-            if (CS) continue;
             string name = INS.getOpcodeName();
             instruction_info[&INS] = {name + to_string(this->count_ins++),
                                       counter++};
