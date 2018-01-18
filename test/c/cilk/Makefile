@@ -1,8 +1,8 @@
 CC=clang
 XKETCH=../../../build/bin/xketch
-CFLAGS=-g -emit-llvm -m32 -S -o -
+CFLAGS= -DPIR -g -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
-SCALA=$(SOURCES:%.c=%.scala)
+SCALA=$(SOURCES:%.c*=%.scala)
 
 .PRECIOUS: %.ll
 
