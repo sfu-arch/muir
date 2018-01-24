@@ -1,22 +1,22 @@
 CC=clang
 XKETCH=../../../build/bin/xketch
-CFLAGS= -DPIR -g -emit-llvm -m32 -S -o -
+CFLAGS= -DPIR -g -fno-inline -emit-llvm -m32 -S -o -
+OPTFLAGS= -disable-inlining -mem2reg -dot-cfg
 SOURCES=$(shell ls *.c)
-SCALA=$(SOURCES:%.c*=%.scala)
+SCALA=$(SOURCES:%.c=%.scala)
 
 .PRECIOUS: %.ll
 
 all: $(SCALA)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt $(OPTFLAGS) -o $@
 
 %.ll: %.bc
 	llvm-dis $<
 
 %.scala: %.ll
 	$(XKETCH) -fn-name=$* $< -o $*
-	mv -f dfg.$*.dot $*.dot 2>/dev/null; true
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@

@@ -16,7 +16,7 @@ all: $(SCALA)
 
 %.scala: %.ll
 	$(XKETCH) -fn-name=$* $< -o $*
-	mv -f dfg.$*.dot $*.dot 2>/dev/null; true
+#	mv -f dfg.$*.dot $*.dot 2>/dev/null; true
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@

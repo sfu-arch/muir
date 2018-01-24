@@ -31,6 +31,7 @@ enum InstructionType {
     TSync,
 #endif
     TReturnInst,
+    TCallInst,
     TNULL
 };
 
