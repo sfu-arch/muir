@@ -1,0 +1,14 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x5d893d0 [shape=record,label="{entry:\l  %a = alloca [5 x i32], align 4\l  %b = alloca [5 x i32], align 4\l  %c = alloca [5 x i32], align 4\l  call void @llvm.dbg.declare(metadata [5 x i32]* %a, metadata !11, metadata\l... !16), !dbg !17\l  %0 = bitcast [5 x i32]* %a to i8*, !dbg !17\l  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([5 x i32]* @main.a\l... to i8*), i32 20, i32 4, i1 false), !dbg !17\l  call void @llvm.dbg.declare(metadata [5 x i32]* %b, metadata !18, metadata\l... !16), !dbg !19\l  %1 = bitcast [5 x i32]* %b to i8*, !dbg !19\l  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* bitcast ([5 x i32]* @main.b\l... to i8*), i32 20, i32 4, i1 false), !dbg !19\l  call void @llvm.dbg.declare(metadata [5 x i32]* %c, metadata !20, metadata\l... !16), !dbg !21\l  %2 = bitcast [5 x i32]* %c to i8*, !dbg !21\l  call void @llvm.memset.p0i8.i32(i8* %2, i8 0, i32 20, i32 4, i1 false), !dbg\l... !21\l  %arraydecay = getelementptr inbounds [5 x i32], [5 x i32]* %a, i32 0, i32 0,\l... !dbg !22\l  %arraydecay1 = getelementptr inbounds [5 x i32], [5 x i32]* %b, i32 0, i32\l... 0, !dbg !23\l  %arraydecay2 = getelementptr inbounds [5 x i32], [5 x i32]* %c, i32 0, i32\l... 0, !dbg !24\l  %call = call i32 @test10(i32* %arraydecay, i32* %arraydecay1, i32*\l... %arraydecay2), !dbg !25\l  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !26, metadata\l... !16), !dbg !27\l  br label %for.cond, !dbg !28\l}"];
+	Node0x5d893d0 -> Node0x5d8d3c0;
+	Node0x5d8d3c0 [shape=record,label="{for.cond:                                         \l  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]\l  call void @llvm.dbg.value(metadata i32 %i.0, i64 0, metadata !26, metadata\l... !16), !dbg !27\l  %cmp = icmp slt i32 %i.0, 5, !dbg !30\l  br i1 %cmp, label %for.body, label %for.end, !dbg !33\l|{<s0>T|<s1>F}}"];
+	Node0x5d8d3c0:s0 -> Node0x5d8d900;
+	Node0x5d8d3c0:s1 -> Node0x5d89480;
+	Node0x5d8d900 [shape=record,label="{for.body:                                         \l  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* %c, i32 0, i32\l... %i.0, !dbg !35\l  %3 = load i32, i32* %arrayidx, align 4, !dbg !35\l  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8],\l... [4 x i8]* @.str, i32 0, i32 0), i32 %3), !dbg !37\l  br label %for.inc, !dbg !38\l}"];
+	Node0x5d8d900 -> Node0x5d8eb00;
+	Node0x5d8eb00 [shape=record,label="{for.inc:                                          \l  %inc = add nsw i32 %i.0, 1, !dbg !39\l  call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !26, metadata\l... !16), !dbg !27\l  br label %for.cond, !dbg !41, !llvm.loop !42\l}"];
+	Node0x5d8eb00 -> Node0x5d8d3c0;
+	Node0x5d89480 [shape=record,label="{for.end:                                          \l  ret i32 0, !dbg !45\l}"];
+}

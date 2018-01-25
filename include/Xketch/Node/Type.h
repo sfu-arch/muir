@@ -12,18 +12,24 @@ namespace dandelion {
 class Type {
    public:
     enum TypeID {
-        FunctionTyID = 0,
-        GlobalTyID,
+        GlobalTyID = 0,
         ConstTyID,
         BasicBlockTyID,
         UMBasicBlockTyID,
-        MBasicBlockTyID
+        MBasicBlockTyID,
+        InstructionTyID
     };
 
+    //Returning type information
+    TypeID getTypeID() const { return ID; }
+
    private:
-    TypeID : 0;
+    TypeID ID : 1;
 
    protected:
+    explicit Type(TypeID tid) : ID(tid) {}
+    ~Type() = default;
+
 };
 
 // template <typename NodeTy> class SymbolTableListTraits;

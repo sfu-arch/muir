@@ -1,0 +1,5 @@
+digraph "CFG for 'foo' function" {
+	label="CFG for 'foo' function";
+
+	Node0x555a390 [shape=record,label="{entry:\l  %sum = alloca [2 x i32], align 4\l  call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !12, metadata\l... !13), !dbg !14\l  call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !15, metadata\l... !13), !dbg !16\l  call void @llvm.dbg.declare(metadata [2 x i32]* %sum, metadata !17, metadata\l... !13), !dbg !21\l  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32 0,\l... !dbg !22\l  store i32 %a, i32* %arrayidx, align 4, !dbg !23\l  %arrayidx1 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32\l... 1, !dbg !24\l  store i32 %b, i32* %arrayidx1, align 4, !dbg !25\l  %arrayidx2 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32\l... 0, !dbg !26\l  %0 = load i32, i32* %arrayidx2, align 4, !dbg !26\l  %arrayidx3 = getelementptr inbounds [2 x i32], [2 x i32]* %sum, i32 0, i32\l... 1, !dbg !27\l  %1 = load i32, i32* %arrayidx3, align 4, !dbg !27\l  %add = add nsw i32 %0, %1, !dbg !28\l  ret i32 %add, !dbg !29\l}"];
+}
