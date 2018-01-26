@@ -2964,12 +2964,15 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring return instructions\n";
                 command = "";
                 if (c == 0)
+                    // Evil hack performed to drive enable to downstream.
                     command =
                         "  {{ins_name}}.io.InputIO <> "
                         "{{operand_name}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
-                        "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n";
-                else
+                        "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n\n"
+                        "  io.out.enable.valid := {{ins_name}}.io.Out(0).valid\n"
+                        "  io.out.enable.bits.control := true.B\n";
+              else
                     assert(
                         !"Return instruction cannot have more than one input");
 
@@ -2988,8 +2991,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "{{value}}.U\n"
                         "  {{ins_name}}.io.InputIO.bits.predicate := "
                         "true.B\n"
-                        "  {{ins_name}}.io.InputIO.valid := true.B\n\n"
-                        "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n";
+                        "  {{ins_name}}.io.InputIO.valid := true.B\n"
+                        "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n\n"
+                        "  io.out.enable.valid := {{ins_name}}.io.Out(0).valid\n"
+                        "  io.out.enable.bits.control := true.B\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 if (operand_const)
                     ins_template.set("value",
@@ -2998,7 +3003,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                   ins_template.set("value", 0);
                 printCode(comment + ins_template.render(command) + "\n");
             } else {
-                command = "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n";
+                command = "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n\n"
+                          "  io.out.enable.valid := {{ins_name}}.io.Out(0).valid\n"
+                          "  io.out.enable.bits.control := true.B\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
