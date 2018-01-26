@@ -3691,7 +3691,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                     "  "
                                     "{{loop_name}}_liveIN_{{arg_index}}.io."
                                     "InData"
-                                    " <> io.{{operand_name}}\n";
+                                    " <> io.in.data(\"{{operand_name}}\")\n";
 
                                 ins_template.set(
                                     "loop_name",
