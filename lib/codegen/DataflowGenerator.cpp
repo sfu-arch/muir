@@ -318,9 +318,6 @@ void DataflowGeneratorPass::printCode(string code, raw_ostream &out) {
 void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
     for (auto &BB : F) {
         for (auto &Ins : BB) {
-            CallSite CS(&Ins);
-            // TODO add custom module
-            if (CS.isCall()) continue;
 
             instruction_use[&Ins] = 0;
             auto ins_type = InstructionTypeNode(Ins);
@@ -334,6 +331,8 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
                 instruction_load.push_back(&Ins);
             else if (ins_type == TStore)
                 instruction_store.push_back(&Ins);
+            else if (ins_type == TCallInst)
+                instruction_call.push_back(&Ins);
             else if (ins_type == TAlloca)
                 instruction_alloca.push_back(&Ins);
 // else if (ins_type == TFpext) {
@@ -718,12 +717,13 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 
     for (auto &bb : F) {
         for (auto &ins : bb) {
-            llvm::CallSite CS(&ins);
+
+//            llvm::CallSite CS(&ins);
             auto br_ins = dyn_cast<llvm::BranchInst>(&ins);
             bool emptyMap = true;
-            if (CS)
-                continue;
-            else if (br_ins && br_ins->getNumOperands() == 1)
+//            if (CS)
+//                continue;
+            if (br_ins && br_ins->getNumOperands() == 1)
                 continue;
             else {
                 final_command.clear();
@@ -813,6 +813,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     ins_template.set("module_name", F.getName().str());
     final_command.append(ins_template.render(command));
 
+    // Print input call parameters
     command = "    val in = Flipped(new CallDecoupled(List(";
     final_command.append(ins_template.render(command));
     uint32_t c = 0;
@@ -825,6 +826,30 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     command = ")))\n";
     final_command.append(ins_template.render(command));
 
+    // Print sub-function call interface
+    c = 0;
+    for (auto fc : instruction_call) {
+        // Call arguments to subroutine
+        string name = instruction_info[fc].name;
+        command = "    val {{call}}_out = new CallDecoupled(List(";
+        ins_template.set("call", instruction_info[fc].name);
+        final_command.append(ins_template.render(command));
+        for (auto &ag : fc->getFunction()->getArgumentList()) {
+            command = "32,";
+            ins_template.set("index", static_cast<int>(c++));
+            final_command.append(ins_template.render(command));
+        }
+        final_command.pop_back();
+        command = "))\n";
+        final_command.append(ins_template.render(command));
+        // Return values from sub-routine.
+        // Only supports a single 32 bit data bundle for now
+        command = "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
+        ins_template.set("call", instruction_info[fc].name);
+        final_command.append(ins_template.render(command));
+    }
+
+    // Print global memory interface
     c = 0;
     for (auto &gl : F.getParent()->getGlobalList()) {
         for (User *U : gl.users()) {
@@ -840,10 +865,12 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         }
     }
 
+    // Print cache memory interface
     final_command.append(
         "    val CacheResp = Flipped(Valid(new CacheRespT))\n"
         "    val CacheReq = Decoupled(new CacheReq)\n");
 
+    // Print output (return) parameters
     if (!F.getReturnType()->isVoidTy()) {
         final_command.append("    val out = new CallDecoupled(List(32))\n");
     }
@@ -891,7 +918,7 @@ void DataflowGeneratorPass::HelperPrintBBInit(Function &F) {
 /**
  * Helper funciton for printing BasicBlocks
  */
-void DataflowGeneratorPass::HelperPrintInistInit(Function &F) {
+void DataflowGeneratorPass::HelperPrintInstInit(Function &F) {
     string comment = "  //Initializing Instructions: \n";
     printCode(comment);
 
@@ -1408,6 +1435,12 @@ void DataflowGeneratorPass::PrintAllocaIns(Instruction &Ins) {
     raw_string_ostream out(init_test);
     out << Ins;
     printCode(out.str() + "\n" + result + "\n");
+}
+
+std::string DataflowGeneratorPass::PrintCallResp(Instruction &Ins, uint32_t num) {
+    std::string output = "io." + instruction_info[&Ins].name +
+            "_in.data(\"field" + std::to_string(num) + "\")\n";
+    return output;
 }
 
 void DataflowGeneratorPass::PrintCallIns(Instruction &Ins) {
@@ -2109,10 +2142,20 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             printCode(ins_template.render(command));
 
         } else if (ins_target) {
-            string command =
-                "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
-                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out"
-                "(param.{{phi_name}}_in(\"{{ins_name}}\"))\n";
+            auto call_target = dyn_cast<llvm::CallInst>(ins_target);
+            string command;
+            if(call_target) {
+                // Connect to call's I/O
+                command =
+                        "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                                "(\"{{ins_name}}\")) <> " + PrintCallResp(*ins_target,0) + "\n";
+
+            } else {
+                command =
+                        "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
+                                "(\"{{ins_name}}\")) <> {{ins_name}}.io.Out"
+                                "(param.{{phi_name}}_in(\"{{ins_name}}\"))\n";
+            }
             ins_template.set("phi_name", instruction_info[&ins].name);
             ins_template.set("ins_name", instruction_info[ins_target].name);
 
@@ -2165,6 +2208,7 @@ void DataflowGeneratorPass::PrintPHIMask(
     string result = ins_template.render(command);
     printCode(result);
 }
+
 
 /**
  * Connecting Insturctions in the dataflow order
@@ -3202,6 +3246,48 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             }
 
             printCode(comment + ins_template.render(command) + "\n");
+        } else if (ins_type == TCallInst) {
+            // First get the instruction
+            auto op_ins = ins.getOperand(0);
+
+            // If the input is from function argument
+            auto tmp_fun_arg = dyn_cast<llvm::Argument>(op_ins);
+            auto tmp_find_arg = find(function_argument.begin(),
+                                     function_argument.end(), tmp_fun_arg);
+
+            if (c == 0) {
+            // If the input is function argument
+            if (tmp_find_arg != function_argument.end()) {
+                // First get the instruction
+                auto op_ins = ins.getOperand(0);
+                auto op_arg = dyn_cast<llvm::Argument>(op_ins);
+
+                comment =
+                        "  // Wiring Call instruction I/O to the function "
+                                "argument\n";
+                command = "  io.{{ins_name}}_out.data(\"field0\") <> io.in.data(\"{{operand_name}}\")\n";
+                // XXX uncomment if needed
+                // command =
+                //"  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
+                //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name", argument_info[op_arg].name);
+            } else {
+                comment = "  // Wiring instructions\n";
+                command =
+                        "  io.{{ins_name}}_out.data(\"field0\") <> {{operand_name}}.io.Out"
+                                "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set("operand_name",
+                                 instruction_info[dyn_cast<llvm::Instruction>(
+                                         ins.getOperand(c))]
+                                         .name);
+            }
+
+            printCode(comment + ins_template.render(command) + "\n");
+        }
 #ifdef TAPIR
         } else if (ins_type == TDetach || ins_type == TReattach ||
                    ins_type == TSync) {
@@ -3223,10 +3309,11 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
 
     for (auto &BB : F) {
         for (auto &ins : BB) {
+/*
             // TODO supporting for function calls
             CallSite CS(&ins);
             if (CS.isCall()) continue;
-
+*/
             // Get instruction type
             if (InstructionTypeNode(ins) == TUBranchInst)
                 continue;
@@ -3766,17 +3853,16 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "  poke(c.io.in.enable.bits.control, false.B)\n"
         "  poke(c.io.in.enable.valid, false.B)\n\n";
 
+    command =
+            "  *    in = Flipped(new CallDecoupled(List(...)))\n";
+    final_command.append(ins_template.render(command));
     for (auto &ag : F.getArgumentList()) {
-        command =
-            "  *    io.in.data(\"field{{index}}\") = Flipped(Decoupled(new DataBundle))\n";
-        ins_template.set("index", static_cast<int>(c++));
-        final_command.append(ins_template.render(command));
 
         command =
             "  poke(c.io.in.data(\"field{{index}}\").bits.data, 0.U)\n"
             "  poke(c.io.in.data(\"field{{index}}\").bits.predicate, false.B)\n"
             "  poke(c.io.in.data(\"field{{index}}\").valid, false.B)\n\n";
-
+        ins_template.set("index", static_cast<int>(c++));
         init_command.append(ins_template.render(command));
     }
 
@@ -3802,19 +3888,16 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         }
     }
 
-    command = "  poke(c.io.result.ready, false.B)\n\n";
+    command = "  poke(c.io.out.data(\"field0\").ready, false.B)\n"
+              "  poke(c.io.out.enable.ready, false.B)\n\n";
     init_command.append(command);
-
-    final_command.append(
-        "   *    val pred = Decoupled(new Bool())\n"
-        "   *    val start = Input(new Bool())\n");
 
     if (!F.getReturnType()->isVoidTy()) {
         final_command.append(
-            "   *    val result = Decoupled(new DataBundle)\n");
+            "  *    out = new CallDecoupled(List(32))\n");
     }
 
-    final_command.append("   */\n\n\n");
+    final_command.append("  */\n\n\n");
 
     command = "  // Initializing the signals\n\n";
     final_command.append(command);
@@ -3969,7 +4052,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     // Step6:
     // Printing Instruction initialization
     printHeader("Printing Instructions");
-    HelperPrintInistInit(F);
+    HelperPrintInstInit(F);
 
     // Step 7:
     // Initilizing the parameters object

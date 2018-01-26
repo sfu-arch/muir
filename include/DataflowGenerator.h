@@ -62,6 +62,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     std::vector<llvm::Instruction *> instruction_store;
     std::vector<llvm::Instruction *> instruction_alloca;
     std::vector<llvm::Instruction *> instruction_select;
+    std::vector<llvm::Instruction *> instruction_call;
 #ifdef TAPIR
     std::vector<llvm::Instruction *> instruction_detach;
 #endif
@@ -149,7 +150,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintBasicBlockInit(llvm::BasicBlock &);
     void PrintBasicBlockInit(llvm::BasicBlock &, llvm::Loop &);
 
-    void HelperPrintInistInit(llvm::Function &);
+    void HelperPrintInstInit(llvm::Function &);
     void PrintInstInit(Instruction &);
     void PrintBinaryComparisionIns(Instruction &);
     void PrintBranchIns(Instruction &);
@@ -196,6 +197,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintCacheMem();
 
     void printEndingModule(llvm::Function &);
+
+    std::string PrintCallResp(llvm::Instruction &, uint32_t);
 
     /**
      * Print method gets called right after the pass finishes
