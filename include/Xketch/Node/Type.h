@@ -14,10 +14,10 @@ class Type {
     enum TypeID {
         GlobalTyID = 0,
         ConstTyID,
+        InstructionTyID,
         BasicBlockTyID,
         UMBasicBlockTyID,
-        MBasicBlockTyID,
-        InstructionTyID
+        MBasicBlockTyID
     };
 
     //Returning type information

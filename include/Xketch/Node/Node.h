@@ -21,6 +21,7 @@ class Node {
    private:
     uint32_t ID;
     std::string Name;
+
     std::list<Node *> node_sucessors;
     std::list<Node *> node_predecessors;
     Type *node_type;
@@ -28,11 +29,12 @@ class Node {
    public:
     explicit Node();
     explicit Node(uint32_t _id, std::string _nm, std::list<Node *> _list_pred,
-                  std::list<Node *> _list_suc)
+                  std::list<Node *> _list_suc, Type *_ty)
         : ID(_id),
           Name(_nm),
           node_sucessors(std::move(_list_suc)),
-          node_predecessors(std::move(_list_pred)) {}
+          node_predecessors(std::move(_list_pred)),
+          node_type(_ty) {}
 
     ~Node() = default;
 
@@ -46,18 +48,29 @@ class BasicBlock : public Node {
     Function *parent_function;
 
    public:
-    explicit BasicBlock(Function *PF)
-        : parent_function(PF) {}
+    using Node::Node;
+    explicit BasicBlock(uint32_t _id, std::string _nm,
+                        std::list<Node *> _list_pred,
+                        std::list<Node *> _list_suc, Type *_ty, Function *PF)
+        : Node(_id, _nm, _list_pred, _list_suc, _ty), parent_function(PF) {}
+
+    void setParentFunction(Function *PF);
 };
 
 class Instruction : public Node {
    private:
     Function *parent_function;
-    Node *parent_basicblock;
+    BasicBlock *parent_basicblock;
 
    public:
-    explicit Instruction(Function *PF, Node *PB)
-        : parent_function(PF), parent_basicblock(PB) {}
+    using Node::Node;
+    explicit Instruction(uint32_t _id, std::string _nm,
+                         std::list<Node *> _list_pred,
+                         std::list<Node *> _list_suc, Type *_tp, Function *PF,
+                         BasicBlock *PB)
+        : Node(_id, _nm, _list_pred, _list_suc, _tp),
+          parent_function(PF),
+          parent_basicblock(PB) {}
 };
 
 }  // End dandelion namespace

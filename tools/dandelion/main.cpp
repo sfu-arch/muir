@@ -72,8 +72,8 @@
 #include "Common.h"
 #include "AliasMem.h"
 #include "TargetLoopExtractor.h"
-#include "DataflowGenerator.h"
 #include "GEPSplitter.h"
+#include "GraphGeneratorPass.h"
 
 using namespace llvm;
 using std::string;
@@ -302,7 +302,7 @@ static void AApassTest(Module &m) {
     pm.run(m);
 }
 
-static void codeGenerator(Module &m){
+static void graphGen(Module &m){
 
     //Check wether xketch outpufile name has been specified
     if(outFile.getValue() == ""){
@@ -312,47 +312,22 @@ static void codeGenerator(Module &m){
 
 
     std::error_code errc;
-    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+    //raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
 
-    raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
+    //raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
-    //pm.add(new gepsplitter::GEPSplitter(XKETCHName));
-#ifndef TAPIR
-    // Creates duplicate pfor.end and pfor.end.continue blocks
-    pm.add(llvm::createTailCallEliminationPass());
-#endif
-    pm.add(llvm::createFunctionInliningPass(1));
-    pm.add(llvm::createAAResultsWrapperPass());
-#ifndef TAPIR
-    // Inserts critical edge block after detach
-    pm.add(createBreakCriticalEdgesPass());
-#endif
-    pm.add(createLoopSimplifyPass());
-    pm.add(new DominatorTreeWrapperPass());
-    pm.add(new LoopInfoWrapperPass());
-
-    pm.add(new helpers::GEPAddrCalculation(XKETCHName));
-    pm.add(new amem::AliasMem(XKETCHName));
-    pm.add(new helpers::InstCounter(XKETCHName));
-    pm.add(new codegen::DataflowGeneratorPass(out, test, XKETCHName));
+    pm.add(new graphgen::GraphGeneratorPass());
 
     pm.add(createVerifierPass());
     pm.run(m);
-
-    //auto replaceExt = [](string &s, const string &newExt) {
-        //string::size_type i = s.rfind('.', s.length());
-        //if (i != string::npos) {
-            //s.replace(i + 1, newExt.length(), newExt);
-        //}
-    //};
-
-    //replaceExt(inPath, "chisel.bc");
-    //saveModule(m, inPath);
 }
+
+
+
 
 /**
  * Running UIDLabel pss
@@ -386,21 +361,8 @@ int main(int argc, char **argv) {
     }
 
 
-    //Extracting for loops
-    //if(lExtract)
-        //extractLoops(*module);
-
-    //Labeling instructions
-    //labelFunctions(*module);
-
-    //Running Alias Analysis pass
-    //AApassTest(*module);
-
-    //Saving the final modified bc file
-    //saveModule(*module, "final.bc");
-
-    //Generating Chisel code
-    //codeGenerator(*module);
+    //Generating graph
+    graphGen(*module);
 
     //saveModule(*module, "final.bc");
 
