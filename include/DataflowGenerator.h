@@ -77,7 +77,10 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     std::vector<llvm::Loop *> loop_container;
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveins;
+    std::map<llvm::Loop *, std::map<llvm::Value *, uint32_t>> loop_liveins_count;
+
     std::map<llvm::Loop *, std::set<llvm::Value *>> loop_liveouts;
+    std::map<llvm::Loop *, std::map<llvm::Value *, uint32_t>> loop_liveouts_count;
 
     std::map<llvm::Value *, uint32_t> ins_loop_header_idx;
     std::map<llvm::Value *, uint32_t> ins_loop_end_idx;
