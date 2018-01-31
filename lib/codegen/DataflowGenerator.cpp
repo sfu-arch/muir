@@ -124,11 +124,11 @@ inline uint32_t countPred(BasicBlock &BB) {
  * Counting number of uses an Instruction
  */
 inline uint32_t countInsUse(Instruction &Ins) {
-    //uint32_t count = 0;
-    //for (auto ins_it : Ins.users()) {
-        //llvm::CallSite CS(ins_it);
-        //if (CS) continue;
-        //count++;
+    // uint32_t count = 0;
+    // for (auto ins_it : Ins.users()) {
+    // llvm::CallSite CS(ins_it);
+    // if (CS) continue;
+    // count++;
     //}
 
     return Ins.getNumUses();
@@ -611,8 +611,8 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
 
         uint32_t c = 0;
         for (auto &ins : bb) {
-            //llvm::CallSite CS(&ins);
-            //if (CS) continue;
+            // llvm::CallSite CS(&ins);
+            // if (CS) continue;
 
             command = "    \"{{ins_name}}\" -> {{index}},\n";
             ins_template.set("ins_name", instruction_info[&ins].name);
@@ -1508,7 +1508,7 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
  * Priniting Basic Blcok definition for each basic block
  */
 void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
-    //auto &ins_cnt_pass_ctx = getAnalysis<helpers::InstCounter>();
+    // auto &ins_cnt_pass_ctx = getAnalysis<helpers::InstCounter>();
 
     uint32_t phi_c = CountPhiNode(BB);
     string bb_define;
@@ -1528,9 +1528,8 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
         else
             bb_template.set("num_target", static_cast<int>(countPred(BB)));
 
-        bb_template.set("num_ins",
-                        static_cast<int>(BB.size()));
-                        //static_cast<int>(ins_cnt_pass_ctx.BasicBlockCnt[&BB]));
+        bb_template.set("num_ins", static_cast<int>(BB.size()));
+        // static_cast<int>(ins_cnt_pass_ctx.BasicBlockCnt[&BB]));
         // bb_template.set("num_ins",
         // static_cast<int>(BB.getInstList().size()));
         bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
@@ -2103,6 +2102,105 @@ void DataflowGeneratorPass::PrintPHIMask(
  * and then find the previous node and then we connect them
  * together.
  */
+void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
+    /**
+     * Each connection has two sides, left and right connections
+     * Left connection should be on of the predefined insturctions type
+     * within our generator
+     * For the right side we can have five different options:
+     *  1) Loop latches
+     *  2) Const value
+     *  3) Global value
+     *  4) Function argument
+     *  5) Instruction
+     *
+     *Base of these choices we generate the right value of the connection
+     */
+    LuaTemplater ins_template;
+
+    // First we iterate over function's operands
+    auto ins_type = InstructionTypeNode(ins);
+    for (uint32_t c = 0; c < ins.getNumOperands(); ++c) {
+        auto operand = ins.getOperand(c);
+
+        // For each operand we have to figure out if the connection is
+        // comming from a live-in value or not, and for this purpose we
+        // use following function:
+        auto loop_detector = [operand](auto &ins, auto LoopEdges, auto loop_info) -> Loop * {
+            Loop *target_loop = nullptr;
+            /**
+                     * Check if the edge in LoopEdges
+                     * This edge count is the loop header
+                     */
+            auto loop_edge = std::find_if(
+                LoopEdges.begin(), LoopEdges.end(),
+                [&operand, &ins](const pair<Value *, Value *> &edge) {
+                    return ((edge.second == &ins) && (edge.first == operand));
+                });
+
+            /**
+             * If we find the edge in the container it means that
+             * we have to connect the instruction to latch
+             * We still need to figure out:
+             *  1) The instruction belongs to which loop
+             *  2) The edge is live-in or live-out
+             *
+             *  We have split the edge and connect the source to the register
+             * file
+             *  and register file to the destination
+             *
+             *  Now we have to replace the SRC connection with appropriate loop
+             *  header
+             *  We need to find two things:
+             *      1) Loop
+             *      2) index of the loop header
+             */
+            // Make a priority_queue for loops
+            auto cmp = [](Loop *left, Loop *right) {
+                return left->getSubLoops().size() > right->getSubLoops().size();
+            };
+            std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)>
+                order_loops(cmp);
+            for (auto &L : getLoops(*loop_info)) {
+                order_loops.push(L);
+            }
+
+            if (loop_edge != LoopEdges.end()) {
+                while (!order_loops.empty()) {
+                    auto L = order_loops.top();
+                    auto Loc = L->getStartLoc();
+                    auto Filename = getBaseName(Loc->getFilename().str());
+
+                    if (dyn_cast<Argument>(loop_edge->first)) {
+                        target_loop = L;
+                        break;
+                    }
+
+                    else if (L->contains(&ins) ||
+                             L->contains(
+                                 dyn_cast<Instruction>(loop_edge->first))) {
+                        target_loop = L;
+                        break;
+                    }
+                    order_loops.pop();
+                }
+            }
+
+            return target_loop;
+        };
+
+        auto target_loop = loop_detector(ins, this->LoopEdges, this->LI);
+        if(target_loop != nullptr)
+            errs() << "SUCESS!\n";
+    }
+}
+
+/**
+ * Connecting Insturctions in the dataflow order
+ * We iterate over each instrauction's operand
+ * and then find the previous node and then we connect them
+ * together.
+ */
 void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
     LuaTemplater ins_template;
     auto ins_type = InstructionTypeNode(ins);
@@ -2173,8 +2271,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 auto Loc = L->getStartLoc();
                 auto Filename = getBaseName(Loc->getFilename().str());
 
-                // TODO Fix and handel the function argument
-                // It's broken and I'm just skiping for now
                 if (dyn_cast<Argument>(loop_edge->first)) {
                     target_loop = L;
                     break;
@@ -2816,7 +2912,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
         else if (ins_type == TReturnInst) {
             // Check wether Ret instruction return result
-            //dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
+            // dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
             //
             if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
                 // First get the instruction
@@ -3180,8 +3276,10 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
                 printCode(comment + ins_template.render(command) + "\n");
-            } else
+            } else{
                 DataflowGeneratorPass::PrintDataFlow(ins);
+                DataflowGeneratorPass::NewPrintDataFlow(ins);
+            }
         }
     }
 }
@@ -3205,11 +3303,10 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
 
     for (auto &BB : F) {
         for (auto &ins : BB) {
-
             // IF the instruction callsite type we need to forward enable signal
             // as an input to its interface
             // Otherwise, we fire the enable signal the insturction
-            if (llvm::CallSite(&ins)){
+            if (llvm::CallSite(&ins)) {
                 command =
                     "  io.{{ins_name}}_out.enable <> {{bb_name}}.io.Out"
                     "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
@@ -3217,8 +3314,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
                 ins_template.set("bb_name", basic_block_info[&BB].name);
                 printCode(ins_template.render(command));
 
-            }
-            else {
+            } else {
                 command =
                     "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
                     "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";

@@ -209,6 +209,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
 
     void HelperPrintInstructionDF(llvm::Function &);
     void PrintDataFlow(llvm::Instruction &);
+    void NewPrintDataFlow(llvm::Instruction &);
 
     // Printing TESTER function
     void generateTestFunction(llvm::Function &);
