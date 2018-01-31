@@ -2815,38 +2815,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         }
 
         else if (ins_type == TReturnInst) {
-            // if (target_loop != nullptr) {
-            // auto Loc = target_loop->getStartLoc();
-
-            //// First get the instruction
-            // comment = "  // Wiring return instructions\n";
-            // command = "";
-            // if (c == 0)
-            // command =
-            //"  {{ins_name}}.io.InputIO <> "
-            //"{{loop_name}}_end.io.outputArg"
-            //"({{loop_index}})\n"
-            //"  io.result <> {{ins_name}}.io.Out(0)\n";
-            // else
-            // assert(
-            //!"Return instruction cannot have more than one input");
-
-            // ins_template.set("ins_name", instruction_info[&ins].name);
-            // ins_template.set("operand_name",
-            // instruction_info[dyn_cast<llvm::Instruction>(
-            // ins.getOperand(c))]
-            //.name);
-            // ins_template.set("loop_name",
-            //"loop_L_" + std::to_string(Loc.getLine()));
-            // ins_template.set(
-            //"loop_index",
-            // static_cast<int>(this->ins_loop_end_idx[&ins]));
-
-            // printCode(comment + ins_template.render(command) + "\n");
-
-            //} else {
             // Check wether Ret instruction return result
-            dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
+            //dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
+            //
             if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
                 // First get the instruction
                 comment = "  // Wiring return instructions\n";
@@ -2898,7 +2869,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 printCode(comment + ins_template.render(command) + "\n");
             }
-            //}
         }
 
         else if (ins_type == TPtrToInt) {
@@ -2952,28 +2922,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
             // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TTrunc || ins_type == TFPTrunc) {
-            DEBUG(errs() << "TTrunc\n");
-            // auto edge = JumpIns[&ins];
-            // DEBUG(edge.first->dump());
-            // DEBUG(edge.second->dump());
-            // DEBUG(errs() << "END\n");
-            // TODO add tptrtoint
-            // First get the instruction
-            // comment = "  // Wiring instructions\n";
-            // command = "";
-            // if (c == 0)
-            // command =
-            //"  {{ins_name}}.io.ptr <> {{operand_name}}.io.Out"
-            //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-            // else
-            // command = "  {{ins_name}}.io.type <> insType\n";
-            // ins_template.set("ins_name", instruction_info[&ins].name);
-            // ins_template.set(
-            //"operand_name",
-            // instruction_info[dyn_cast<llvm::Instruction>(ins.getOperand(c))]
-            //.name);
-
-            // printCode(comment + ins_template.render(command) + "\n");
+            assert(!"We don't support TTrunc instructions for now!");
         } else if (ins_type == TFpext) {
             // TODO add tptrtoint
             errs() << "FPext\n";
