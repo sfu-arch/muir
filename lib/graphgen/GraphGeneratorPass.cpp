@@ -29,22 +29,32 @@ using BasicBlockList = std::list<SuperNode>;
 
 extern cl::opt<string> XKETCHName;
 
-// namespace graphgen {
+ namespace graphgen {
 
 char GraphGeneratorPass::ID = 0;
 
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
 
-//}
+}
 
 bool GraphGeneratorPass::doInitialization(Module &M) {
-    // TODO: Add code here if it's needed before running loop extraction
+    // TODO: Add code here if it's needed before pas
     return false;
 }
 
 bool GraphGeneratorPass::doFinalization(Module &M) {
-    // TODO: Add code here to do post loop extraction
+    // TODO: Add code here to do post pass
     return false;
+}
+
+void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
+    SmallVector<Instruction *, 16> _ins_vector;
+    for (auto &ins : BB) {
+        _ins_vector.push_back(&ins);
+    }
+    SuperNode new_super_node(_ins_vector, &BB);
+
+    this->super_node_list.push_back(new_super_node);
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {
@@ -68,8 +78,6 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
                 SuperNode tmp_bb(tmp, &BB);
             }
         }
-
-            // tmp_ll.push_back(InstructionNode(*it_ins));
     }
 
     // Graph tmp_graph(std::list<InstructionNode>())
