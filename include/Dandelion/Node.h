@@ -35,11 +35,11 @@ class Node {
     uint32_t ReturnControlOutputPortIndex(Node &);
     uint32_t ReturnMemoryOutputPortIndex(Node &);
 
-    //TODO how to define virtual functions?
-    //virtual void PrintInitilization();
-    //virtual void PrintDataflow();
-    //virtual void PrintControlFlow();
-    //virtual void PrintMemory();
+    // TODO how to define virtual functions?
+    // virtual void PrintInitilization();
+    // virtual void PrintDataflow();
+    // virtual void PrintControlFlow();
+    // virtual void PrintMemory();
 };
 
 /**

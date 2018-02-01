@@ -22,6 +22,10 @@ using namespace std;
 using namespace graphgen;
 using namespace dandelion;
 // using graphgen::GraphGeneratorPass;
+//
+using InstructionList = std::list<InstructionNode>;
+using ArgumentList = std::list<ArgumentNode>;
+using BasicBlockList = std::list<SuperNode>;
 
 extern cl::opt<string> XKETCHName;
 
@@ -46,6 +50,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
 bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         std::vector<SuperNode *> Graph;
+        InstructionList tmp_ll;
         if (F.isDeclaration() || F.getName() != XKETCHName)
             continue;
         else {
@@ -56,11 +61,18 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
                 // SmallVector<Instruction *, 16> tmp(BB.begin(), BB.end());
 
                 SmallVector<Instruction *, 16> tmp;
-                for (auto &ins : BB) tmp.push_back(&ins);
+                for (auto &ins : BB) {
+                    tmp.push_back(&ins);
+                    tmp_ll.push_back(InstructionNode(&ins));
+                }
                 SuperNode tmp_bb(tmp, &BB);
             }
         }
+
+            // tmp_ll.push_back(InstructionNode(*it_ins));
     }
+
+    // Graph tmp_graph(std::list<InstructionNode>())
 
     return false;
 }
