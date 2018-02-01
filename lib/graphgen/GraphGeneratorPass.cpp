@@ -21,20 +21,18 @@ using namespace llvm;
 using namespace std;
 using namespace graphgen;
 using namespace dandelion;
-// using graphgen::GraphGeneratorPass;
-//
+
 using InstructionList = std::list<InstructionNode>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
 
 extern cl::opt<string> XKETCHName;
 
- namespace graphgen {
+namespace graphgen {
 
 char GraphGeneratorPass::ID = 0;
 
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
-
 }
 
 bool GraphGeneratorPass::doInitialization(Module &M) {
@@ -48,6 +46,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
 }
 
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
+    //TODO find all the basicblock dependencies
     SmallVector<Instruction *, 16> _ins_vector;
     for (auto &ins : BB) {
         _ins_vector.push_back(&ins);
@@ -55,6 +54,10 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
     SuperNode new_super_node(_ins_vector, &BB);
 
     this->super_node_list.push_back(new_super_node);
+}
+
+void GraphGeneratorPass::visitInstruction(Instruction &Ins){
+    this->instruction_list.push_back(InstructionNode(&Ins));
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {

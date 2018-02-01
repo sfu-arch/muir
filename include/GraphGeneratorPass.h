@@ -35,6 +35,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     // Maintaining supernode list
     BasicBlockList super_node_list;
+    InstructionList instruction_list;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
