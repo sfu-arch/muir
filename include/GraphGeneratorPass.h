@@ -40,6 +40,8 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     ArgumentList argument_list;
     GlobalValueList glob_list;
 
+    std::map<llvm::Value *, Node *> map_value_node;
+
     // Default value is standard out
     llvm::raw_ostream &code_out;
 

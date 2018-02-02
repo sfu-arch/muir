@@ -66,8 +66,9 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
-    this->instruction_list.push_back(
-        BinaryOperatorNode(&I, BinaryInstructionTy));
+    auto tmp_ins = BinaryOperatorNode(&I, BinaryInstructionTy);
+    this->instruction_list.push_back(tmp_ins);
+    this->map_value_node[&I] = &tmp_ins;
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
@@ -125,6 +126,8 @@ void GraphGeneratorPass::visitFunction(Function &F) {
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {
     visit(F);
+
+    errs() << this->map_value_node.size() << "\n";
 
     // std::vector<SuperNode *> Graph;
     // InstructionList tmp_ll;
