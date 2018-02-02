@@ -26,6 +26,7 @@ using namespace dandelion;
 using InstructionList = std::list<InstructionNode>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
+using GlobalValueList = std::list<GlobalValueNode>;
 
 namespace graphgen {
 
@@ -37,6 +38,7 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     BasicBlockList super_node_list;
     InstructionList instruction_list;
     ArgumentList argument_list;
+    GlobalValueList glob_list;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -53,6 +55,13 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     void visitBinaryOperator(llvm::BinaryOperator &);
     void visitICmpInst(llvm::ICmpInst &);
     void visitBranchInst(llvm::BranchInst &);
+    void visitPHINode(llvm::PHINode &);
+    void visitAllocaInst(llvm::AllocaInst &);
+    void visitGetElementPtrInst(llvm::GetElementPtrInst &);
+    void visitLoadInst(llvm::LoadInst &);
+    void visitStoreInst(llvm::StoreInst &);
+    void visitReturnInst(llvm::ReturnInst &);
+    void visitCallInst(llvm::CallInst &);
 
    public:
     static char ID;

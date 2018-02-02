@@ -151,6 +151,80 @@ class BranchNode : public InstructionNode {
     }
 };
 
+class PHIGNode: public InstructionNode {
+   public:
+    PHIGNode(llvm::PHINode *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == PhiInstructionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: PHIInstruction can be either "
+               "PHIInsturctionTy or UnkonwTy!");
+    }
+};
+
+
+class AllocaNode: public InstructionNode {
+   public:
+    AllocaNode(llvm::AllocaInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == AllocaInstructionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: AllocaInstruction can be either "
+               "AllocaInstructionTy or UnkonwTy!");
+    }
+};
+
+
+class GEPNode: public InstructionNode {
+   public:
+    GEPNode(llvm::GetElementPtrInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == GetElementPtrInstTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: GEPInstruction can be either "
+               "GEPInstructionTy or UnkonwTy!");
+    }
+};
+
+class LoadNode: public InstructionNode {
+   public:
+    LoadNode(llvm::LoadInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == LoadInstructionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: LoadInstruction can be either "
+               "LoadInstructionTy or UnkonwTy!");
+    }
+};
+
+
+class StoreNode: public InstructionNode {
+   public:
+    StoreNode(llvm::StoreInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == StoreInstructionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: StoreInstruction can be either "
+               "StoreInstructionTy or UnkonwTy!");
+    }
+};
+
+class ReturnNode: public InstructionNode {
+   public:
+    ReturnNode(llvm::ReturnInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == ReturnInstrunctionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: ReturnInstruction can be either "
+               "ReturnInstructionTy or UnkonwTy!");
+    }
+};
+
+
+class CallNode: public InstructionNode {
+   public:
+    CallNode(llvm::CallInst *_ins = nullptr, NodeType _nd = UnkonwTy)
+        : InstructionNode(_ins, _nd) {
+        assert(((_nd == CallInstructionTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: CallInstruction can be either "
+               "CallInstructionTy or UnkonwTy!");
+    }
+};
+
 class ArgumentNode : public Node {
    private:
     llvm::Argument *parent_argument;
@@ -158,6 +232,16 @@ class ArgumentNode : public Node {
    public:
     ArgumentNode(llvm::Argument *_arg = nullptr) : parent_argument(_arg) {}
 };
+
+class GlobalValueNode : public Node {
+   private:
+    llvm::GlobalValue *parent_glob;
+
+   public:
+    GlobalValueNode(llvm::GlobalValue *_glb = nullptr) : parent_glob(_glb) {}
+};
+
+
 }
 
 #endif  // end of DANDDELION_NODE_H

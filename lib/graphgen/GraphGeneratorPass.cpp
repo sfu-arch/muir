@@ -59,7 +59,11 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
     this->super_node_list.push_back(new_super_node);
 }
 
-void GraphGeneratorPass::visitInstruction(Instruction &Ins) {}
+
+void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
+    Ins.dump();
+    assert(!"Instruction is not supported");
+}
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
     this->instruction_list.push_back(
@@ -74,14 +78,49 @@ void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
     this->instruction_list.push_back(BranchNode(&I, BranchInstructionTy));
 }
 
+void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
+    this->instruction_list.push_back(PHIGNode(&I, PhiInstructionTy));
+}
+
+void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
+    this->instruction_list.push_back(AllocaNode(&I, AllocaInstructionTy));
+}
+
+void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
+    this->instruction_list.push_back(GEPNode(&I, GetElementPtrInstTy));
+}
+
+void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
+    this->instruction_list.push_back(LoadNode(&I, LoadInstructionTy));
+}
+
+void GraphGeneratorPass::visitStoreInst(llvm::StoreInst &I) {
+    this->instruction_list.push_back(StoreNode(&I, StoreInstructionTy));
+}
+
+void GraphGeneratorPass::visitReturnInst(llvm::ReturnInst &I) {
+    this->instruction_list.push_back(ReturnNode(&I, ReturnInstrunctionTy));
+}
+
+void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
+    this->instruction_list.push_back(CallNode(&I, CallInstructionTy));
+}
+
+
 void GraphGeneratorPass::visitFunction(Function &F) {
     // TODO
     // Here we make a graph
     // Graph gg()
+    //
     // Filling function argument nodes
-    for (auto &f_arg : F.getArgumentList()) {
+    for (auto &f_arg : F.getArgumentList()) 
         this->argument_list.push_back(ArgumentNode(&f_arg));
-    }
+
+    // Filling global variables
+    for (auto &g_var : F.getParent()->getGlobalList())
+        this->glob_list.push_back(GlobalValueNode(&g_var));
+
+
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {
