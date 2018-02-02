@@ -7,19 +7,19 @@
 #include "llvm/AsmParser/Parser.h"
 
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 
 // Support for LLVM 4.0+
 #define LLVM_VERSION_GE(major, minor) \
-                (LLVM_VERSION_MAJOR > (major) ||  \
-                                            LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
+    (LLVM_VERSION_MAJOR > (major) ||  \
+     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
 #define LLVM_VERSION_EQ(major, minor) \
-                (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
+    (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
 #define LLVM_VERSION_LE(major, minor) \
-                (LLVM_VERSION_MAJOR < (major) ||  \
-                                            LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
+    (LLVM_VERSION_MAJOR < (major) ||  \
+     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
 #if LLVM_VERSION_GE(3, 7)
 #include "llvm/IR/LegacyPassManager.h"
 #else
@@ -61,19 +61,19 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 
 #include <memory>
 #include <string>
 
-#include "Common.h"
 #include "AliasMem.h"
-#include "TargetLoopExtractor.h"
+#include "Common.h"
 #include "GEPSplitter.h"
 #include "GraphGeneratorPass.h"
+#include "TargetLoopExtractor.h"
 
 using namespace llvm;
 using std::string;
@@ -83,32 +83,25 @@ using llvm::sys::ExecuteAndWait;
 using llvm::sys::findProgramByName;
 using llvm::legacy::PassManager;
 
-
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
                        cl::Required);
 
 cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
-                             cl::value_desc("Function name"), cl::Required);
+                           cl::value_desc("Function name"), cl::Required);
 
-cl::opt<bool> aaTrace(
-        "aa-trace", cl::desc("Alias analysis trace"),
-        cl::value_desc("T/F {default = true}"), cl::init(false));
+cl::opt<bool> aaTrace("aa-trace", cl::desc("Alias analysis trace"),
+                      cl::value_desc("T/F {default = true}"), cl::init(false));
 
-cl::opt<bool> lExtract(
-        "l-ex", cl::desc("Extracting loops"),
-        cl::value_desc("T/F {default = false}"), cl::init(false));
+cl::opt<bool> lExtract("l-ex", cl::desc("Extracting loops"),
+                       cl::value_desc("T/F {default = false}"),
+                       cl::init(false));
 
+cl::opt<bool> testCase("test-file", cl::desc("Printing Test file"),
+                       cl::value_desc("T/F {default = True}"), cl::init(true));
 
-cl::opt<bool> testCase(
-        "test-file", cl::desc("Printing Test file"),
-        cl::value_desc("T/F {default = True}"), cl::init(true));
-
-cl::opt<string> 
-outFile("o",
-        cl::desc("Xketch output file"),
-        cl::value_desc("filename"),
-        cl::init(""));
+cl::opt<string> outFile("o", cl::desc("Xketch output file"),
+                        cl::value_desc("filename"), cl::init(""));
 
 static cl::opt<char> optLevel(
     "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -287,7 +280,6 @@ static void extractLoops(Module &m) {
     saveModule(m, inPath);
 }
 
-
 static void AApassTest(Module &m) {
     legacy::PassManager pm;
     pm.add(createBasicAAWrapperPass());
@@ -302,19 +294,17 @@ static void AApassTest(Module &m) {
     pm.run(m);
 }
 
-static void graphGen(Module &m){
-
-    //Check wether xketch outpufile name has been specified
-    if(outFile.getValue() == ""){
+static void graphGen(Module &m) {
+    // Check wether xketch outpufile name has been specified
+    if (outFile.getValue() == "") {
         errs() << "o command line option must be specified.\n";
         exit(-1);
     }
 
-
     std::error_code errc;
-    //raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+    // raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
 
-    //raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
+    // raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
 
@@ -326,16 +316,23 @@ static void graphGen(Module &m){
     pm.run(m);
 }
 
-
-
+/**
+ * Function lists
+ */
+static void runGraphGen(Function &F) {
+    legacy::FunctionPassManager FPM(F.getParent());
+    FPM.add(new graphgen::GraphGeneratorPass());
+    FPM.doInitialization();
+    FPM.run(F);
+    FPM.doFinalization();
+}
 
 /**
  * Running UIDLabel pss
  */
-void labelFunctions(Module &M){
-    for(auto &F : M){
-        if(F.isDeclaration())
-            continue;
+void labelFunctions(Module &M) {
+    for (auto &F : M) {
+        if (F.isDeclaration()) continue;
         helpers::FunctionUIDLabel(F);
     }
 }
@@ -360,13 +357,20 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    // Calling graphgen pass on selected functions
+    // TODO here we should iterate over list of choosen functions
+    for (auto &F : *module) {
+        if (F.isDeclaration() || F.getName() != XKETCHName) continue;
+        else
+            runGraphGen(F);
+    }
 
-    //Generating graph
-    graphGen(*module);
+    // Generating graph
+    //graphGen(*module);
 
-    //saveModule(*module, "final.bc");
+    // saveModule(*module, "final.bc");
 
-    //common::PrintFunctionDFG(*module);
+    // common::PrintFunctionDFG(*module);
 
     return 0;
 }

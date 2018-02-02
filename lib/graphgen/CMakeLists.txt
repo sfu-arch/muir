@@ -1,2 +1,3 @@
 add_library(graphgen 
-    GraphGeneratorPass.cpp)
+    GraphGeneratorPass.cpp
+    Node.cpp)

@@ -29,13 +29,14 @@ using BasicBlockList = std::list<SuperNode>;
 
 namespace graphgen {
 
-class GraphGeneratorPass : public llvm::ModulePass,
+class GraphGeneratorPass : public llvm::FunctionPass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
     // Maintaining supernode list
     BasicBlockList super_node_list;
     InstructionList instruction_list;
+    ArgumentList argument_list;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -46,16 +47,19 @@ class GraphGeneratorPass : public llvm::ModulePass,
     virtual bool doInitialization(llvm::Module &M) override;
     virtual bool doFinalization(llvm::Module &M) override;
 
-    void visitFunction(llvm::Function &F);
-    void visitBasicBlock(llvm::BasicBlock &BB);
-    void visitInstruction(llvm::Instruction &I);
+    void visitFunction(llvm::Function &);
+    void visitBasicBlock(llvm::BasicBlock &);
+    void visitInstruction(llvm::Instruction &);
+    void visitBinaryOperator(llvm::BinaryOperator &);
+    void visitICmpInst(llvm::ICmpInst &);
+    void visitBranchInst(llvm::BranchInst &);
 
    public:
     static char ID;
 
-    GraphGeneratorPass() : llvm::ModulePass(ID), code_out(llvm::outs()) {}
+    GraphGeneratorPass() : llvm::FunctionPass(ID), code_out(llvm::outs()) {}
 
-    virtual bool runOnModule(llvm::Module &m) override;
+    virtual bool runOnFunction(llvm::Function &) override;
 };
 }
 

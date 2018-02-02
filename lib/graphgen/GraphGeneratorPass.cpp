@@ -13,9 +13,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
-#include "GraphGeneratorPass.h"
+#include <iostream>
 
 #include "Dandelion/Node.h"
+#include "GraphGeneratorPass.h"
 
 using namespace llvm;
 using namespace std;
@@ -41,12 +42,14 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
 }
 
 bool GraphGeneratorPass::doFinalization(Module &M) {
+    cout << "Number of instruction nodes: " << instruction_list.size() << endl;
     // TODO: Add code here to do post pass
     return false;
 }
 
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
-    //TODO find all the basicblock dependencies
+    // TODO find all the basicblock dependencies
+    // TODO SmallVector should be type of Node
     SmallVector<Instruction *, 16> _ins_vector;
     for (auto &ins : BB) {
         _ins_vector.push_back(&ins);
@@ -56,34 +59,49 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
     this->super_node_list.push_back(new_super_node);
 }
 
-void GraphGeneratorPass::visitInstruction(Instruction &Ins){
-    this->instruction_list.push_back(InstructionNode(&Ins));
+void GraphGeneratorPass::visitInstruction(Instruction &Ins) {}
+
+void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
+    this->instruction_list.push_back(
+        BinaryOperatorNode(&I, BinaryInstructionTy));
 }
 
-bool GraphGeneratorPass::runOnModule(Module &M) {
-    for (auto &F : M) {
-        std::vector<SuperNode *> Graph;
-        InstructionList tmp_ll;
-        if (F.isDeclaration() || F.getName() != XKETCHName)
-            continue;
-        else {
-            for (auto &BB : F) {
-                // Filling instruction container for each BasicBlock
-                // XXX The follwoing code doesn't work because of explicit
-                // conversions
-                // SmallVector<Instruction *, 16> tmp(BB.begin(), BB.end());
+void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
+    this->instruction_list.push_back(IcmpNode(&I, IcmpInstructionTy));
+}
 
-                SmallVector<Instruction *, 16> tmp;
-                for (auto &ins : BB) {
-                    tmp.push_back(&ins);
-                    tmp_ll.push_back(InstructionNode(&ins));
-                }
-                SuperNode tmp_bb(tmp, &BB);
-            }
-        }
+void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
+    this->instruction_list.push_back(BranchNode(&I, BranchInstructionTy));
+}
+
+void GraphGeneratorPass::visitFunction(Function &F) {
+    // TODO
+    // Here we make a graph
+    // Graph gg()
+    // Filling function argument nodes
+    for (auto &f_arg : F.getArgumentList()) {
+        this->argument_list.push_back(ArgumentNode(&f_arg));
     }
+}
 
-    // Graph tmp_graph(std::list<InstructionNode>())
+bool GraphGeneratorPass::runOnFunction(Function &F) {
+    visit(F);
+
+    // std::vector<SuperNode *> Graph;
+    // InstructionList tmp_ll;
+    // for (auto &BB : F) {
+    //// Filling instruction container for each BasicBlock
+    //// XXX The follwoing code doesn't work because of explicit
+    //// conversions
+    //// SmallVector<Instruction *, 16> tmp(BB.begin(), BB.end());
+
+    // SmallVector<Instruction *, 16> tmp;
+    // for (auto &ins : BB) {
+    // tmp.push_back(&ins);
+    // tmp_ll.push_back(InstructionNode(&ins));
+    //}
+    // SuperNode tmp_bb(tmp, &BB);
+    //}
 
     return false;
 }
