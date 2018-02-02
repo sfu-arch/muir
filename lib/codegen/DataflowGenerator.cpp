@@ -1288,6 +1288,10 @@ void DataflowGeneratorPass::PrintZextIns(Instruction &Ins) {
     out << Ins;
     printCode(out.str() + "\n" + result + "\n");
 }
+void DataflowGeneratorPass::PrintBitCastIns(Instruction &Ins) {
+    // This stub is required because Tapir inserts spurious bitcast instructions.
+    errs() << "BitCast found! Not supported so ignoring for now.\n";
+}
 
 void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     // Get instruction type
@@ -1499,6 +1503,8 @@ void DataflowGeneratorPass::PrintInstInit(Instruction &Ins) {
         PrintRetIns(Ins);
     } else if (ins_type == TCallInst) {
         PrintCallIns(Ins);
+    } else if (ins_type == TBitCast) {
+        PrintBitCastIns(Ins);
     } else {
         assert(!"Undefined Instruction");
     }
