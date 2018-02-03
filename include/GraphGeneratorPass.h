@@ -27,6 +27,7 @@ using InstructionList = std::list<InstructionNode>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
 using GlobalValueList = std::list<GlobalValueNode>;
+//using ConstIntList = std::list<ConstIntNode>;
 
 namespace graphgen {
 
@@ -39,6 +40,7 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     InstructionList instruction_list;
     ArgumentList argument_list;
     GlobalValueList glob_list;
+    std::list<ConstIntNode> const_int_list;
 
     std::map<llvm::Value *, Node *> map_value_node;
 
@@ -64,6 +66,10 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     void visitStoreInst(llvm::StoreInst &);
     void visitReturnInst(llvm::ReturnInst &);
     void visitCallInst(llvm::CallInst &);
+
+    void fillInstructionNodeMap();
+    void findDataInputPort(llvm::Function &);
+    void findDataOutputPort();
 
    public:
     static char ID;

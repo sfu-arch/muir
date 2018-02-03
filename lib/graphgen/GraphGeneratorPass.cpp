@@ -59,16 +59,14 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
     this->super_node_list.push_back(new_super_node);
 }
 
-
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
     Ins.dump();
     assert(!"Instruction is not supported");
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
-    auto tmp_ins = BinaryOperatorNode(&I, BinaryInstructionTy);
-    this->instruction_list.push_back(tmp_ins);
-    this->map_value_node[&I] = &tmp_ins;
+    this->instruction_list.push_back(
+        BinaryOperatorNode(&I, BinaryInstructionTy));
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
@@ -107,27 +105,104 @@ void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
     this->instruction_list.push_back(CallNode(&I, CallInstructionTy));
 }
 
-
 void GraphGeneratorPass::visitFunction(Function &F) {
     // TODO
     // Here we make a graph
     // Graph gg()
-    //
     // Filling function argument nodes
-    for (auto &f_arg : F.getArgumentList()) 
+    for (auto &f_arg : F.getArgumentList()) {
         this->argument_list.push_back(ArgumentNode(&f_arg));
+        auto ff = std::find_if(argument_list.begin(), argument_list.end(),
+                               [&f_arg](ArgumentNode &arg_nd) -> bool {
+                                   return arg_nd.getArgumentValue() == &f_arg;
+                               });
+
+        map_value_node[&f_arg] = &*ff;
+    }
 
     // Filling global variables
-    for (auto &g_var : F.getParent()->getGlobalList())
+    for (auto &g_var : F.getParent()->getGlobalList()) {
         this->glob_list.push_back(GlobalValueNode(&g_var));
+        auto ff = std::find_if(glob_list.begin(), glob_list.end(),
+                               [&g_var](GlobalValueNode &arg_nd) -> bool {
+                                   return arg_nd.getGlobalValue() == &g_var;
+                               });
+
+        map_value_node[&g_var] = &*ff;
+    }
+}
+
+/**
+ * This function iterate over instruction container
+ * and fill out a map from instructions to their nodes
+ */
+void GraphGeneratorPass::fillInstructionNodeMap() {
+    for (auto &nd : this->instruction_list)
+        map_value_node[nd.getInstruction()] = &nd;
+}
+
+/**
+ * In this function we iterate over each function argument and connect all of
+ * its
+ * successors as a data input port.
+ * If the input is constant value we find the value and make a ConstNode for
+ * that value
+ */
+void GraphGeneratorPass::findDataInputPort(Function &F) {
+    // Check wether we already have iterated over the instructions
+    assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
+
+    for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
+        for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
+            auto operand = ins_it->getOperand(c);
+
+            if (isa<llvm::BasicBlock>(operand)) {
+                DEBUG(dbgs() << "BasicBlock operand!\n");
+                continue;
+            }
+            // If the operand is constant we have to create a new node
+            else if (isa<llvm::ConstantInt>(operand)) {
+                auto const_value = dyn_cast<llvm::ConstantInt>(operand);
+                this->const_int_list.push_back(ConstIntNode(const_value));
+                auto ff = std::find_if(
+                    const_int_list.begin(), const_int_list.end(),
+                    [const_value](ConstIntNode &nd) -> bool {
+                        return nd.getConstantParent() == const_value;
+                    });
+                map_value_node[operand] = &*ff;
+            }
+
+            auto _node = this->map_value_node.find(&*ins_it);
+            if (_node == this->map_value_node.end()) {
+                ins_it->dump();
+                assert(!"The instruction couldn't find!");
+            }
+
+            auto _op_node = this->map_value_node.find(operand);
+            if (_op_node == this->map_value_node.end()) {
+                operand->dump();
+                assert(!"The operand couldn't find!");
+            }
 
 
+            _node->second->AddDataInputPort(_op_node->second);
+        }
+    }
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {
+    stripDebugInfo(F);
     visit(F);
+    fillInstructionNodeMap();
+    findDataInputPort(F);
 
-    errs() << this->map_value_node.size() << "\n";
+    //for (auto &ins : this->instruction_list) {
+        //errs() << &ins << "\n";
+    //}
+
+    // for(auto &ins : this->map_value_node){
+    // errs() << ins.second << "\n";
+    //}
 
     // std::vector<SuperNode *> Graph;
     // InstructionList tmp_ll;

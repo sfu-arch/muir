@@ -52,6 +52,8 @@ enum NodeType {
 #endif
     ReturnInstrunctionTy,
     CallInstructionTy,
+    FunctionArgTy,
+    GlobalValueTy,
     UnkonwTy
 };
 
@@ -78,8 +80,16 @@ class Node {
     uint32_t ReturnControlOutputPortIndex(Node &);
     uint32_t ReturnMemoryOutputPortIndex(Node &);
 
+    void AddDataInputPort(Node *);
+    void AddDataOutputPort(Node *);
+
+    uint32_t NumDataInputPort() { return port_data.data_input_port.size(); }
+    uint32_t NumDataOutputPort() { return port_data.data_output_port.size(); }
+
     // TODO how to define virtual functions?
     virtual void PrintInitilization() {}
+
+    uint32_t ReturnType() { return node_type; }
     // virtual void PrintDataflow();
     // virtual void PrintControlFlow();
     // virtual void PrintMemory();
@@ -118,6 +128,8 @@ class InstructionNode : public Node {
    public:
     InstructionNode(llvm::Instruction *_ins = nullptr, NodeType _nd = UnkonwTy)
         : Node(_nd), parent_instruction(_ins) {}
+
+    llvm::Instruction *getInstruction();
 };
 
 class BinaryOperatorNode : public InstructionNode {
@@ -151,7 +163,7 @@ class BranchNode : public InstructionNode {
     }
 };
 
-class PHIGNode: public InstructionNode {
+class PHIGNode : public InstructionNode {
    public:
     PHIGNode(llvm::PHINode *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -161,8 +173,7 @@ class PHIGNode: public InstructionNode {
     }
 };
 
-
-class AllocaNode: public InstructionNode {
+class AllocaNode : public InstructionNode {
    public:
     AllocaNode(llvm::AllocaInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -172,8 +183,7 @@ class AllocaNode: public InstructionNode {
     }
 };
 
-
-class GEPNode: public InstructionNode {
+class GEPNode : public InstructionNode {
    public:
     GEPNode(llvm::GetElementPtrInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -183,7 +193,7 @@ class GEPNode: public InstructionNode {
     }
 };
 
-class LoadNode: public InstructionNode {
+class LoadNode : public InstructionNode {
    public:
     LoadNode(llvm::LoadInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -193,8 +203,7 @@ class LoadNode: public InstructionNode {
     }
 };
 
-
-class StoreNode: public InstructionNode {
+class StoreNode : public InstructionNode {
    public:
     StoreNode(llvm::StoreInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -204,7 +213,7 @@ class StoreNode: public InstructionNode {
     }
 };
 
-class ReturnNode: public InstructionNode {
+class ReturnNode : public InstructionNode {
    public:
     ReturnNode(llvm::ReturnInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -214,8 +223,7 @@ class ReturnNode: public InstructionNode {
     }
 };
 
-
-class CallNode: public InstructionNode {
+class CallNode : public InstructionNode {
    public:
     CallNode(llvm::CallInst *_ins = nullptr, NodeType _nd = UnkonwTy)
         : InstructionNode(_ins, _nd) {
@@ -230,7 +238,14 @@ class ArgumentNode : public Node {
     llvm::Argument *parent_argument;
 
    public:
-    ArgumentNode(llvm::Argument *_arg = nullptr) : parent_argument(_arg) {}
+    ArgumentNode(llvm::Argument *_arg = nullptr, NodeType _nd = UnkonwTy)
+        : Node(_nd), parent_argument(_arg) {
+        assert(((_nd == FunctionArgTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: ArgumentNode can be either "
+               "FunctionArgTy or UnkonwTy!");
+    }
+
+    llvm::Argument* getArgumentValue();
 };
 
 class GlobalValueNode : public Node {
@@ -238,10 +253,26 @@ class GlobalValueNode : public Node {
     llvm::GlobalValue *parent_glob;
 
    public:
-    GlobalValueNode(llvm::GlobalValue *_glb = nullptr) : parent_glob(_glb) {}
+    GlobalValueNode(llvm::GlobalValue *_glb = nullptr, NodeType _nd = UnkonwTy)
+        : Node(_nd), parent_glob(_glb) {
+        assert(((_nd == GlobalValueTy) || (_nd == UnkonwTy)) &&
+               " WRONG TYPE: GlobalNode can be either "
+               "GlobalValueTy or UnkonwTy!");
+    }
+
+    llvm::GlobalValue* getGlobalValue();
 };
 
+class ConstIntNode : public Node {
+   private:
+    llvm::ConstantInt* parent_const_int;
 
+   public:
+    ConstIntNode(llvm::ConstantInt *_cint = nullptr)
+        : parent_const_int(_cint) {}
+
+    llvm::ConstantInt* getConstantParent();
+};
 }
 
 #endif  // end of DANDDELION_NODE_H
