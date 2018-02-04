@@ -36,6 +36,21 @@ char GraphGeneratorPass::ID = 0;
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
 }
 
+/**
+ * This function is a helper function which only gets a new instruction
+ * and insert a new entry to our map to instruction value map
+ */
+void inline HelperInsertInstructionMap(InstructionList &ins_list,
+                                 std::map<llvm::Value *, Node *> &map_node,
+                                 llvm::Instruction &I) {
+    auto ff = std::find_if(ins_list.begin(), ins_list.end(),
+                           [&I](InstructionNode &arg) -> bool {
+                               return arg.getInstruction() == &I;
+                           });
+
+    map_node[&I] = &*ff;
+}
+
 bool GraphGeneratorPass::doInitialization(Module &M) {
     // TODO: Add code here if it's needed before pas
     return false;
@@ -67,10 +82,19 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
     this->instruction_list.push_back(
         BinaryOperatorNode(&I, BinaryInstructionTy));
+
+    HelperInsertInstructionMap(&this->instruction_list, &this->map_value_node, &I);
+
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
     this->instruction_list.push_back(IcmpNode(&I, IcmpInstructionTy));
+    auto ff = std::find_if(instruction_list.begin(), instruction_list.end(),
+                           [&I](InstructionNode &arg) -> bool {
+                               return arg.getInstruction() == &I;
+                           });
+
+    map_value_node[&I] = &*ff;
 }
 
 void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
@@ -184,7 +208,6 @@ void GraphGeneratorPass::findDataInputPort(Function &F) {
                 assert(!"The operand couldn't find!");
             }
 
-
             _node->second->AddDataInputPort(_op_node->second);
         }
     }
@@ -196,8 +219,8 @@ bool GraphGeneratorPass::runOnFunction(Function &F) {
     fillInstructionNodeMap();
     findDataInputPort(F);
 
-    //for (auto &ins : this->instruction_list) {
-        //errs() << &ins << "\n";
+    // for (auto &ins : this->instruction_list) {
+    // errs() << &ins << "\n";
     //}
 
     // for(auto &ins : this->map_value_node){
