@@ -3,6 +3,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -174,13 +175,23 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
 
-            if (isa<llvm::BasicBlock>(operand)) {
-                DEBUG(dbgs() << "BasicBlock operand!\n");
-                continue;
+            if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
+                // Here we have to add a new edge from instruction to BB
+                // 1) First find the basicblock node
+                // 2) Add the bb as a control output
+                // 3) Add the ins ass a control input
+                auto _node_dest = this->map_value_node.find(
+                    operand);  // it should be supernode
+                auto _node_src =
+                    this->map_value_node.find(&*ins_it);  // it should be node
+
+                _node_dest->second->addControlInputPort(_node_src->second);
+                _node_src->second->addControlOutputPort(_node_dest->second);
+
+                //TODO make the edges
             }
             // If the operand is constant we have to create a new node
-            else if (isa<llvm::ConstantInt>(operand)) {
-                auto const_value = dyn_cast<llvm::ConstantInt>(operand);
+            else if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
                 this->const_int_list.push_back(ConstIntNode(const_value));
                 auto ff = std::find_if(
                     const_int_list.begin(), const_int_list.end(),
@@ -188,25 +199,25 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         return nd.getConstantParent() == const_value;
                     });
                 map_value_node[operand] = &*ff;
+            } else {
+                auto _node_src = this->map_value_node.find(operand);
+                auto _node_dest = this->map_value_node.find(&*ins_it);
+
+                if (_node_src == this->map_value_node.end()) {
+                    DEBUG(ins_it->dump());
+                    assert(!"The destination instruction couldn't find!");
+                }
+
+                if (_node_dest == this->map_value_node.end()) {
+                    DEBUG(ins_it->dump());
+                    assert(!"The destination instruction couldn't find!");
+                }
+
+                _node_src->second->addDataOutputPort(_node_dest->second);
+                _node_dest->second->addDataInputPort(_node_src->second);
+
+                // TODO Here we have to build data edges as well!!
             }
-
-            auto _node_src = this->map_value_node.find(operand);
-            auto _node_dest = this->map_value_node.find(&*ins_it);
-
-            if (_node_src == this->map_value_node.end()) {
-                DEBUG(ins_it->dump());
-                assert(!"The destination instruction couldn't find!");
-            }
-
-            if (_node_dest == this->map_value_node.end()) {
-                DEBUG(ins_it->dump());
-                assert(!"The destination instruction couldn't find!");
-            }
-
-            _node_src->second->addDataOutputPort(_node_dest->second);
-            _node_dest->second->addDataInputPort(_node_src->second);
-
-            // TODO Here we have to build data edges as well!!
         }
     }
 }
@@ -221,13 +232,19 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
     for (auto &BB : F) {
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
-                if(auto _ins = dyn_cast<InstructionNode>(this->map_value_node[&I]))
+                // Iterate over the basicblock's instructions
+                if (auto _ins =
+                        dyn_cast<InstructionNode>(this->map_value_node[&I]))
                     _bb->addInstruction(_ins);
                 else
                     assert(!"The instruction is not visited!");
+
+                // Iterate over the basicblock's predecessors
+                for (auto _bb_pp : llvm::predecessors(&BB)) {
+                }
             }
-        }
-        else
+
+        } else
             assert(!"The basicblock is not visited!");
     }
 }

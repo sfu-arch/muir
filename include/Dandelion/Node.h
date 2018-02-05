@@ -26,8 +26,8 @@ struct DataPort {
 };
 
 struct ControlPort {
-    std::list<SuperNode *> control_input_port;
-    std::list<SuperNode *> control_output_port;
+    std::list<Node *> control_input_port;
+    std::list<Node *> control_output_port;
 };
 
 struct MemoryPort {
@@ -71,6 +71,9 @@ class Node {
 
     void addDataInputPort(Node *);
     void addDataOutputPort(Node *);
+
+    void addControlInputPort(Node *);
+    void addControlOutputPort(Node *);
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
