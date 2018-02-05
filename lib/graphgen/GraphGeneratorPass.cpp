@@ -26,6 +26,7 @@ using namespace dandelion;
 using InstructionList = std::list<InstructionNode>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
+using NodeList = std::list<Node>;
 
 extern cl::opt<string> XKETCHName;
 
@@ -40,15 +41,14 @@ RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
  * This function is a helper function which only gets a new instruction
  * and insert a new entry to our map to instruction value map
  */
-void inline HelperInsertInstructionMap(InstructionList &ins_list,
-                                 std::map<llvm::Value *, Node *> &map_node,
-                                 llvm::Instruction &I) {
+void inline HelperInsertInstructionMap(
+    InstructionList &ins_list, std::map<llvm::Value *, Node *> &map_node,
+    llvm::Value &V) {
     auto ff = std::find_if(ins_list.begin(), ins_list.end(),
-                           [&I](InstructionNode &arg) -> bool {
-                               return arg.getInstruction() == &I;
+                           [&V](InstructionNode &arg) -> bool {
+                               return arg.getInstruction() == &V;
                            });
-
-    map_node[&I] = &*ff;
+    map_node[&V] = &*ff;
 }
 
 bool GraphGeneratorPass::doInitialization(Module &M) {
@@ -63,32 +63,27 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
 }
 
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
-    // TODO find all the basicblock dependencies
-    // TODO SmallVector should be type of Node
-    SmallVector<Instruction *, 16> _ins_vector;
-    for (auto &ins : BB) {
-        _ins_vector.push_back(&ins);
-    }
-    SuperNode new_super_node(_ins_vector, &BB);
-
-    this->super_node_list.push_back(new_super_node);
+    this->super_node_list.push_back(SuperNode(&BB));
+    auto ff = std::find_if(
+        super_node_list.begin(), super_node_list.end(),
+        [&BB](SuperNode &arg) -> bool { return arg.getBasicBlock() == &BB; });
+    this->map_value_node[&BB] = &*ff;
 }
 
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
+    // Here we have to check see whether we have missed any instruction or not
     Ins.dump();
     assert(!"Instruction is not supported");
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
-    this->instruction_list.push_back(
-        BinaryOperatorNode(&I, BinaryInstructionTy));
+    this->instruction_list.push_back(BinaryOperatorNode(&I));
 
-    HelperInsertInstructionMap(&this->instruction_list, &this->map_value_node, &I);
-
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
-    this->instruction_list.push_back(IcmpNode(&I, IcmpInstructionTy));
+    this->instruction_list.push_back(IcmpNode(&I));
     auto ff = std::find_if(instruction_list.begin(), instruction_list.end(),
                            [&I](InstructionNode &arg) -> bool {
                                return arg.getInstruction() == &I;
@@ -98,35 +93,43 @@ void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
 }
 
 void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
-    this->instruction_list.push_back(BranchNode(&I, BranchInstructionTy));
+    this->instruction_list.push_back(BranchNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
-    this->instruction_list.push_back(PHIGNode(&I, PhiInstructionTy));
+    this->instruction_list.push_back(PhiNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
-    this->instruction_list.push_back(AllocaNode(&I, AllocaInstructionTy));
+    this->instruction_list.push_back(AllocaNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    this->instruction_list.push_back(GEPNode(&I, GetElementPtrInstTy));
+    this->instruction_list.push_back(GEPNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
-    this->instruction_list.push_back(LoadNode(&I, LoadInstructionTy));
+    this->instruction_list.push_back(LoadNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitStoreInst(llvm::StoreInst &I) {
-    this->instruction_list.push_back(StoreNode(&I, StoreInstructionTy));
+    this->instruction_list.push_back(StoreNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitReturnInst(llvm::ReturnInst &I) {
-    this->instruction_list.push_back(ReturnNode(&I, ReturnInstrunctionTy));
+    this->instruction_list.push_back(ReturnNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
-    this->instruction_list.push_back(CallNode(&I, CallInstructionTy));
+    this->instruction_list.push_back(CallNode(&I));
+    HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
 void GraphGeneratorPass::visitFunction(Function &F) {
@@ -157,22 +160,13 @@ void GraphGeneratorPass::visitFunction(Function &F) {
 }
 
 /**
- * This function iterate over instruction container
- * and fill out a map from instructions to their nodes
- */
-void GraphGeneratorPass::fillInstructionNodeMap() {
-    for (auto &nd : this->instruction_list)
-        map_value_node[nd.getInstruction()] = &nd;
-}
-
-/**
  * In this function we iterate over each function argument and connect all of
  * its
  * successors as a data input port.
  * If the input is constant value we find the value and make a ConstNode for
  * that value
  */
-void GraphGeneratorPass::findDataInputPort(Function &F) {
+void GraphGeneratorPass::findDataPort(Function &F) {
     // Check wether we already have iterated over the instructions
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
 
@@ -196,52 +190,60 @@ void GraphGeneratorPass::findDataInputPort(Function &F) {
                 map_value_node[operand] = &*ff;
             }
 
-            auto _node = this->map_value_node.find(&*ins_it);
-            if (_node == this->map_value_node.end()) {
-                ins_it->dump();
-                assert(!"The instruction couldn't find!");
+            auto _node_src = this->map_value_node.find(operand);
+            auto _node_dest = this->map_value_node.find(&*ins_it);
+
+            if (_node_src == this->map_value_node.end()) {
+                DEBUG(ins_it->dump());
+                assert(!"The destination instruction couldn't find!");
             }
 
-            auto _op_node = this->map_value_node.find(operand);
-            if (_op_node == this->map_value_node.end()) {
-                operand->dump();
-                assert(!"The operand couldn't find!");
+            if (_node_dest == this->map_value_node.end()) {
+                DEBUG(ins_it->dump());
+                assert(!"The destination instruction couldn't find!");
             }
 
-            _node->second->AddDataInputPort(_op_node->second);
+            _node_src->second->addDataOutputPort(_node_dest->second);
+            _node_dest->second->addDataInputPort(_node_src->second);
+
+            // TODO Here we have to build data edges as well!!
         }
     }
+}
+
+/**
+ * This function has two tasks:
+ * 1) Iterate over the basicblock's insturcitons and make a list of those
+ * instructions
+ * 2) Make control dependnce edges
+ */
+void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
+    for (auto &BB : F) {
+        if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
+            for (auto &I : BB) {
+                if(auto _ins = dyn_cast<InstructionNode>(this->map_value_node[&I]))
+                    _bb->addInstruction(_ins);
+                else
+                    assert(!"The instruction is not visited!");
+            }
+        }
+        else
+            assert(!"The basicblock is not visited!");
+    }
+}
+
+/**
+ * Do all the initializations for function members
+ */
+void GraphGeneratorPass::init(Function &F) {
+    findDataPort(F);
+    fillBasicBlockDependencies(F);
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {
     stripDebugInfo(F);
     visit(F);
-    fillInstructionNodeMap();
-    findDataInputPort(F);
-
-    // for (auto &ins : this->instruction_list) {
-    // errs() << &ins << "\n";
-    //}
-
-    // for(auto &ins : this->map_value_node){
-    // errs() << ins.second << "\n";
-    //}
-
-    // std::vector<SuperNode *> Graph;
-    // InstructionList tmp_ll;
-    // for (auto &BB : F) {
-    //// Filling instruction container for each BasicBlock
-    //// XXX The follwoing code doesn't work because of explicit
-    //// conversions
-    //// SmallVector<Instruction *, 16> tmp(BB.begin(), BB.end());
-
-    // SmallVector<Instruction *, 16> tmp;
-    // for (auto &ins : BB) {
-    // tmp.push_back(&ins);
-    // tmp_ll.push_back(InstructionNode(&ins));
-    //}
-    // SuperNode tmp_bb(tmp, &BB);
-    //}
+    init(F);
 
     return false;
 }

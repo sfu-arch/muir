@@ -53,6 +53,8 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     virtual bool doInitialization(llvm::Module &M) override;
     virtual bool doFinalization(llvm::Module &M) override;
 
+    void init(llvm::Function &);
+
     void visitFunction(llvm::Function &);
     void visitBasicBlock(llvm::BasicBlock &);
     void visitInstruction(llvm::Instruction &);
@@ -67,9 +69,8 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     void visitReturnInst(llvm::ReturnInst &);
     void visitCallInst(llvm::CallInst &);
 
-    void fillInstructionNodeMap();
-    void findDataInputPort(llvm::Function &);
-    void findDataOutputPort();
+    void fillBasicBlockDependencies(llvm::Function &);
+    void findDataPort(llvm::Function &);
 
    public:
     static char ID;

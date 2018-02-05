@@ -8,12 +8,17 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
+
+using namespace llvm;
 
 namespace dandelion {
 
 class Node;
 class SuperNode;
 class MemoryNode;
+class InstructionNode;
 
 struct DataPort {
     std::list<Node *> data_input_port;
@@ -30,34 +35,18 @@ struct MemoryPort {
     std::list<MemoryNode *> memory_output_port;
 };
 
-enum NodeType {
-    BasicBlockTy = 0,
-    BinaryInstructionTy,
-    IcmpInstructionTy,
-    BranchInstructionTy,
-    PhiInstructionTy,
-    AllocaInstructionTy,
-    GetElementPtrInstTy,
-    LoadInstructionTy,
-    StoreInstructionTy,
-    SextInstructionTy,
-    ZextInstructionTy,
-    BitCastInstructionTy,
-    TruncInstructionTy,
-    SelectInstructionTy,
-#ifdef TAPIR
-    DetachInstructionTy,
-    ReattachInstructionTy,
-    SyncInstructionTy,
-#endif
-    ReturnInstrunctionTy,
-    CallInstructionTy,
-    FunctionArgTy,
-    GlobalValueTy,
-    UnkonwTy
-};
-
 class Node {
+   public:
+    enum NodeType {
+        SuperNodeTy = 0,
+        InstructionNodeTy,
+        FunctionArgTy,
+        GlobalValueTy,
+        ConstIntTy,
+        UnkonwTy
+
+    };
+
    private:
     // List of data ports
     DataPort port_data;
@@ -70,29 +59,31 @@ class Node {
     NodeType node_type;
 
    public:
-    Node(NodeType _nt = UnkonwTy) : node_type(_nt) {}
+    Node(NodeType _nt) : node_type(_nt) {}
 
-    uint32_t ReturnDataInputPortIndex(Node &);
-    uint32_t ReturnControlInputPortIndex(Node &);
-    uint32_t ReturnMemoryInputPortIndex(Node &);
+    uint32_t returnDataInputPortIndex(Node &);
+    uint32_t returnControlInputPortIndex(Node &);
+    uint32_t returnMemoryInputPortIndex(Node &);
 
-    uint32_t ReturnDataOutputPortIndex(Node &);
-    uint32_t ReturnControlOutputPortIndex(Node &);
-    uint32_t ReturnMemoryOutputPortIndex(Node &);
+    uint32_t returnDataOutputPortIndex(Node &);
+    uint32_t returnControlOutputPortIndex(Node &);
+    uint32_t returnMemoryOutputPortIndex(Node &);
 
-    void AddDataInputPort(Node *);
-    void AddDataOutputPort(Node *);
+    void addDataInputPort(Node *);
+    void addDataOutputPort(Node *);
 
-    uint32_t NumDataInputPort() { return port_data.data_input_port.size(); }
-    uint32_t NumDataOutputPort() { return port_data.data_output_port.size(); }
+    uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
+    uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
     // TODO how to define virtual functions?
-    virtual void PrintInitilization() {}
+    virtual void printInitilization() {}
 
-    uint32_t ReturnType() { return node_type; }
+    uint32_t getType() const { return node_type; }
+
     // virtual void PrintDataflow();
     // virtual void PrintControlFlow();
     // virtual void PrintMemory();
+    //
 };
 
 /**
@@ -103,17 +94,19 @@ class SuperNode : public Node {
     llvm::BasicBlock *basic_block;
 
     // List of the instructions
-    llvm::SmallVector<llvm::Instruction *, 16> instruction_list;
+    llvm::SmallVector<InstructionNode *, 16> instruction_list;
 
    public:
-    explicit SuperNode(llvm::BasicBlock *_bb = nullptr, NodeType _nd = UnkonwTy)
-        : Node(_nd), basic_block(_bb) {}
-    explicit SuperNode(llvm::SmallVector<llvm::Instruction *, 16> _bb_ins_list,
-                       llvm::BasicBlock *_bb = nullptr, NodeType _nd = UnkonwTy)
-        : Node(_nd), basic_block(_bb) {
-        std::copy(_bb_ins_list.begin(), _bb_ins_list.end(),
-                  instruction_list.begin());
+    explicit SuperNode(llvm::BasicBlock *_bb = nullptr)
+        : Node(Node::SuperNodeTy), basic_block(_bb) {}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::SuperNodeTy;
     }
+
+    llvm::BasicBlock *getBasicBlock();
+    void addInstruction(InstructionNode *);
 };
 
 /**
@@ -122,114 +115,190 @@ class SuperNode : public Node {
  * the pointer can be NULL that means this is a new insturction type
  */
 class InstructionNode : public Node {
+   public:
+    enum InstType {
+        BinaryInstructionTy,
+        IcmpInstructionTy,
+        BranchInstructionTy,
+        PhiInstructionTy,
+        AllocaInstructionTy,
+        GetElementPtrInstTy,
+        LoadInstructionTy,
+        StoreInstructionTy,
+        SextInstructionTy,
+        ZextInstructionTy,
+        BitCastInstructionTy,
+        TruncInstructionTy,
+        SelectInstructionTy,
+#ifdef TAPIR
+        DetachInstructionTy,
+        ReattachInstructionTy,
+        SyncInstructionTy,
+#endif
+        ReturnInstrunctionTy,
+        CallInstructionTy
+    };
+
    private:
+    InstType ins_type;
     llvm::Instruction *parent_instruction;
 
    public:
-    InstructionNode(llvm::Instruction *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : Node(_nd), parent_instruction(_ins) {}
+    InstructionNode(NodeType _nd, InstType _ins_t,
+                    llvm::Instruction *_ins = nullptr)
+        : Node(Node::InstructionNodeTy),
+          ins_type(_ins_t),
+          parent_instruction(_ins) {}
 
     llvm::Instruction *getInstruction();
+
+    uint32_t getOpCode() const { return ins_type; }
+
+    bool isBinaryOp() const { return ins_type == BinaryInstructionTy; }
+
+    static bool classof(const Node *T) {
+        return T->getType() == Node::InstructionNodeTy;
+    }
 };
 
 class BinaryOperatorNode : public InstructionNode {
    public:
-    BinaryOperatorNode(llvm::BinaryOperator *_ins = nullptr,
-                       NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == BinaryInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: Binaryinstruction can be either "
-               "BinaryInstructionTy or UnkonwTy!");
+    BinaryOperatorNode(llvm::BinaryOperator *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::BinaryInstructionTy, _ins) {}
+
+    // Overloading isa<>, dyn_cast from llvm
+    static bool classof(const InstructionNode *I) {
+        return I->getOpCode() == InstType::BinaryInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class IcmpNode : public InstructionNode {
    public:
-    IcmpNode(llvm::ICmpInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == IcmpInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: IcmpInstruction can be either "
-               "IcmpInstructionTy or UnkonwTy!");
+    IcmpNode(llvm::ICmpInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::IcmpInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *I) {
+        return I->getOpCode() == InstType::IcmpInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class BranchNode : public InstructionNode {
    public:
-    BranchNode(llvm::BranchInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == BranchInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: BranchInstruction can be either "
-               "BranchInstructionTy or UnkonwTy!");
+    BranchNode(llvm::BranchInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstType::BranchInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::BranchInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
-class PHIGNode : public InstructionNode {
+class PhiNode : public InstructionNode {
    public:
-    PHIGNode(llvm::PHINode *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == PhiInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: PHIInstruction can be either "
-               "PHIInsturctionTy or UnkonwTy!");
+    PhiNode(llvm::PHINode *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, InstType::PhiInstructionTy,
+                          _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::PhiInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class AllocaNode : public InstructionNode {
    public:
-    AllocaNode(llvm::AllocaInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == AllocaInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: AllocaInstruction can be either "
-               "AllocaInstructionTy or UnkonwTy!");
+    AllocaNode(llvm::AllocaInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::AllocaInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::AllocaInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class GEPNode : public InstructionNode {
    public:
-    GEPNode(llvm::GetElementPtrInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == GetElementPtrInstTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: GEPInstruction can be either "
-               "GEPInstructionTy or UnkonwTy!");
+    GEPNode(llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::GetElementPtrInstTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::GetElementPtrInstTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class LoadNode : public InstructionNode {
    public:
-    LoadNode(llvm::LoadInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == LoadInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: LoadInstruction can be either "
-               "LoadInstructionTy or UnkonwTy!");
+    LoadNode(llvm::LoadInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::LoadInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::LoadInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class StoreNode : public InstructionNode {
    public:
     StoreNode(llvm::StoreInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == StoreInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: StoreInstruction can be either "
-               "StoreInstructionTy or UnkonwTy!");
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::StoreInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::StoreInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class ReturnNode : public InstructionNode {
    public:
     ReturnNode(llvm::ReturnInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == ReturnInstrunctionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: ReturnInstruction can be either "
-               "ReturnInstructionTy or UnkonwTy!");
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::ReturnInstrunctionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::ReturnInstrunctionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
 class CallNode : public InstructionNode {
    public:
     CallNode(llvm::CallInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(_ins, _nd) {
-        assert(((_nd == CallInstructionTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: CallInstruction can be either "
-               "CallInstructionTy or UnkonwTy!");
+        : InstructionNode(Node::InstructionNodeTy,
+                          InstructionNode::CallInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::CallInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 };
 
@@ -238,14 +307,10 @@ class ArgumentNode : public Node {
     llvm::Argument *parent_argument;
 
    public:
-    ArgumentNode(llvm::Argument *_arg = nullptr, NodeType _nd = UnkonwTy)
-        : Node(_nd), parent_argument(_arg) {
-        assert(((_nd == FunctionArgTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: ArgumentNode can be either "
-               "FunctionArgTy or UnkonwTy!");
-    }
+    ArgumentNode(llvm::Argument *_arg = nullptr)
+        : Node(Node::FunctionArgTy), parent_argument(_arg) {}
 
-    llvm::Argument* getArgumentValue();
+    llvm::Argument *getArgumentValue();
 };
 
 class GlobalValueNode : public Node {
@@ -253,25 +318,21 @@ class GlobalValueNode : public Node {
     llvm::GlobalValue *parent_glob;
 
    public:
-    GlobalValueNode(llvm::GlobalValue *_glb = nullptr, NodeType _nd = UnkonwTy)
-        : Node(_nd), parent_glob(_glb) {
-        assert(((_nd == GlobalValueTy) || (_nd == UnkonwTy)) &&
-               " WRONG TYPE: GlobalNode can be either "
-               "GlobalValueTy or UnkonwTy!");
-    }
+    GlobalValueNode(llvm::GlobalValue *_glb = nullptr)
+        : Node(Node::GlobalValueTy), parent_glob(_glb) {}
 
-    llvm::GlobalValue* getGlobalValue();
+    llvm::GlobalValue *getGlobalValue();
 };
 
 class ConstIntNode : public Node {
    private:
-    llvm::ConstantInt* parent_const_int;
+    llvm::ConstantInt *parent_const_int;
 
    public:
     ConstIntNode(llvm::ConstantInt *_cint = nullptr)
-        : parent_const_int(_cint) {}
+        : Node(Node::ConstIntTy), parent_const_int(_cint) {}
 
-    llvm::ConstantInt* getConstantParent();
+    llvm::ConstantInt *getConstantParent();
 };
 }
 
