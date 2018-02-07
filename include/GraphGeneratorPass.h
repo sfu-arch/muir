@@ -15,6 +15,7 @@
 #include "NodeType.h"
 
 #include "Dandelion/Node.h"
+#include "Dandelion/Edge.h"
 
 #include <map>
 #include <set>
@@ -27,7 +28,9 @@ using InstructionList = std::list<InstructionNode>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
 using GlobalValueList = std::list<GlobalValueNode>;
-//using ConstIntList = std::list<ConstIntNode>;
+using ConstIntList = std::list<ConstIntNode>;
+//
+using EdgeList = std::list<Edge>;
 
 namespace graphgen {
 
@@ -40,7 +43,8 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     InstructionList instruction_list;
     ArgumentList argument_list;
     GlobalValueList glob_list;
-    std::list<ConstIntNode> const_int_list;
+    ConstIntList const_int_list;
+    EdgeList edge_list;
 
     std::map<llvm::Value *, Node *> map_value_node;
 

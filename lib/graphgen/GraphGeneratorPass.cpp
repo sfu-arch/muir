@@ -63,6 +63,10 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
     return false;
 }
 
+/**
+ * Iterating over target function's basicblocks and
+ * then make supernode for each of them and add them to the node list
+ */
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
     this->super_node_list.push_back(SuperNode(&BB));
     auto ff = std::find_if(
@@ -180,26 +184,36 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 // 1) First find the basicblock node
                 // 2) Add the bb as a control output
                 // 3) Add the ins ass a control input
+                //
                 auto _node_dest = this->map_value_node.find(
                     operand);  // it should be supernode
+                assert(isa<SuperNode>(_node_dest->second) &&
+                       "Destination node should be super node!");
+
                 auto _node_src =
                     this->map_value_node.find(&*ins_it);  // it should be node
+                assert(isa<InstructionNode>(_node_src->second) &&
+                       "Source node should be instruction node!");
 
                 _node_dest->second->addControlInputPort(_node_src->second);
                 _node_src->second->addControlOutputPort(_node_dest->second);
 
-                //TODO make the edges
-            }
-            // If the operand is constant we have to create a new node
-            else if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
-                this->const_int_list.push_back(ConstIntNode(const_value));
-                auto ff = std::find_if(
-                    const_int_list.begin(), const_int_list.end(),
-                    [const_value](ConstIntNode &nd) -> bool {
-                        return nd.getConstantParent() == const_value;
-                    });
-                map_value_node[operand] = &*ff;
+                edge_list.push_back(Edge(Edge::DataToControlTypeEdge,
+                                         _node_src->second,
+                                         _node_dest->second));
+
             } else {
+                // If the operand is constant we have to create a new node
+                if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
+                    this->const_int_list.push_back(ConstIntNode(const_value));
+                    auto ff = std::find_if(
+                        const_int_list.begin(), const_int_list.end(),
+                        [const_value](ConstIntNode &nd) -> bool {
+                            return nd.getConstantParent() == const_value;
+                        });
+                    map_value_node[operand] = &*ff;
+                }
+
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
@@ -216,7 +230,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 _node_src->second->addDataOutputPort(_node_dest->second);
                 _node_dest->second->addDataInputPort(_node_src->second);
 
-                // TODO Here we have to build data edges as well!!
+                edge_list.push_back(Edge(Edge::DataTypeEdge, _node_src->second,
+                                         _node_dest->second));
             }
         }
     }
@@ -234,14 +249,17 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
             for (auto &I : BB) {
                 // Iterate over the basicblock's instructions
                 if (auto _ins =
-                        dyn_cast<InstructionNode>(this->map_value_node[&I]))
+                        dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
-                else
+
+                    //Make a control edge
+                    edge_list.push_back(Edge(Edge::ControlTypeEdge, _bb, _ins));
+                } else
                     assert(!"The instruction is not visited!");
 
                 // Iterate over the basicblock's predecessors
-                for (auto _bb_pp : llvm::predecessors(&BB)) {
-                }
+                // for (auto _bb_pp : llvm::predecessors(&BB)) {
+                //}
             }
 
         } else
