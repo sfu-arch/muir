@@ -25,7 +25,6 @@ using namespace dandelion;
 void Graph::init(BasicBlockList &_bb_ll, InstructionList &_ins_ll,
                  ArgumentList &_arg_ll, GlobalValueList &_glb_ll,
                  ConstIntList &_con_ll, EdgeList &_edge) {
-
     std::copy(bb_list.begin(), bb_list.end(), _bb_ll.begin());
     std::copy(inst_list.begin(), inst_list.end(), _ins_ll.begin());
     std::copy(arg_list.begin(), arg_list.end(), _arg_ll.begin());
@@ -34,4 +33,19 @@ void Graph::init(BasicBlockList &_bb_ll, InstructionList &_ins_ll,
     std::copy(edge_list.begin(), edge_list.end(), _edge.begin());
 
     graph_empty = true;
+}
+
+/**
+ * Print function prints the generated graph in the choosen format
+ */
+void Graph::printGraph(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(errs() << "Test print scala!\n");
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
 }

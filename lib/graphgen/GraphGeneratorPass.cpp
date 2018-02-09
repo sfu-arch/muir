@@ -275,12 +275,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
  * Does all the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
+
+    //Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
 
     // Initilizing the graph
     graph.init(super_node_list, instruction_list, argument_list, glob_list,
                const_int_list, edge_list);
+    graph.printGraph(PrintType::Scala);
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {

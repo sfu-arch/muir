@@ -40,7 +40,7 @@ void SuperNode::addPhiInstruction(PhiNode *node) {
     this->phi_list.push_back(node);
 }
 
-void SuperNode::PrintDefinition(Node::PrintType pt) {
+void SuperNode::PrintDefinition(PrintType pt) {
     switch (pt) {
         case PrintType::Scala:
             DEBUG(errs() << "Test print scala!\n");

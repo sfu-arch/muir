@@ -21,6 +21,8 @@ class MemoryNode;
 class InstructionNode;
 class PhiNode;
 
+enum PrintType { Scala = 0, Dot, Json };
+
 struct DataPort {
     std::list<Node *> data_input_port;
     std::list<Node *> data_output_port;
@@ -47,8 +49,6 @@ class Node {
         UnkonwTy
 
     };
-
-    enum PrintType { Scala = 0, Dot, Json };
 
    private:
     // List of data ports
