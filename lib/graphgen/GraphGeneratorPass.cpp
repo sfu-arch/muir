@@ -252,7 +252,11 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
 
-                    //Make a control edge
+                    // Detect Phi instrucctions
+                    if (auto _phi_ins = dyn_cast<PhiNode>(_ins))
+                        _bb->addPhiInstruction(_phi_ins);
+
+                    // Make a control edge
                     edge_list.push_back(Edge(Edge::ControlTypeEdge, _bb, _ins));
                 } else
                     assert(!"The instruction is not visited!");
@@ -268,11 +272,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 }
 
 /**
- * Do all the initializations for function members
+ * Does all the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
     findDataPort(F);
     fillBasicBlockDependencies(F);
+
+    // Initilizing the graph
+    graph.init(super_node_list, instruction_list, argument_list, glob_list,
+               const_int_list, edge_list);
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {

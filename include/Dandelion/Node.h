@@ -19,6 +19,7 @@ class Node;
 class SuperNode;
 class MemoryNode;
 class InstructionNode;
+class PhiNode;
 
 struct DataPort {
     std::list<Node *> data_input_port;
@@ -47,6 +48,8 @@ class Node {
 
     };
 
+    enum PrintType { Scala = 0, Dot, Json };
+
    private:
     // List of data ports
     DataPort port_data;
@@ -58,7 +61,7 @@ class Node {
     // Type of the Node
     NodeType node_type;
 
-   public:
+   public:  // Public methods
     Node(NodeType _nt) : node_type(_nt) {}
 
     uint32_t returnDataInputPortIndex(Node &);
@@ -79,10 +82,12 @@ class Node {
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
     // TODO how to define virtual functions?
-    virtual void printInitilization() {}
+    // virtual void printInitilization() {}
 
     uint32_t getType() const { return node_type; }
+    virtual void printDefinition() {}
 
+   protected:  // Private methods
     // virtual void PrintDataflow();
     // virtual void PrintControlFlow();
     // virtual void PrintMemory();
@@ -93,11 +98,15 @@ class Node {
  * Super node is actual implimetation of our basic blocks
  */
 class SuperNode : public Node {
+   public:
+    // List of the instructions
+    using PhiNodeList = std::list<PhiNode *>;
+
    private:
     llvm::BasicBlock *basic_block;
 
-    // List of the instructions
     llvm::SmallVector<InstructionNode *, 16> instruction_list;
+    PhiNodeList phi_list;
 
    public:
     explicit SuperNode(llvm::BasicBlock *_bb = nullptr)
@@ -110,6 +119,13 @@ class SuperNode : public Node {
 
     llvm::BasicBlock *getBasicBlock();
     void addInstruction(InstructionNode *);
+    void addPhiInstruction(PhiNode *);
+
+    bool hasPhi() { return !phi_list.empty(); }
+    uint32_t getNumPhi() { return phi_list.size(); }
+    const PhiNodeList &getPhiList() const { return phi_list; }
+
+    void PrintDefinition(Node::PrintType);
 };
 
 /**
