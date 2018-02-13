@@ -1,27 +1,25 @@
 #include <stdio.h>
 #include <cilk/cilk.h>
 
-unsigned cilk_for_test02_add(unsigned a, unsigned b) {
-  unsigned sum;
-  sum = a + b;
-  return sum;
+void cilk_for_test02_mul(unsigned *a, unsigned *b, unsigned i) {
+  b[i] = a[i]*2;
+  return;
 }
 
-unsigned cilk_for_test02(unsigned *a, unsigned *b, unsigned *c) {
+void cilk_for_test02(unsigned *a, unsigned *b) {
   cilk_for (unsigned i = 0; i < 5; ++i) {
-    c[i] = cilk_for_test02_add(a[i],b[i]);
+    cilk_for_test02_mul(a,b,i);
   }
-  return 1;
+  return;
 }
 
 int main() {
   int i;
   unsigned a[5] = {1,2,3,4,5};
-  unsigned b[5] = {1,2,3,4,5};
-  unsigned c[5] = {0};
-  cilk_for_test02(a,b,c);
+  unsigned b[5] = {0};
+  cilk_for_test02(a,b);
   for(i=0;i<5;i++) {
-    printf("%d\n", c[i]);
+    printf("b[%d]=%d\n", i, b[i]);
   }
 
 }

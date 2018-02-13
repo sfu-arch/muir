@@ -434,11 +434,7 @@ void DataflowGeneratorPass::NamingInstruction(llvm::Function &F) {
  */
 void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
     string command =
-#ifdef TAPIR
-        "package concurrent\n"
-#else
         "package dataflow\n"
-#endif
         "\n"
         "import chisel3._\n"
         "import chisel3.util._\n"
@@ -762,7 +758,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     final_command.append(ins_template.render(command));
 
     // Print input call parameters
-    command = "    val in = Flipped(new CallDecoupled(List(";
+    command = "    val in = Flipped(new Call(List(";
     final_command.append(ins_template.render(command));
     uint32_t c = 0;
     for (auto &ag : F.getArgumentList()) {
@@ -779,7 +775,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     for (auto fc : instruction_call) {
         // Call arguments to subroutine
         string name = instruction_info[fc].name;
-        command = "    val {{call}}_out = new CallDecoupled(List(";
+        command = "    val {{call}}_out = new Call(List(";
         ins_template.set("call", instruction_info[fc].name);
         final_command.append(ins_template.render(command));
         for (auto &ag : fc->getFunction()->getArgumentList()) {
@@ -793,7 +789,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         // Return values from sub-routine.
         // Only supports a single 32 bit data bundle for now
         command =
-            "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
+            "    val {{call}}_in = Flipped(new Call(List(32)))\n";
         ins_template.set("call", instruction_info[fc].name);
         final_command.append(ins_template.render(command));
     }
@@ -821,9 +817,9 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         "    val CacheReq = Decoupled(new CacheReq)\n");
 
     // Print output (return) parameters
-    if (!F.getReturnType()->isVoidTy()) {
-        final_command.append("    val out = new CallDecoupled(List(32))\n");
-    }
+//    if (!F.getReturnType()->isVoidTy()) {
+        final_command.append("    val out = new Call(List(32))\n");
+//    }
 
     final_command.append(
         "  })\n"
@@ -1303,19 +1299,10 @@ void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new RetNode(NumOuts={{num_out}}, ID={{ins_id}}))";
+        "Module(new RetNode(retTypes=List(32), ID={{ins_id}}))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
-    if (Ins.getNumUses() == 0)
-        ins_template.set("num_out", static_cast<int>(Ins.getNumUses() + 1));
-
-    if (Ins.getNumUses() == 0)
-        // In cases which there is no consumer for an instruction we
-        // hardwire the number of output to 1
-        ins_template.set("num_out", static_cast<int>(1));
-    else
-        ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
 
     string result = ins_template.render(ins_define);
 
@@ -1371,15 +1358,20 @@ void DataflowGeneratorPass::PrintCallIns(Instruction &Ins) {
     auto ins_type = InstructionTypeNode(Ins);
 
     LuaTemplater ins_template;
-    string ins_define =
-        "  val {{ins_name}} = "
-        "Module(new CallNode(ID = {{ins_id}})(p))";
-
-    // TODO - num_incr, num_decr, max_count should be set properly
+    string final_command;
+    string command = "  val {{ins_name}} = Module(new CallNode(ID={{ins_id}},argTypes=List(";
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    final_command.append(ins_template.render(command));
+    for (auto &ag : (&Ins)->getFunction()->getArgumentList()) {
+      command = "32,";
+      final_command.append(ins_template.render(command));
+    }
+    final_command.pop_back();
+    command = "),retTypes=List(32))(p))";
+    final_command.append(ins_template.render(command));
 
-    string result = ins_template.render(ins_define);
+    string result = ins_template.render(final_command);
 
     // Printing each instruction
     string init_test = "\n  //";
@@ -1422,11 +1414,12 @@ void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Reattach(NumInputs={{num_in}}, ID = {{ins_id}})(p))";
+        "Module(new Reattach(NumCtrlIn={{ctl_in}}, NumDataIn={{data_in}}, ID={{ins_id}})(p))";
 
-    // TODO - resp_bundle should be set properly
+    // TODO - interface numbers should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
-    ins_template.set("num_in", static_cast<int>(1));
+    ins_template.set("ctl_in", static_cast<int>(1));
+    ins_template.set("data_in", static_cast<int>(0));
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
 
     string result = ins_template.render(ins_define);
@@ -2917,7 +2910,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
         }
 
         else if (ins_type == TReturnInst) {
-            // Check wether Ret instruction return result
+            // Check whether Ret instruction return result
             // dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
             //
             if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
@@ -2927,11 +2920,10 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 0)
                     // Evil hack performed to drive enable to downstream.
                     command =
-                        "  {{ins_name}}.io.InputIO <> "
+                        "  {{ins_name}}.io.In.data(\"field0\") <> "
                         "{{operand_name}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
-                        "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n"
-                        "  io.out.enable <> {{ins_name}}.io.CtlIO(0)\n";
+                        "  io.out <> {{ins_name}}.io.Out\n";
                 else
                     assert(
                         !"Return instruction cannot have more than one input");
@@ -2947,13 +2939,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring constant\n";
                 command = "";
                 command =
-                    "  {{ins_name}}.io.InputIO.bits.data := "
+                    "  {{ins_name}}.io.In.data(\"field0\").bits.data := "
                     "{{value}}.U\n"
-                    "  {{ins_name}}.io.InputIO.bits.predicate := "
+                    "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := "
                     "true.B\n"
-                    "  {{ins_name}}.io.InputIO.valid := true.B\n"
-                    "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n"
-                    "  io.out.enable <> {{ins_name}}.io.CtlIO(0)\n";
+                    "  {{ins_name}}.io.In.data(\"field0\").valid := true.B\n"
+                    "  io.out <> {{ins_name}}.io.Out\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 if (operand_const)
                     ins_template.set(
@@ -2964,8 +2955,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 printCode(comment + ins_template.render(command) + "\n");
             } else {
                 command =
-                    "  io.out.data(\"field0\") <> {{ins_name}}.io.Out(0)\n"
-                    "  io.out.enable <> {{ins_name}}.io.CtlIO(0)\n";
+                    "  io.out <> {{ins_name}}.io.Out\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
@@ -3020,7 +3010,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                      .name);
             }
 
-            printCode(comment + ins_template.render(command) + "\n");
+            // printCode(comment + ins_template.render(command) + "\n");
 
             // printCode(comment + ins_template.render(command) + "\n");
         } else if (ins_type == TTrunc || ins_type == TFPTrunc) {
@@ -3274,11 +3264,10 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 // If your function is VOID
                 LuaTemplater ins_template;
                 string command =
-                    "  {{ins_name}}.io.InputIO.bits.data := 1.U\n"
-                    "  {{ins_name}}.io.InputIO.bits.predicate := true.B\n"
-                    "  {{ins_name}}.io.InputIO.bits.valid := true.B\n"
-                    "  {{ins_name}}.io.InputIO.valid := true.B\n\n"
-                    "  {{ins_name}}.io.Out(0).ready := true.B\n";
+                    "  {{ins_name}}.io.In.data(\"field0\").bits.data := 1.U\n"
+                    "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := true.B\n"
+                    "  {{ins_name}}.io.In.data(\"field0\").valid := true.B\n"
+                    "  io.out <> {{ins_name}}.io.Out\n";
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
                 printCode(comment + ins_template.render(command) + "\n");
@@ -3309,18 +3298,28 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
 
     for (auto &BB : F) {
         for (auto &ins : BB) {
-            // IF the instruction callsite type we need to forward enable signal
-            // as an input to its interface
-            // Otherwise, we fire the enable signal the insturction
-            if (llvm::CallSite(&ins)) {
-                command =
-                    "  io.{{ins_name}}_out.enable <> {{bb_name}}.io.Out"
+          // IF the instruction callsite type we need to forward enable signal
+          // as an input to its interface
+          // Otherwise, we fire the enable signal the insturction
+          if (llvm::CallSite(&ins)) {
+            command =
+                "  io.{{ins_name}}_out.enable <> {{bb_name}}.io.Out"
                     "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
-                ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("bb_name", basic_block_info[&BB].name);
-                printCode(ins_template.render(command));
+            ins_template.set("ins_name", instruction_info[&ins].name);
+            ins_template.set("bb_name", basic_block_info[&BB].name);
+            printCode(ins_template.render(command));
 
-            } else {
+          } else if (InstructionTypeNode(ins) == TBitCast) {
+            // Ignore bitcasts for now
+            continue;
+          } else if (InstructionTypeNode(ins) == TReturnInst) {
+            command =
+                "  {{ins_name}}.io.In.enable <> {{bb_name}}.io.Out"
+                    "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
+            ins_template.set("ins_name", instruction_info[&ins].name);
+            ins_template.set("bb_name", basic_block_info[&BB].name);
+            printCode(ins_template.render(command));
+          } else {
                 command =
                     "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
                     "(param.{{bb_name}}_activate(\"{{ins_name}}\"))\n";
@@ -3789,7 +3788,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
         "  poke(c.io.in.enable.bits.control, false.B)\n"
         "  poke(c.io.in.enable.valid, false.B)\n\n";
 
-    command = "  *    in = Flipped(new CallDecoupled(List(...)))\n";
+    command = "  *    in = Flipped(new Call(List(...)))\n";
     final_command.append(ins_template.render(command));
     for (auto &ag : F.getArgumentList()) {
         command =
@@ -3829,7 +3828,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     init_command.append(command);
 
     if (!F.getReturnType()->isVoidTy()) {
-        final_command.append("  *    out = new CallDecoupled(List(32))\n");
+        final_command.append("  *    out = new Call(List(32))\n");
     }
 
     final_command.append("  */\n\n\n");
