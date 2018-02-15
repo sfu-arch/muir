@@ -220,6 +220,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintStackPointer();
     void PrintRegisterFile();
     void PrintCacheMem();
+    void PrintInputSplitter(llvm::Function &);
 
     void printEndingModule(llvm::Function &);
 
