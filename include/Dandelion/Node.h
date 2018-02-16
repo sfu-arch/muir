@@ -125,7 +125,7 @@ class SuperNode : public Node {
     uint32_t getNumPhi() { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
-    void PrintDefinition(Node::PrintType);
+    void PrintDefinition(PrintType);
 };
 
 /**

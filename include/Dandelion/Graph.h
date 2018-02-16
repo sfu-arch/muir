@@ -46,9 +46,12 @@ class Graph {
     void init(BasicBlockList &, InstructionList &, ArgumentList &,
               GlobalValueList &, ConstIntList &, EdgeList &);
 
-    void printGraph(PrintType );
+    void printGraph(PrintType);
 
     bool isEmpty(){return graph_empty;}
+
+   protected:
+    void printBasicBlocks(PrintType);
 };
 }
 

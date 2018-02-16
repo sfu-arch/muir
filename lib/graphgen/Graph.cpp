@@ -25,12 +25,16 @@ using namespace dandelion;
 void Graph::init(BasicBlockList &_bb_ll, InstructionList &_ins_ll,
                  ArgumentList &_arg_ll, GlobalValueList &_glb_ll,
                  ConstIntList &_con_ll, EdgeList &_edge) {
-    std::copy(bb_list.begin(), bb_list.end(), _bb_ll.begin());
+    //std::copy(_bb_ll.begin(), _bb_ll.end(), std::back_inserter(_bb_ll));
+    //std::copy(bb_list.begin(), bb_list.end(), _bb_ll.begin());
     std::copy(inst_list.begin(), inst_list.end(), _ins_ll.begin());
     std::copy(arg_list.begin(), arg_list.end(), _arg_ll.begin());
     std::copy(glob_list.begin(), glob_list.end(), _glb_ll.begin());
     std::copy(const_list.begin(), const_list.end(), _con_ll.begin());
     std::copy(edge_list.begin(), edge_list.end(), _edge.begin());
+
+    outs() << "Init the graph\n";
+    outs() << "Size" << bb_list.size() << "\n";
 
     graph_empty = true;
 }
@@ -41,11 +45,32 @@ void Graph::init(BasicBlockList &_bb_ll, InstructionList &_ins_ll,
 void Graph::printGraph(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
-            DEBUG(errs() << "Test print scala!\n");
+            DEBUG(outs() << "Print Graph information!\n");
+            printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
             assert(!"Uknown print type!");
     }
+}
+
+/**
+ * Print the basicblock definition
+ */
+void Graph::printBasicBlocks(PrintType _pt){
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(outs() << "\t Print BasicBlocks information!\n");
+            DEBUG(outs() << "Size: " << bb_list.size() << "\n");
+            for(auto &bb_node : this->bb_list){
+                bb_node.PrintDefinition(PrintType::Scala);
+            }
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+
 }

@@ -43,7 +43,7 @@ void SuperNode::addPhiInstruction(PhiNode *node) {
 void SuperNode::PrintDefinition(PrintType pt) {
     switch (pt) {
         case PrintType::Scala:
-            DEBUG(errs() << "Test print scala!\n");
+            outs() << "\t\tPrint BB!\n";
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
