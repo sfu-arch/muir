@@ -188,6 +188,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintStoreIns(Instruction &);
     void PrintSextIns(Instruction &);
     void PrintZextIns(Instruction &);
+    void PrintBitCastIns(Instruction &);
     void PrintAllocaIns(Instruction &);
     void PrintRetIns(Instruction &);
     void PrintCallIns(Instruction &);
@@ -227,6 +228,7 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     void PrintStackPointer();
     void PrintRegisterFile();
     void PrintCacheMem();
+    void PrintInputSplitter(llvm::Function &);
 
     void printEndingModule(llvm::Function &);
 
