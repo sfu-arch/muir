@@ -453,7 +453,8 @@ void DataflowGeneratorPass::generateImportSection(raw_ostream &out) {
         "import arbiters._\n"
         "import loop._\n"
         "import accel._\n"
-        "import node._\n\n";
+        "import node._\n"
+        "import junctions._\n\n";
 
     // Print to the OUTPUT
     printCode(command, out);
@@ -774,10 +775,10 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         command = "    val {{call}}_out = Decoupled(new Call(List(";
         ins_template.set("call", instruction_info[fc].name);
         final_command.append(ins_template.render(command));
-        for (auto &ag : fc->getFunction()->getArgumentList()) {
+        auto call_ins = dyn_cast<llvm::CallInst>(fc);
+        for (int arg = 0; arg < call_ins->getNumArgOperands(); arg++) {
             command = "32,";
-            ins_template.set("index", static_cast<int>(c++));
-            final_command.append(ins_template.render(command));
+            final_command.append(command);
         }
         final_command.pop_back();
         command = ")))\n";
@@ -1287,9 +1288,6 @@ void DataflowGeneratorPass::PrintBitCastIns(Instruction &Ins) {
 
 void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     // Get instruction type
-    auto ins_type = InstructionTypeNode(Ins);
-
-    auto ins_cast = dyn_cast<llvm::CastInst>(&Ins);
     auto DL = Ins.getModule()->getDataLayout();
 
     LuaTemplater ins_template;
@@ -1681,6 +1679,26 @@ void DataflowGeneratorPass::PrintCacheMem() {
     printCode(result);
 }
 
+void DataflowGeneratorPass::PrintInputSplitter(llvm::Function &F) {
+    string final_command;
+    string command =
+            "  val InputSplitter = Module(new SplitCall(List(";
+    final_command.append(command);
+
+    // Print input call parameters
+    uint32_t c = 0;
+    for (auto &ag : F.getArgumentList()) {
+        command = "32,";
+        final_command.append(command);
+    }
+    final_command.pop_back();
+    command = ")))\n";
+    final_command.append(command);
+    command = "  InputSplitter.io.In <> io.in\n";
+    final_command.append(command);
+    printCode(final_command);
+}
+
 void DataflowGeneratorPass::PrintParamObject() {
     string param =
         "  /**\n"
@@ -1701,7 +1719,7 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPredicate() {
 
     LuaTemplater bb_template;
 
-    string ground_entry = "  {{bb_name}}.io.predicateIn(0) <> io.in.bits.enable\n";
+    string ground_entry = "  {{bb_name}}.io.predicateIn(0) <> InputSplitter.io.Out.enable\n";
     auto find_bb = basic_block_info.find(entry_bb);
     if (find_bb == basic_block_info.end())
         assert(!"COULDNT'T FIND THE BASICBLOCK INFORMATION");
@@ -2001,7 +2019,7 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
 
             string command =
                 "  {{phi_name}}.io.InData(param.{{phi_name}}_phi_in"
-                "(\"{{ins_name}}\")) <> io.in.bits.data(\"{{operand_name}}\")\n";
+                "(\"{{ins_name}}\")) <> InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
             ins_template.set("phi_name", instruction_info[&ins].name);
             ins_template.set("ins_name", argument_info[op_arg].name);
@@ -2075,8 +2093,6 @@ void DataflowGeneratorPass::PrintPHIMask(
  * together.
  */
 void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
-    LuaTemplater ins_template;
-
     /**
      * Each connection has two sides, left and right connections
      * Left connection should be on of the predefined insturctions type
@@ -2087,270 +2103,85 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
      *  3) Global value
      *  4) Function argument
      *  5) Instruction
-     *  6) Null
      *
      *Base of these choices we generate the right value of the connection
      */
-
-    enum RightSide {
-        ConLoop = 0,
-        ConConstInt,
-        ConConstFP,
-        ConGlobal,
-        ConFunctionArg,
-        ConInstruction,
-        ConNull
-    };
-
-    auto find_right_value_type = [&ins](uint32_t c,
-                                        llvm::Loop *loop) -> RightSide {
-
-        if (loop)
-            return RightSide::ConLoop;
-        else if (dyn_cast<llvm::Instruction>(ins.getOperand(c)))
-            return RightSide::ConInstruction;
-        else if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
-            return RightSide::ConConstInt;
-        else if (dyn_cast<llvm::ConstantFP>(ins.getOperand(c)))
-            return RightSide::ConConstFP;
-        else if (dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c)))
-            return RightSide::ConNull;
-        else if (dyn_cast<llvm::GlobalValue>(ins.getOperand(c)))
-            return RightSide::ConGlobal;
-        else if (dyn_cast<llvm::Argument>(ins.getOperand(c)))
-            return RightSide::ConFunctionArg;
-        else {
-            ins.dump();
-            ins.getOperand(c)->dump();
-            assert(!"Unrecognized operand type");
-        }
-
-    };
-
-    auto operand_name = [this, &ins](uint32_t c) -> string {
-
-        if (auto op = dyn_cast<llvm::Instruction>(ins.getOperand(c)))
-            return this->instruction_info[op].name;
-        else if (auto op = dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
-            return std::to_string(static_cast<int>(op->getSExtValue()));
-        else if (auto op = dyn_cast<llvm::ConstantFP>(ins.getOperand(c)))
-            assert(!"We dont't support floating point right now!");
-        // return std::to_string(static_cast<int>(op->getSplatValue()));
-        else if (auto op =
-                     dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c)))
-            return std::to_string(0);
-        else if (auto op = dyn_cast<llvm::GlobalValue>(ins.getOperand(c)))
-            return this->global_info[op].name;
-        else if (auto op = dyn_cast<llvm::Argument>(ins.getOperand(c)))
-            return this->argument_info[op].name;
-        else
-            assert(!"Unrecognized operand type");
-
-    };
-
-    // For each operand we have to figure out if the connection is
-    // comming from a live-in value or not, and for this purpose we
-    // use following function:
-    auto loop_detector = [&ins](auto LoopEdges, auto loop_info,
-                                auto c) -> Loop * {
-        auto operand = ins.getOperand(c);
-
-        Loop *target_loop = nullptr;
-        /**
-                 * Check if the edge in LoopEdges
-                 * This edge count is the loop header
-                 */
-        auto loop_edge = std::find_if(
-            LoopEdges.begin(), LoopEdges.end(),
-            [&operand, &ins](const pair<Value *, Value *> &edge) {
-                return ((edge.second == &ins) && (edge.first == operand));
-            });
-
-        /**
-         * If we find the edge in the container it means that
-         * we have to connect the instruction to latch
-         * We still need to figure out:
-         *  1) The instruction belongs to which loop
-         *  2) The edge is live-in or live-out
-         *
-         *  We have split the edge and connect the source to the register
-         * file
-         *  and register file to the destination
-         *
-         *  Now we have to replace the SRC connection with appropriate loop
-         *  header
-         *  We need to find two things:
-         *      1) Loop
-         *      2) index of the loop header
-         */
-        // Make a priority_queue for loops
-        auto cmp = [](Loop *left, Loop *right) {
-            return left->getSubLoops().size() > right->getSubLoops().size();
-        };
-        std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)> order_loops(
-            cmp);
-        for (auto &L : getLoops(*loop_info)) {
-            order_loops.push(L);
-        }
-
-        if (loop_edge != LoopEdges.end()) {
-            while (!order_loops.empty()) {
-                auto L = order_loops.top();
-                auto Loc = L->getStartLoc();
-                auto Filename = getBaseName(Loc->getFilename().str());
-
-                if (dyn_cast<Argument>(loop_edge->first)) {
-                    target_loop = L;
-                    break;
-                }
-
-                else if (L->contains(dyn_cast<Instruction>(loop_edge->first))) {
-                    target_loop = L;
-                    break;
-                } else
-                    assert(!"Wrong edge detector!");
-
-                order_loops.pop();
-            }
-        }
-
-        return target_loop;
-    };
-
-    /**
-     * This function figure the right side string of each assignment
-     */
-    auto print_right_string = [this, &ins](RightSide right_type,
-                                           string right_string, Loop *L,
-                                           uint32_t c) -> string {
-        LuaTemplater lua_right;
-        string command = string();
-
-        switch (right_type) {
-            case RightSide::ConLoop:
-                command =
-                    "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
-                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-                lua_right.set("ins_name", instruction_info[&ins].name);
-                lua_right.set(
-                    "loop_name",
-                    "loop_L_" + std::to_string(L->getStartLoc().getLine()));
-                lua_right.set(
-                    "loop_index",
-                    static_cast<int>(this->ins_loop_header_idx[&ins]));
-                lua_right.set("operand_name", right_string);
-                break;
-
-            case RightSide::ConInstruction:
-                command =
-                    "{{operand_name}}.io.Out"
-                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-                lua_right.set("ins_name", instruction_info[&ins].name);
-                lua_right.set("operand_name", right_string);
-                break;
-            case RightSide::ConGlobal:
-                command = "io.{{operand_name}}\n";
-                lua_right.set("operand_name", right_string);
-                break;
-
-            case RightSide::ConFunctionArg:
-                command = "io.in.data(\"{{operand_name}}\")\n";
-                lua_right.set("operand_name", right_string);
-                break;
-            case RightSide::ConConstInt:
-            case RightSide::ConNull:
-                command = "{{value}}.U\n";
-                lua_right.set("value", right_string);
-                break;
-            case RightSide::ConConstFP:
-                assert(!"We don't support floating point right now!");
-                break;
-
-            default:
-                assert(!"Uknow type!");
-                break;
-        }
-
-        return lua_right.render(command);
-
-    };
+    LuaTemplater ins_template;
 
     // First we iterate over function's operands
-    // auto ins_type = InstructionTypeNode(ins);
-
+    auto ins_type = InstructionTypeNode(ins);
     for (uint32_t c = 0; c < ins.getNumOperands(); ++c) {
-        // XXX If the operand is BasicBlock it means
-        // the insturtion is branch we already have
-        // connected the signal
-        if (dyn_cast<llvm::BasicBlock>(ins.getOperand(c))) continue;
+        auto operand = ins.getOperand(c);
 
-        // Initilizing command and comment string std::vector<string> command;
-        string command = string();
-        string command_left = string();
-        string command_right = string();
+        // For each operand we have to figure out if the connection is
+        // comming from a live-in value or not, and for this purpose we
+        // use following function:
+        auto loop_detector = [operand](auto &ins, auto LoopEdges, auto loop_info) -> Loop * {
+            Loop *target_loop = nullptr;
+            /**
+                     * Check if the edge in LoopEdges
+                     * This edge count is the loop header
+                     */
+            auto loop_edge = std::find_if(
+                LoopEdges.begin(), LoopEdges.end(),
+                [&operand, &ins](const pair<Value *, Value *> &edge) {
+                    return ((edge.second == &ins) && (edge.first == operand));
+                });
 
-        auto target_loop = loop_detector(this->LoopEdges, this->LI, c);
-        auto right_type = find_right_value_type(
-            c, loop_detector(this->LoopEdges, this->LI, c));
+            /**
+             * If we find the edge in the container it means that
+             * we have to connect the instruction to latch
+             * We still need to figure out:
+             *  1) The instruction belongs to which loop
+             *  2) The edge is live-in or live-out
+             *
+             *  We have split the edge and connect the source to the register
+             * file
+             *  and register file to the destination
+             *
+             *  Now we have to replace the SRC connection with appropriate loop
+             *  header
+             *  We need to find two things:
+             *      1) Loop
+             *      2) index of the loop header
+             */
+            // Make a priority_queue for loops
+            auto cmp = [](Loop *left, Loop *right) {
+                return left->getSubLoops().size() > right->getSubLoops().size();
+            };
+            std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)>
+                order_loops(cmp);
+            for (auto &L : getLoops(*loop_info)) {
+                order_loops.push(L);
+            }
 
-        auto ins_type = InstructionTypeNode(ins);
-        auto right_string =
-            print_right_string(right_type, operand_name(c), target_loop, c);
+            if (loop_edge != LoopEdges.end()) {
+                while (!order_loops.empty()) {
+                    auto L = order_loops.top();
+                    auto Loc = L->getStartLoc();
+                    auto Filename = getBaseName(Loc->getFilename().str());
 
-        // Setting right side of the connection
-        switch (ins_type) {
-            case InstructionType::TBinaryOperator:
-            case InstructionType::TICmpInst:
-                if (c == 0)
-                    command = 
-                        "  //Connecting left input of {{ins_name}}\n"
-                        "  {{ins_name}}.io.LeftIO <> {{right_side}}";
-                else if (c == 1)
-                    command = 
-                        "  //Connecting Right input of {{ins_name}}\n"
-                        "  {{ins_name}}.io.RightIO <> {{right_side}}";
-                else
-                    assert(
-                        !"Binary operation can not have more than two inputs");
-                break;
+                    if (dyn_cast<Argument>(loop_edge->first)) {
+                        target_loop = L;
+                        break;
+                    }
 
-            case InstructionType::TCBranchInst:
-                if (c == 0)
-                    command = 
-                        "  //Connecting comparision input of {{ins_name}}\n"
-                        "  {{ins_name}}.io.CmpIO <> {{right_side}}";
-                else
-                    assert(
-                        !"Conditional branch can not have more than one input");
-                break;
+                    else if (L->contains(&ins) ||
+                             L->contains(
+                                 dyn_cast<Instruction>(loop_edge->first))) {
+                        target_loop = L;
+                        break;
+                    }
+                    order_loops.pop();
+                }
+            }
 
-            case InstructionType::TGEP:
-                if (c == 0)
-                    command = 
-                        "  //Connecting base address of {{ins_name}}\n"
-                        "  {{ins_name}}.io.baseAddress <> {{right_side}}";
-                else if (c == 1)
-                    command = 
-                        "  //Connecting idx1 input of {{ins_nam}}\n"
-                        "  {{ins_name}}.io.idx1 <> {{right_side}}";
-                else if (c == 2)
-                    command = 
-                        "  //Connecting idx2 input of {{ins_name}}\n"
-                        "  {{ins_name}}.io.idx2 <> {{right_side}}";
-                else
-                    assert(!"The GEP instruction is not simplified!");
-                break;
+            return target_loop;
+        };
 
-            default:
-                ins.dump();
-                ins.getOperand(c)->dump();
-                assert(!"UKNOWN INSTRUCTION TYPE!");
-                break;
-        }
-        ins_template.set("ins_name", instruction_info[&ins].name);
-        ins_template.set("right_side", right_string);
-        //Setting left side of the connection command_left =
-        errs() << ins_template.render(command) << "\n";
+        auto target_loop = loop_detector(ins, this->LoopEdges, this->LI);
+        if(target_loop != nullptr)
+            errs() << "SUCESS!\n";
     }
 }
 
@@ -2464,6 +2295,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.LeftIO <>"
                         "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                //"{{loop_name}}_start.io.outputArg({{loop_index}})\n";
 
                 else
                     command =
@@ -2520,11 +2352,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 0)
                     command =
                         "  {{ins_name}}.io.LeftIO <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                 else
                     command =
                         "  {{ins_name}}.io.RightIO <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
@@ -2598,6 +2430,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring GEP instruction to the loop header\n";
 
                 command =
+                    //"  {{ins_name}}.io.LeftIO <>"
+                    //"{{loop_name}}_liveIN_{{loop_index}}.io.Out(0)\n";
                     "  {{ins_name}}.io.{{ins_input}} <> "
                     "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
                     "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
@@ -2630,7 +2464,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 command =
                     "  {{ins_name}}.io.{{ins_input}} <> "
-                    "io.in.bits.data(\"{{operand_name}}\")\n\n";
+                    "InputSplitter.io.Out.data(\"{{operand_name}}\")\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set(
@@ -2727,7 +2561,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 command =
                     "  {{ins_name}}.io.GepAddr <> "
-                    "io.in.bits.data(\"{{operand_name}}\")\n"
+                    "InputSplitter.io.Out.data(\"{{operand_name}}\")\n"
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  CacheMem.io.ReadIn({{ins_index}}) <> "
@@ -2890,7 +2724,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "argument\n";
                     command =
                         "  {{ins_name}}.io.GepAddr <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
@@ -3077,6 +2911,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 0)
                     // Evil hack performed to drive enable to downstream.
                     command =
+                        "  {{ins_name}}.io.predicateIn(0).bits.control := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.predicateIn(0).bits.taskID := "
+                        "0.U\n"
+                        "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                         "  {{ins_name}}.io.In.data(\"field0\") <> "
                         "{{operand_name}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
@@ -3156,7 +2995,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 0)
                     command =
                         "  {{ins_name}}.io.Input <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("operand_name", argument_info[op_arg].name);
@@ -3204,11 +3043,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 1)
                     command =
                         "  {{ins_name}}.io.Input1 <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                 else if (c == 2)
                     command =
                         "  {{ins_name}}.io.Input2 <> "
-                        "io.in.bits.data(\"{{operand_name}}\")\n";
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                 ins_template.set("operand_name", argument_info[op_arg].name);
             }
@@ -3279,7 +3118,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "argument\n";
                 command =
                     "  {{ins_name}}.io.Input <> "
-                    "io.in.bits.data(\"{{operand_name}}\")\n";
+                    "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                 // XXX uncomment if needed
                 // command =
                 //"  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
@@ -3323,7 +3162,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "argument\n";
                 command =
                     "  {{ins_name}}.io.Input <> "
-                    "io.in.bits.data(\"{{operand_name}}\")\n";
+                    "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                 // XXX uncomment if needed
                 // command =
                 //"  {{ins_name}}.io.Input <> {{operand_name}}.io.Out"
@@ -3411,7 +3250,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                       "  // Wiring Call to the function argument\n";
                   command =
                       "  {{ins_name}}.io.In.data(\"field{{operand_num}}\") <> "
-                          "io.in.bits.data(\"{{operand_name}}\")\n";
+                          "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                   ins_template.set("ins_name", instruction_info[&ins].name);
                   ins_template.set("operand_name", argument_info[op_arg].name);
@@ -3474,7 +3313,7 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 ins_template.set("ins_name", instruction_info[&ins].name);
 
                 printCode(comment + ins_template.render(command) + "\n");
-            } else {
+            } else{
                 DataflowGeneratorPass::PrintDataFlow(ins);
                 DataflowGeneratorPass::NewPrintDataFlow(ins);
             }
@@ -3822,7 +3661,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                                     "  "
                                     "{{loop_name}}_liveIN_{{arg_index}}.io."
                                     "InData"
-                                    " <> io.in.bits.data(\"{{operand_name}}\")\n";
+                                    " <> InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
 
                                 ins_template.set(
                                     "loop_name",
@@ -3981,16 +3820,15 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
 
     uint32_t c = 0;
     string init_command =
-        "  poke(c.io.in.enable.bits.control, false.B)\n"
-        "  poke(c.io.in.enable.valid, false.B)\n\n";
+        "  poke(c.io.in.valid, false.B)\n\n";
+        "  poke(c.io.in.bits.enable.control, false.B)\n";
 
     command = "  *    in = Flipped(Decoupled(new Call(List(...))))\n";
     final_command.append(ins_template.render(command));
     for (auto &ag : F.getArgumentList()) {
         command =
-            "  poke(c.io.in.data(\"field{{index}}\").bits.data, 0.U)\n"
-            "  poke(c.io.in.data(\"field{{index}}\").bits.predicate, false.B)\n"
-            "  poke(c.io.in.data(\"field{{index}}\").valid, false.B)\n\n";
+            "  poke(c.io.in.bits.data(\"field{{index}}\").data, 0.U)\n"
+            "  poke(c.io.in.bits.data(\"field{{index}}\").predicate, false.B)\n";
         ins_template.set("index", static_cast<int>(c++));
         init_command.append(ins_template.render(command));
     }
@@ -4019,8 +3857,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
     }
 
     command =
-        "  poke(c.io.out.data(\"field0\").ready, false.B)\n"
-        "  poke(c.io.out.enable.ready, false.B)\n\n";
+        "  poke(c.io.out.ready, false.B)\n\n";
     init_command.append(command);
 
     if (!F.getReturnType()->isVoidTy()) {
@@ -4173,6 +4010,7 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     PrintStackPointer();
     PrintRegisterFile();
     PrintCacheMem();
+    PrintInputSplitter(F);
 
     // Step5:
     // Printing Loop headers
