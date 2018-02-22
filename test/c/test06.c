@@ -1,4 +1,6 @@
-int foo(unsigned int a, unsigned int b){
+#include <stdio.h>
+
+int test06(unsigned int a, unsigned int b){
     int sum[2];
     sum[0] = a;
     sum[1] = b;
@@ -8,6 +10,7 @@ int foo(unsigned int a, unsigned int b){
 int main(){
     unsigned a = 5;
     unsigned b = 3;
-    unsigned sum = foo(a,b);
+    unsigned sum = test06(a,b);
+    printf("sum=%u\n", sum);
     return 0;
 }
