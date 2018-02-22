@@ -1,22 +1,26 @@
 CC=clang
 XKETCH=../../build/bin/xketch
-CFLAGS=-g -emit-llvm -m32 -S -o -
-SOURCES=$(shell ls test*.c)
+CFLAGS= -DPIR -emit-llvm -m32 -S -o -
+SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
+DOT=$(shell ls *.dot)
+SVG=$(DOT:%.dot=%.svg)
 
 .PRECIOUS: %.ll
 
 all: $(SCALA)
 
+svg: $(SVG)
+
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
+	$(CC) -g $(CFLAGS) $< -o - | opt -mem2reg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
 
 %.scala: %.ll
 	$(XKETCH) -fn-name=$* $< -o $*
-#	mv -f dfg.$*.dot $*.dot 2>/dev/null; true
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
