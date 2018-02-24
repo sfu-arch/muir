@@ -1,16 +1,18 @@
 #include <stdio.h>
 
-int test06(unsigned int a, unsigned int b){
-    int sum[2];
-    sum[0] = a;
-    sum[1] = b;
-    return sum[0] + sum[1];
+int test06(unsigned a, unsigned b){
+    unsigned alloc0[2];
+    int alloc1[1];
+    alloc0[0] = a;
+    alloc0[1] = b;
+    alloc1[0] = alloc0[0]+alloc0[1];
+    return alloc1[0];
 }
 
 int main(){
     unsigned a = 5;
     unsigned b = 3;
-    unsigned sum = test06(a,b);
-    printf("sum=%u\n", sum);
+    unsigned result = test06(a,b);
+    printf("result=%u\n", result);
     return 0;
 }
