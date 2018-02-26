@@ -11,6 +11,6 @@ unsigned test12(unsigned j) {
 }
 
 int main() {
-  int result = test12(100);
+  int result = test12(10);
   printf("%d\n",result);
 }
