@@ -6,7 +6,7 @@ void test04(int a, int b){
       a -= b;
     else
       b -= a;
-    printf("a=%d, b=%d\n",a,b);
+    //    printf("a=%d, b=%d\n",a,b);
   } 
   return;
 }

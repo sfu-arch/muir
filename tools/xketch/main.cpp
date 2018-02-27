@@ -394,7 +394,7 @@ int main(int argc, char **argv) {
     labelFunctions(*module);
 
     //Running Alias Analysis pass
-    //AApassTest(*module);
+    AApassTest(*module);
 
     //Saving the final modified bc file
     //saveModule(*module, "final.bc");

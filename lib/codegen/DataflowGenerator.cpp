@@ -2911,10 +2911,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 if (c == 0)
                     // Evil hack performed to drive enable to downstream.
                     command =
-                        "  {{ins_name}}.io.predicateIn(0).bits.control := "
-                        "true.B\n"
-                        "  {{ins_name}}.io.predicateIn(0).bits.taskID := "
-                        "0.U\n"
+                        "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
+                        "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
                         "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                         "  {{ins_name}}.io.In.data(\"field0\") <> "
                         "{{operand_name}}.io.Out"
@@ -2935,10 +2933,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring return instruction\n";
                 command = "";
                 command =
-                    "  {{ins_name}}.io.predicateIn(0).bits.control := "
-                    "true.B\n"
-                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := "
-                    "0.U\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
                     "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := "
                     "{{value}}.U\n"
@@ -3306,6 +3302,9 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 // If your function is VOID
                 LuaTemplater ins_template;
                 string command =
+                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
+                    "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := 1.U\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").valid := true.B\n"
@@ -4041,15 +4040,14 @@ void DataflowGeneratorPass::generateFunction(llvm::Function &F) {
     printHeader("Connecting Basic Blocks to instructions");
     PrintBasicBlockEnableInstruction(F);
 
+    // Connecting Instructions in dataflow order
+    printHeader("Connecting LoopHeaders");
+    PrintLoopRegister(F);
+
     // Connecting BasicBlock masks to their Phi nodes
     printHeader("Dumping PHI nodes");
     HelperPrintBasicBlockPhi();
 
-    // Step 9:
-    // Connecting Instructions in dataflow order
-    printHeader("Connecting LoopHeaders");
-    PrintLoopRegister(F);
-    // TODO Connect the loop headers
     printHeader("Dumping Dataflow");
     HelperPrintInstructionDF(F);
 

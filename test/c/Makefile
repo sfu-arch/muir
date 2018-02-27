@@ -1,7 +1,7 @@
 CC=clang
 XKETCH=../../build/bin/xketch
-CFLAGS= -DPIR -emit-llvm -m32 -S -o -
-SOURCES=$(shell ls *.c)
+CFLAGS= -emit-llvm -m32 -S -o -
+SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
