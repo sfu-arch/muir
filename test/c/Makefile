@@ -13,8 +13,8 @@ all: $(SCALA)
 svg: $(SVG)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
-	$(CC) -g $(CFLAGS) $< -o - | opt -mem2reg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -dce -mem2reg -dot-cfg -o $@
+	$(CC) -g $(CFLAGS) $< -o - | opt -dce -mem2reg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
