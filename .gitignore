@@ -1,4 +1,9 @@
 build/*
+build-tapir/*
+workload/*
+*.txt
 luacpptemplater/*
 *.swp
 .ycm_extra_conf.py
+*.svg
+*.out

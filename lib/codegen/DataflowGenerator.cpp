@@ -912,8 +912,8 @@ void DataflowGeneratorPass::PrintBinaryComparisionIns(Instruction &Ins) {
         "  val {{ins_name}} = "
         "Module (new {{ins_type}}"
         "(NumOuts = {{num_out}}, ID = {{ins_id}}, "
-        "opCode = \"{{op_code}}\", Desc = \"{{ins_name}}\")"
-        "(sign={{sign_flag}})(p))";
+        "opCode = \"{{op_code}}\")"
+        "(sign={{sign_flag}}))";
     LuaTemplater ins_template;
 
     // Get Instruction Type
@@ -1002,7 +1002,7 @@ void DataflowGeneratorPass::PrintBranchIns(Instruction &Ins) {
     string ins_define =
         "  val {{ins_name}} = "
         "Module (new {{ins_type}}"
-        "(ID = {{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        "(ID = {{ins_id}}))";
     LuaTemplater ins_template;
 
     // Get Instruction Type
@@ -1029,7 +1029,7 @@ void DataflowGeneratorPass::PrintPHIIns(Instruction &Ins) {
         "  val {{ins_name}} = "
         "Module (new {{ins_type}}"
         "(NumInputs = {{phi_in}}, NumOuts = {{phi_out}}"
-        ", ID = {{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        ", ID = {{ins_id}}))";
     LuaTemplater ins_template;
 
     // Get Instruction Type
@@ -1066,9 +1066,9 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
             "  val {{ins_name}} = "
             "Module (new GepOneNode"
             "(NumOuts = {{ins_out}}, "
-            "ID = {{ins_id}}, Desc = \"{{ins_name}}\")"
+            "ID = {{ins_id}})"
             "(numByte1 = {{num_byte}})"
-            "(p))";
+            ")";
         ins_template.set("ins_name", instruction_info[&Ins].name);
         ins_template.set("ins_out", static_cast<int>(countInsUse(Ins)));
         ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
@@ -1088,10 +1088,9 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
             "  val {{ins_name}} = "
             "Module (new GepTwoNode"
             "(NumOuts = {{ins_out}}, "
-            "ID = {{ins_id}}, Desc = \"{{ins_name}}\")"
+            "ID = {{ins_id}})"
             "(numByte1 = {{num_byte1}}, "
-            "numByte2 = {{num_byte2}})"
-            "(p))";
+            "numByte2 = {{num_byte2}}))";
         ins_template.set("ins_name", instruction_info[&Ins].name);
         ins_template.set("ins_out", static_cast<int>(countInsUse(Ins)));
         ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
@@ -1158,7 +1157,7 @@ void DataflowGeneratorPass::PrintLoadIns(Instruction &Ins) {
         "  val {{ins_name}} = "
         "Module(new UnTypLoad(NumPredOps={{num_pred}}, "
         "NumSuccOps={{num_succ}}, "
-        "NumOuts={{num_out}},ID={{ins_id}},RouteID={{route_id}},Desc=\"{{ins_name}}\"))";
+        "NumOuts={{num_out}},ID={{ins_id}},RouteID={{route_id}}))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("num_pred", static_cast<int>(mem_pred[&Ins].size()));
@@ -1195,7 +1194,7 @@ void DataflowGeneratorPass::PrintStoreIns(Instruction &Ins) {
         "  val {{ins_name}} = "
         "Module(new UnTypStore(NumPredOps={{num_pred}}, "
         "NumSuccOps={{num_succ}}, "
-        "NumOuts={{num_out}},ID={{ins_id}},RouteID={{route_id}},Desc=\"{{ins_name}}\"))";
+        "NumOuts={{num_out}},ID={{ins_id}},RouteID={{route_id}}))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("num_pred", static_cast<int>(mem_pred[&Ins].size()));
@@ -1293,7 +1292,7 @@ void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new RetNode(NumPredIn=1, retTypes=List(32), ID={{ins_id}}, Desc=\"{{ins_name}}\"))";
+        "Module(new RetNode(NumPredIn=1, retTypes=List(32), ID={{ins_id}}))";
 
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
@@ -1356,7 +1355,7 @@ void DataflowGeneratorPass::PrintCallIns(Instruction &Ins) {
       final_command.append(ins_template.render(command));
     }
     final_command.pop_back();
-    command = "),retTypes=List(32), Desc=\"{{ins_name}}\")(p))";
+    command = "),retTypes=List(32))(p))";
     final_command.append(ins_template.render(command));
 
     string result = ins_template.render(final_command);
@@ -1376,7 +1375,7 @@ void DataflowGeneratorPass::PrintDetachIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Detach(ID = {{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        "Module(new Detach(ID = {{ins_id}}))";
     //    "Module(new Detach(ID = {{ins_id}}, ReqBundle = {{req_bundle}}, "
     //            "RespBundle = {{resp_bundle}})(p))";
 
@@ -1402,7 +1401,7 @@ void DataflowGeneratorPass::PrintReattachIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Reattach(NumPredIn={{ctl_in}}, ID={{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        "Module(new Reattach(NumPredIn={{ctl_in}}, ID={{ins_id}}))";
 
     // TODO - interface numbers should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
@@ -1425,7 +1424,7 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Sync(ID = {{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        "Module(new Sync(ID = {{ins_id}}))";
 
     // TODO - num_incr, num_decr, max_count should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
@@ -1499,7 +1498,7 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
             "  val {{bb_name}} = "
             "Module(new BasicBlockNoMaskNode"
             "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, "
-            "BID = {{bb_id}}, Desc = \"{{bb_name}}\")(p))";
+            "BID = {{bb_id}}))";
 
         bb_template.set("bb_name", basic_block_info[&BB].name);
 
@@ -1522,7 +1521,7 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
             "Module(new BasicBlockNode"
             "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, NumPhi = "
             "{{phi_num}}, "
-            "BID = {{bb_id}}, Desc = \"{{bb_name}}\")(p))";
+            "BID = {{bb_id}}))";
         LuaTemplater bb_template;
 
         bb_template.set("bb_name", basic_block_info[&BB].name);
@@ -1552,7 +1551,7 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB, Loop &L) {
             "  val {{bb_name}} = "
             "Module(new BasicBlockNoMaskNode"
             "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, "
-            "BID = {{bb_id}}, Desc = \"{{bb_name}}\")(p))";
+            "BID = {{bb_id}}))";
 
         bb_template.set("bb_name", basic_block_info[&BB].name);
 
@@ -1576,7 +1575,7 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB, Loop &L) {
             "Module(new BasicBlockNode"
             "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, NumPhi = "
             "{{phi_num}}, "
-            "BID = {{bb_id}}, Desc = \"{{bb_name}}\")(p))";
+            "BID = {{bb_id}}))";
         LuaTemplater bb_template;
 
         bb_template.set("bb_name", basic_block_info[&BB].name);
@@ -1719,7 +1718,7 @@ void DataflowGeneratorPass::HelperPrintBasicBlockPredicate() {
 
     LuaTemplater bb_template;
 
-    string ground_entry = "  {{bb_name}}.io.predicateIn(0) <> InputSplitter.io.Out.enable\n";
+    string ground_entry = "  {{bb_name}}.io.predicateIn <> InputSplitter.io.Out.enable\n";
     auto find_bb = basic_block_info.find(entry_bb);
     if (find_bb == basic_block_info.end())
         assert(!"COULDNT'T FIND THE BASICBLOCK INFORMATION");
@@ -2933,9 +2932,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring return instruction\n";
                 command = "";
                 command =
-                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
-                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
-                    "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
+                    "  {{ins_name}}.io.predicateIn.bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn.bits.taskID := 0.U\n"
+                    "  {{ins_name}}.io.predicateIn.valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := "
                     "{{value}}.U\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := "
@@ -3302,9 +3301,9 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 // If your function is VOID
                 LuaTemplater ins_template;
                 string command =
-                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
-                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
-                    "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
+                    "  {{ins_name}}.io.predicateIn.bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn.bits.taskID := 0.U\n"
+                    "  {{ins_name}}.io.predicateIn.valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := 1.U\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").valid := true.B\n"
