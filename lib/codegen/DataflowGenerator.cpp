@@ -1373,7 +1373,7 @@ void DataflowGeneratorPass::PrintCallIns(Instruction &Ins) {
         final_command.append(ins_template.render(command));
     }
     final_command.pop_back();
-    command = "),retTypes=List(32))(p))";
+    command = "),retTypes=List(32)))";
     final_command.append(ins_template.render(command));
 
     string result = ins_template.render(final_command);
@@ -2955,12 +2955,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "true.B\n"
                         "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
                         "  {{ins_name}}.io.predicateIn(0).valid := true.B\n\n"
-                        "  {{loop_name}}_liveOut_{{loop_index}}.io.InData"
+                        "  {{loop_name}}_LiveOut_{{loop_index}}.io.InData"
                         " <> "
                         "  {{operand_name}}.io.Out"
                         "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                         "  {{ins_name}}.io.In.data(\"field0\") <> "
-                        "{{loop_name}}_liveOut_{{loop_index}}.io.Out"
+                        "{{loop_name}}_LiveOut_{{loop_index}}.io.Out"
                         "(0)\n"
                         "  io.out <> {{ins_name}}.io.Out\n";
                     //"{{operand_name}}.io.Out"
@@ -3009,9 +3009,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 comment = "  // Wiring return instruction\n";
                 command = "";
                 command =
-                    "  {{ins_name}}.io.predicateIn.bits.control := true.B\n"
-                    "  {{ins_name}}.io.predicateIn.bits.taskID := 0.U\n"
-                    "  {{ins_name}}.io.predicateIn.valid := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
+                    "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := "
                     "{{value}}.U\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := "
@@ -3265,7 +3265,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "  io.{{ins_name}}_out <> "
                     "{{ins_name}}.io.callOut\n"
                     "  {{ins_name}}.io.retIn <> "
-                    "io.{{ins_name}}_in\n";
+                    "io.{{ins_name}}_in\n"
+                    "  {{ins_name}}.io.Out.enable.ready := true.B // Manual fix";
+
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 printCode(comment + ins_template.render(command));
                 if (target_loop != nullptr) {
@@ -3508,7 +3510,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             uint32_t lo_index = 0;
             for (auto li : this->loop_liveouts[loop]) {
                 string ex_define =
-                    "  {{loop_name}}_liveOut_{{en_index}}.io.enable <> "
+                    "  {{loop_name}}_LiveOut_{{en_index}}.io.enable <> "
                     "{{bb_name}}.io.Out({{con_index}})";
                 LuaTemplater ex_template;
 
