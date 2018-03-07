@@ -1425,9 +1425,9 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Sync(ID = {{ins_id}}, Desc = \"{{ins_name}}\")(p))";
+        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1, Desc = \"{{ins_name}}\")(p))";
 
-    // TODO - num_incr, num_decr, max_count should be set properly
+    // TODO - NumInc, NumDec, NumOuts should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
     ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
 
@@ -2613,16 +2613,29 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 command =
                     // TODO fix the Out(0) index
-                    "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out(0)\n"
+                    "  {{ins_name}}.io.GepAddr <> "
+                        "{{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n";
-
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("operand_name",
-                                 instruction_info[operand_ins].name);
-
+                ins_template.set(
+                  "operand_name",
+                  instruction_info[dyn_cast<llvm::Instruction>(
+                      ins.getOperand(c))]
+                      .name);
+//                    "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out(0)\n"
+//                    "  {{ins_name}}.io.memResp <> "
+//                    "CacheMem.io.ReadOut({{ins_index}})\n"
+//                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
+//                    "{{ins_name}}.io.memReq\n";
+//
+//                ins_template.set("ins_name", instruction_info[&ins].name);
+//                ins_template.set("operand_name",
+//                                 instruction_info[operand_ins].name);
+//
             } else {
                 ins.dump();
                 assert(!"Wrong load input");
@@ -2867,7 +2880,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
                         "true.B\n"
                         "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
-                        "true.B\n\n"
+                        "true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.valid          := "
+                            "true.B\n\n"
                         "  // Connecting Alloca to Stack\n";
 
                     // Connectin Alloca to StackPointer
