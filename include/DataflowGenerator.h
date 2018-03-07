@@ -104,6 +104,8 @@ class DataflowGeneratorPass : public llvm::ModulePass {
     // Set of loops header basicblock
     std::map<BasicBlock *, Loop *> loop_header_bb;
 
+    std::map<BasicBlock *, Loop *> loop_end_bb;
+
     std::map<llvm::Value *, uint32_t> ins_loop_header_idx;
     std::map<llvm::Value *, uint32_t> ins_loop_end_idx;
 

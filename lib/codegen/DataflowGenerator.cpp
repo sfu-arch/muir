@@ -56,6 +56,17 @@ static std::map<BasicBlock *, Loop *> getBBHeader(LoopInfo &LI) {
     return loop_header_bb;
 }
 
+static std::map<BasicBlock *, Loop *> getBBEnd(LoopInfo &LI) {
+    std::map<BasicBlock *, Loop *> loop_end_bb;
+    // Getting loop header basic blocks
+    for (auto &L : getLoops(LI)) {
+        L->getLoopLatch()->dump();
+        // loop_header_bb[L->getLoopLatch()] = L;
+    }
+
+    return loop_end_bb;
+}
+
 static string getBaseName(string Path) {
     auto Idx = Path.find_last_of('/');
     return Idx == string::npos ? Path : Path.substr(Idx + 1);
@@ -357,7 +368,10 @@ void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
 }
 
 void DataflowGeneratorPass::FillLoopHeader(llvm::LoopInfo &LI) {
-    for (auto &L : getLoops(LI)) this->loop_header_bb[L->getHeader()] = L;
+    for (auto &L : getLoops(LI)) {
+        this->loop_header_bb[L->getHeader()] = L;
+        this->loop_end_bb[L->getExitBlock()] = L;
+    }
 }
 
 /**
@@ -841,9 +855,10 @@ void DataflowGeneratorPass::HelperPrintBBInit(Function &F) {
     printCode(comment);
 
     for (auto &BB : F) {
-        if (this->loop_header_bb.count(&BB))
+        // if (this->loop_header_bb.count(&BB))
+        if (this->loop_end_bb.count(&BB))
             // If the basicblock is loop header
-            PrintBasicBlockInit(BB, *loop_header_bb[&BB]);
+            PrintBasicBlockInit(BB, *loop_end_bb[&BB]);
         else
             PrintBasicBlockInit(BB);
     }
@@ -879,21 +894,21 @@ void DataflowGeneratorPass::HelperPrintInstInit(Function &F) {
         // is expand node
 
         // print exapand node
-        if (loop_header_bb.count(&BB)) {
-            string ex_define =
-                "  val {{bb_name}}_expand = "
-                "Module(new ExpandNode(NumOuts={{num_out}}, ID=0)(new "
-                "ControlBundle))\n";
-            LuaTemplater ex_template;
+        // if (loop_header_bb.count(&BB)) {
+        // string ex_define =
+        //"  val {{bb_name}}_expand = "
+        //"Module(new ExpandNode(NumOuts={{num_out}}, ID=0)(new "
+        //"ControlBundle))\n";
+        // LuaTemplater ex_template;
 
-            auto &loop = loop_header_bb[&BB];
-            ex_template.set("bb_name", basic_block_info[&BB].name);
-            ex_template.set(
-                "num_out",
-                static_cast<int>(this->loop_liveins[loop].size() + 1));
-            printCode(ex_template.render(ex_define));
-        }
-        printCode("\n");
+        // auto &loop = loop_header_bb[&BB];
+        // ex_template.set("bb_name", basic_block_info[&BB].name);
+        // ex_template.set(
+        //"num_out",
+        // static_cast<int>(this->loop_liveins[loop].size() + 1));
+        // printCode(ex_template.render(ex_define));
+        //}
+        // printCode("\n");
     }
     printCode("\n");
 }
@@ -1518,6 +1533,23 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB) {
 
         result = bb_template.render(bb_define);
 
+    } else if (loop_header_bb.count(&BB)) {
+        bb_define =
+            "  val {{bb_name}} = "
+            "Module(new BasicBlockLoopHeadNode"
+            "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, NumPhi = "
+            "{{phi_num}}, "
+            "BID = {{bb_id}}))";
+        LuaTemplater bb_template;
+
+        bb_template.set("bb_name", basic_block_info[&BB].name);
+        bb_template.set("num_target", static_cast<int>(countPred(BB)));
+        bb_template.set("num_ins", static_cast<int>(BB.getInstList().size()));
+        bb_template.set("phi_num", static_cast<int>(phi_c));
+        bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
+
+        result = bb_template.render(bb_define);
+
     } else {
         bb_define =
             "  val {{bb_name}} = "
@@ -1550,7 +1582,6 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB, Loop &L) {
     if (phi_c == 0) {
         LuaTemplater bb_template;
         bb_define =
-            "  // The basicblock is a loop header"
             "  val {{bb_name}} = "
             "Module(new BasicBlockNoMaskNode"
             "(NumInputs = {{num_target}}, NumOuts = {{num_ins}}, "
@@ -1563,11 +1594,10 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB, Loop &L) {
         else
             bb_template.set("num_target", static_cast<int>(countPred(BB)));
 
-        // NOTE: plus 1 because we would have one extra expand node for the last
-        // phi node
         bb_template.set("num_ins",
                         static_cast<int>(BB.getInstList().size() +
-                                         this->loop_liveins[&L].size() + 1));
+                                         this->loop_liveouts[&L].size() +
+                                         this->loop_liveins[&L].size()));
         bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
 
         result = bb_template.render(bb_define);
@@ -1588,7 +1618,8 @@ void DataflowGeneratorPass::PrintBasicBlockInit(BasicBlock &BB, Loop &L) {
         // phi node
         bb_template.set("num_ins",
                         static_cast<int>(BB.getInstList().size() +
-                                         this->loop_liveins[&L].size() + 1));
+                                         this->loop_liveins[&L].size() +
+                                         this->loop_liveouts[&L].size()));
         bb_template.set("phi_num", static_cast<int>(phi_c));
         bb_template.set("bb_id", static_cast<int>(basic_block_info[&BB].id));
 
@@ -1772,45 +1803,43 @@ void DataflowGeneratorPass::PrintBranchBasicBlockCon(Instruction &ins) {
     LuaTemplater ins_template;
 
     for (uint32_t i = 0; i < branch_ins->getNumSuccessors(); i++) {
-        if (loop_header_bb.count(ins.getParent())) {
-            auto I = ins.getParent()->end();
-            if (I == ins.getParent()->begin()) assert(!"WRONG!");
-            // Check wether it's the last instruction
-            if (&ins == &*--I) {
-                if (i == 1) {
-                    string comment =
-                        "  //Connecting {{ins_name}} to {{basic_block}}";
-                    string command =
-                        "  "
-                        "{{parent_bb}}_expand.io.InData <> "
-                        "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{"
-                        "basic_block}"
-                        "}\")"
-                        ")\n"
-                        "  "
-                        "{{basic_block}}.io.predicateIn(param.{{basic_block}}_"
-                        "pred(\"{{"
-                        "ins_"
-                        "name}}\"))"
-                        " <> {{parent_bb}}_expand.io.Out(0)\n\n";
+        // if (loop_header_bb.count(ins.getParent())) {
+        // auto I = ins.getParent()->end();
+        // if (I == ins.getParent()->begin()) assert(!"WRONG!");
+        //// Check wether it's the last instruction
+        // if (&ins == &*--I) {
+        // if (i == 1) {
+        // string comment =
+        //"  //Connecting {{ins_name}} to {{basic_block}}";
+        // string command =
+        //"  "
+        //"{{basic_block}}.io.predicateIn(param.{{basic_block}}_"
+        //"pred(\"{{"
+        //"ins_"
+        //"name}}\"))"
+        //" <> "
+        //"{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{"
+        //"basic_block}"
+        //"}\")"
+        //")\n\n";
 
-                    ins_template.set("ins_name", instruction_info[&ins].name);
-                    ins_template.set(
-                        "basic_block",
-                        basic_block_info[branch_ins->getSuccessor(i)].name);
-                    ins_template.set(
-                        "parent_bb",
-                        basic_block_info[branch_ins->getParent()].name);
+        // ins_template.set("ins_name", instruction_info[&ins].name);
+        // ins_template.set(
+        //"basic_block",
+        // basic_block_info[branch_ins->getSuccessor(i)].name);
+        // ins_template.set(
+        //"parent_bb",
+        // basic_block_info[branch_ins->getParent()].name);
 
-                    string result = ins_template.render(comment);
-                    printCode(result);
+        // string result = ins_template.render(comment);
+        // printCode(result);
 
-                    result = ins_template.render(command);
-                    printCode(result);
-                    continue;
-                }
-            }
-        }
+        // result = ins_template.render(command);
+        // printCode(result);
+        // continue;
+        //}
+        //}
+        //}
 
         auto tmp_bb = branch_ins->getSuccessor(i);
         auto phi_c = CountPhiNode(*tmp_bb);
@@ -1947,12 +1976,6 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             [&operand, &ins](const pair<Value *, Value *> &edge) {
                 return ((edge.second == &ins) && (edge.first == operand));
             });
-
-        // if (loop_edge != this->LoopEdges.end()) {
-        // errs() << "Loop:\n";
-        // loop_edge->first->dump();
-        // loop_edge->second->dump();
-        //}
 
         /**
          * If we find the edge in the container it means that
@@ -2922,7 +2945,41 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // Check whether Ret instruction return result
             // dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c));
             //
-            if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
+            if (target_loop != nullptr) {
+                auto Loc = target_loop->getStartLoc();
+                if (target_loop->contains(
+                        dyn_cast<Instruction>(loop_edge->first))) {
+                    // LIVOUT
+                    command =
+                        "  {{ins_name}}.io.predicateIn(0).bits.control := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
+                        "  {{ins_name}}.io.predicateIn(0).valid := true.B\n\n"
+                        "  {{loop_name}}_liveOut_{{loop_index}}.io.InData"
+                        " <> "
+                        "  {{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
+                        "  {{ins_name}}.io.In.data(\"field0\") <> "
+                        "{{loop_name}}_liveOut_{{loop_index}}.io.Out"
+                        "(0)\n"
+                        "  io.out <> {{ins_name}}.io.Out\n";
+                    //"{{operand_name}}.io.Out"
+                    //"(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set(
+                        "operand_name",
+                        instruction_info[dyn_cast<llvm::Instruction>(
+                                             ins.getOperand(c))]
+                            .name);
+                    ins_template.set("loop_name",
+                                     "loop_L_" + std::to_string(Loc.getLine()));
+                    ins_template.set(
+                        "loop_index",
+                        static_cast<int>(this->ins_loop_end_idx[&ins]));
+
+                    printCode(comment + ins_template.render(command) + "\n");
+                }
+            } else if (dyn_cast<llvm::Instruction>(ins.getOperand(c))) {
                 // First get the instruction
                 comment = "  // Wiring return instruction\n";
                 command = "";
@@ -3407,27 +3464,27 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             }
         }
 
-        if (loop_header_bb.count(&BB)) {
-            string ex_define =
-                "  {{bb_name}}_expand.io.enable <> "
-                "{{bb_name}}.io.Out({{last_index}})\n";
-            LuaTemplater ex_template;
+        // if (loop_header_bb.count(&BB)) {
+        if (loop_end_bb.count(&BB)) {
+            // string ex_define =
+            //"  {{bb_name}}_expand.io.enable <> "
+            //"{{bb_name}}.io.Out({{last_index}})\n";
+            // LuaTemplater ex_template;
 
-            auto &loop = loop_header_bb[&BB];
-            // Get Instruction Type
-            ex_template.set("bb_name", basic_block_info[&BB].name);
-            ex_template.set("last_index",
-                            static_cast<int>(BB.getInstList().size() +
-                                             this->loop_liveins[loop].size()));
+            //// Get Instruction Type
+            // ex_template.set("bb_name", basic_block_info[&BB].name);
+            // ex_template.set("last_index",
+            // static_cast<int>(BB.getInstList().size() +
+            // this->loop_liveins[loop].size()));
 
-            printCode(ex_template.render(ex_define));
+            // printCode(ex_template.render(ex_define));
 
+            auto &loop = loop_end_bb[&BB];
             // Connecting enable signal for loop headers
             uint32_t ll_index = 0;
             auto Loc = loop->getStartLoc();
             for (auto li : this->loop_liveins[loop]) {
                 string ex_define =
-                    //"  {{loop_name}}_start.io.enableSignal({{en_index}}) <> "
                     "  {{loop_name}}_liveIN_{{en_index}}.io.enable <> "
                     "{{bb_name}}.io.Out({{con_index}})";
                 LuaTemplater ex_template;
@@ -3446,27 +3503,26 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
             }
 
             printCode("");
+
             // Connecting enable signal for loop headers
-            ll_index = 0;
-            for (auto li : this->loop_liveins[loop]) {
-                LuaTemplater ex_template;
+            uint32_t lo_index = 0;
+            for (auto li : this->loop_liveouts[loop]) {
                 string ex_define =
-                    //"  {{loop_name}}_start.io.Finish({{en_index}}) <> "
-                    "  {{loop_name}}_liveIN_{{en_index}}.io.Finish <> "
-                    "{{bb_name}}_expand.io.Out({{label_index}})";
+                    "  {{loop_name}}_liveOut_{{en_index}}.io.enable <> "
+                    "{{bb_name}}.io.Out({{con_index}})";
+                LuaTemplater ex_template;
 
                 ex_template.set("loop_name",
                                 "loop_L_" + std::to_string(Loc.getLine()));
                 ex_template.set("bb_name", basic_block_info[&BB].name);
-                ex_template.set(
-                    "con_index",
-                    static_cast<int>(BB.getInstList().size() + ll_index));
-                ex_template.set("en_index", static_cast<int>(ll_index));
-                ex_template.set("label_index", static_cast<int>(ll_index + 1));
+                ex_template.set("con_index",
+                                static_cast<int>(BB.getInstList().size() +
+                                                 ll_index + lo_index));
+                ex_template.set("en_index", static_cast<int>(lo_index));
 
                 printCode(ex_template.render(ex_define));
 
-                ll_index++;
+                lo_index++;
             }
 
             printCode("");
@@ -3565,8 +3621,14 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                                 SetVector<BasicBlock *>(L->blocks().begin(),
                                                         L->blocks().end()),
                                 U)) {
-                            // this->loop_liveouts[L].insert(U);
-                            // this->LoopEdges.insert(std::make_pair(&I, U));
+                            this->loop_liveouts[L].insert(U);
+                            this->LoopEdges.insert(std::make_pair(&I, U));
+
+                            if (loop_liveouts_count[L].find(U) !=
+                                loop_liveouts_count[L].end())
+                                loop_liveouts_count[L][U]++;
+                            else
+                                loop_liveouts_count[L][U] = 1;
                         }
                     }
                 }
@@ -3596,33 +3658,35 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         static_cast<int>(loop_liveins_count[L][livein]));
 
                     printCode(ins_template.render(loop_define));
-                    // index++;
                 }
             }
 
+            printCode("");
+
             if (this->loop_liveouts[L].size()) {
                 // Dumping Loop end node
-                // TODO Fix number of inputs and outputs for loop head
-                // TODO Do we need output anymore?
-                string loop_define =
-                    "  val {{loop_name}}_end   = "
-                    "Module(new LoopEnd(NumInputs = {{num_inputs}}, NumOuts "
-                    "= "
-                    "{{num_outputs}}, ID "
-                    "= 0)(p))\n";
+                uint32_t index = 0;
+                for (auto &liveout : this->loop_liveouts[L]) {
+                    string loop_define =
+                        "  val {{loop_name}}_LiveOut_{{index}} = "
+                        "Module(new LiveOutNode(NumOuts = {{num_outputs}}, "
+                        "ID "
+                        "= 0))";
 
-                ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(Loc.getLine()));
-                ins_template.set(
-                    "num_inputs",
-                    static_cast<int>(this->loop_liveouts[L].size()));
+                    ins_template.set("loop_name",
+                                     "loop_L_" + std::to_string(Loc.getLine()));
+                    ins_template.set("index", static_cast<int>(index++));
+                    ins_template.set(
+                        "num_inputs",
+                        static_cast<int>(this->loop_liveouts[L].size()));
 
-                // TODO Change it to an array of outputs
-                ins_template.set(
-                    "num_outputs",
-                    static_cast<int>(this->loop_liveouts[L].size()));
+                    // TODO Change it to an array of outputs
+                    ins_template.set(
+                        "num_outputs",
+                        static_cast<int>(this->loop_liveouts[L].size()));
 
-                printCode(ins_template.render(loop_define));
+                    printCode(ins_template.render(loop_define));
+                }
             }
         }
     }
@@ -3778,49 +3842,52 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
                 }
             }
 
-            if (loop_live_out != this->loop_liveouts.end()) {
-                uint32_t live_index = 0;
-                for (auto p : loop_live_out->second) {
-                    for (auto search_elem : LoopEdges) {
-                        if (p == search_elem.second) {
-                            auto target = search_elem.second;
-                            auto target_ins =
-                                dyn_cast<llvm::Instruction>(target);
+            //if (loop_live_out != this->loop_liveouts.end()) {
+                //uint32_t live_index = 0;
+                //for (auto p : loop_live_out->second) {
+                    //for (auto search_elem : LoopEdges) {
+                        //if (p == search_elem.second) {
+                            //auto target = search_elem.second;
+                            //auto target_ins =
+                                //dyn_cast<llvm::Instruction>(target);
 
-                            // Saving the index of loop header of corresponding
-                            // instruction
-                            if (target_ins)
-                                this->ins_loop_end_idx[target] = live_index;
-                            // TODO Fix Me: Currently hard wired to io.Out(0).
-                            // Shouldn't it have its own output?
-                            string live_out_conn =
-                                "  "
-                                "{{loop_name}}_end.io.inputArg({{out_index}}) "
-                                "<> "
-                                "{{ins_name}}.io.Out(0)\n";
-                            //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
-                            //"name}}\"))\n";
-                            //"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
+                            //// Saving the index of loop header of corresponding
+                            //// instruction
+                            //if (target_ins)
+                                //this->ins_loop_end_idx[target] = live_index;
+                            //// TODO Fix Me: Currently hard wired to io.Out(0).
+                            //// Shouldn't it have its own output?
+                            //string live_out_conn =
+                                //"  "
+                                //"//{{loop_name}}_LiveOut_{{lo_index}}.io.InData "
+                                //"<> "
+                                //"{{ins_name}}.io.Out(0)\n";
+                            ////"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
+                            ////"name}}\"))\n";
+                            ////"{{ins_name}}.io.Out(param.m_10_in(\"{{ins_"
 
-                            ins_template.set(
-                                "loop_name",
-                                "loop_L_" + std::to_string(Loc.getLine()));
+                            //ins_template.set(
+                                //"loop_name",
+                                //"loop_L_" + std::to_string(Loc.getLine()));
 
-                            ins_template.set(
-                                "ins_name",
-                                instruction_info[dyn_cast<llvm::Instruction>(
-                                                     search_elem.first)]
-                                    .name);
-                            ins_template.set("out_index",
-                                             static_cast<int>(live_index));
+                            //ins_template.set("lo_index",
+                                             //static_cast<int>(live_index));
 
-                            printCode(ins_template.render(live_out_conn));
+                            //ins_template.set(
+                                //"ins_name",
+                                //instruction_info[dyn_cast<llvm::Instruction>(
+                                                     //search_elem.first)]
+                                    //.name);
+                            //ins_template.set("out_index",
+                                             //static_cast<int>(live_index));
 
-                            live_index++;
-                        }
-                    }
-                }
-            }
+                            //printCode(ins_template.render(live_out_conn));
+
+                            //live_index++;
+                        //}
+                    //}
+                //}
+            //}
         }
     }
 }
