@@ -329,7 +329,7 @@ static void codeGenerator(Module &m){
     pm.add(llvm::createAAResultsWrapperPass());
 #ifndef TAPIR
     // Inserts critical edge block after detach
-    pm.add(createBreakCriticalEdgesPass());
+    //pm.add(createBreakCriticalEdgesPass());
 #endif
     pm.add(createLoopSimplifyPass());
     pm.add(new DominatorTreeWrapperPass());

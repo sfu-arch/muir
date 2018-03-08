@@ -1,11 +1,17 @@
 #include <stdio.h>
 
+unsigned test12_inner(unsigned j) {
+  unsigned foo = j;
+  for(unsigned k = 0; k < 5; ++k){
+     foo++;
+  }
+  return foo;
+}
+
 unsigned test12(unsigned j) {
   unsigned foo = j;
   for (unsigned i = 0; i < 5; ++i) {
-      for(unsigned k = 0; k < 5; ++k){
-        foo++;
-      }
+    foo += test12_inner(foo);
   }
   return foo;
 }
