@@ -1442,8 +1442,7 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1, "
-        "Desc = \"{{ins_name}}\")(p))";
+        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1)))";
 
     // TODO - NumInc, NumDec, NumOuts should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
@@ -1886,30 +1885,45 @@ void DataflowGeneratorPass::PrintBranchBasicBlockCon(Instruction &ins) {
  * @param ins input branch instruction
  */
 void DataflowGeneratorPass::PrintDetachBasicBlockCon(Instruction &ins) {
-    auto detach_ins = dyn_cast<llvm::DetachInst>(&ins);
+  auto detach_ins = dyn_cast<llvm::DetachInst>(&ins);
 
-    LuaTemplater ins_template;
+  LuaTemplater ins_template;
 
-    for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
-        string comment = "  //Connecting {{ins_name}} to {{basic_block}}";
-        string command =
-            "  "
-            "{{basic_block}}.io.predicateIn(param.{{basic_block}}_pred(\"{{ins_"
-            "name}}\"))"
-            " <> "
-            "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}}\")"
-            ")\n\n";
+  for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
+    auto tmp_bb = detach_ins->getSuccessor(i);
+    auto phi_c = CountPhiNode(*tmp_bb);
+    string comment = "  //Connecting {{ins_name}} to {{basic_block}}";
+    string command = "";
+    if (phi_c == 0) {
+      command =
+          "  "
+              "{{basic_block}}.io.predicateIn"
+              " <> "
+              "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
+              "}\")"
+              ")\n\n";
 
-        ins_template.set("ins_name", instruction_info[&ins].name);
-        ins_template.set("basic_block",
-                         basic_block_info[detach_ins->getSuccessor(i)].name);
-
-        string result = ins_template.render(comment);
-        printCode(result);
-
-        result = ins_template.render(command);
-        printCode(result);
+    } else {
+      command =
+          "  "
+              "{{basic_block}}.io.predicateIn(param.{{basic_block}}_pred(\"{{"
+              "ins_"
+              "name}}\"))"
+              " <> "
+              "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
+              "}\")"
+              ")\n\n";
     }
+    ins_template.set("ins_name", instruction_info[&ins].name);
+    ins_template.set("basic_block",
+                     basic_block_info[detach_ins->getSuccessor(i)].name);
+
+    string result = ins_template.render(comment);
+    printCode(result);
+
+    result = ins_template.render(command);
+    printCode(result);
+  }
 }
 #endif
 void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
@@ -2655,7 +2669,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 command =
                     // TODO fix the Out(0) index
-                    "  {{ins_name}}.io.GepAddr <> {{operand_name}}.io.Out(0)\n"
+                    "  {{ins_name}}.io.{{ins_input}} <> "
+                        "{{operand_name}}.io.Out"
+                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n\n";
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  CacheMem.io.ReadIn({{ins_index}}) <> "
@@ -2909,6 +2925,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  {{ins_name}}.io.allocaInputIO.bits.predicate := "
                         "true.B\n"
                         "  {{ins_name}}.io.allocaInputIO.bits.valid     := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.allocaInputIO.valid          := "
                         "true.B\n\n"
                         "  // Connecting Alloca to Stack\n";
 
@@ -3406,9 +3424,9 @@ void DataflowGeneratorPass::HelperPrintInstructionDF(Function &F) {
                 // If your function is VOID
                 LuaTemplater ins_template;
                 string command =
-                    "  {{ins_name}}.io.predicateIn.bits.control := true.B\n"
-                    "  {{ins_name}}.io.predicateIn.bits.taskID := 0.U\n"
-                    "  {{ins_name}}.io.predicateIn.valid := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.control := true.B\n"
+                    "  {{ins_name}}.io.predicateIn(0).bits.taskID := 0.U\n"
+                    "  {{ins_name}}.io.predicateIn(0).valid := true.B\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.data := 1.U\n"
                     "  {{ins_name}}.io.In.data(\"field0\").bits.predicate := "
                     "true.B\n"
