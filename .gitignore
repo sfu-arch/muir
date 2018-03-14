@@ -1,6 +1,5 @@
 build/*
 build-tapir/*
-workload/*
 *.txt
 luacpptemplater/*
 *.swp
