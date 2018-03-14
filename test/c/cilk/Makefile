@@ -27,3 +27,15 @@ svg: $(SVG)
 
 clean:
 	rm -f *.bc *.ll *.dot *.scala *.svg *~
+
+# Notes
+# 
+# ~/amoeba/apala-generator/build/bin/xketch -fn-name=cilk_for_test05 cilk_for_test05.ll -o cilk_for_test05
+# llvm-dis final.bc
+# e final.ll (rename function)
+# opt final.ll -dce -mem2reg -dot-cfg -o cilk_for_test05a.bc
+# llvm-dis cilk_for_test05a.bc
+# May have to add "noinline" to functions in ll file 
+# ../../../build/bin/xketch -fn-name=cilk_for_test05 cilk_for_test05a.ll -o cilk_for_test05
+# ../../../build/bin/xketch -fn-name=cilk_for_test05_detach cilk_for_test05a.ll -o cilk_for_test05_detach
+# make svg
