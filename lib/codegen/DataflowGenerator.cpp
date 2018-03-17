@@ -1301,7 +1301,24 @@ void DataflowGeneratorPass::PrintZextIns(Instruction &Ins) {
 void DataflowGeneratorPass::PrintBitCastIns(Instruction &Ins) {
     // This stub is required because Tapir inserts spurious bitcast
     // instructions.
-    errs() << "BitCast found! Not supported so ignoring for now.\n";
+    errs() << "BitCast found!\n";
+    LuaTemplater ins_template;
+    string ins_define =
+        "  val {{ins_name}} = "
+        "Module(new BitCastNode(NumOuts={{num_out}}, ID={{ins_id}}))";
+
+    ins_template.set("ins_name", instruction_info[&Ins].name);
+    ins_template.set("ins_id", static_cast<int>(instruction_info[&Ins].id));
+    ins_template.set("num_out", static_cast<int>(Ins.getNumUses()));
+
+    string result = ins_template.render(ins_define);
+
+    // Printing each instruction
+    string init_test = "\n  //";
+    raw_string_ostream out(init_test);
+    out << Ins;
+    printCode(out.str() + "\n" + result + "\n");
+
 }
 
 void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
@@ -3491,9 +3508,9 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
                 ins_template.set("bb_name", basic_block_info[&BB].name);
                 printCode(ins_template.render(command));
 
-            } else if (InstructionTypeNode(ins) == TBitCast) {
-                // Ignore bitcasts for now
-                continue;
+            //} else if (InstructionTypeNode(ins) == TBitCast) {
+                 //Ignore bitcasts for now
+                //continue;
             } else {
                 command =
                     "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
