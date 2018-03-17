@@ -1444,7 +1444,7 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1)))";
+        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1))";
 
     // TODO - NumInc, NumDec, NumOuts should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
@@ -2750,7 +2750,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  // Wiring Store instruction to the function "
                         "argument\n";
                     command =
-                        "  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
+                        "  {{ins_name}}.io.inData <> InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
+                        //"  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
+                        //"InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      argument_info[op_arg].name);
