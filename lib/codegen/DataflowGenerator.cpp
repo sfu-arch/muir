@@ -368,9 +368,11 @@ void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
 }
 
 void DataflowGeneratorPass::FillLoopHeader(llvm::LoopInfo &LI) {
+    uint32_t index = 0;
     for (auto &L : getLoops(LI)) {
         this->loop_header_bb[L->getHeader()] = L;
         this->loop_end_bb[L->getExitBlock()] = L;
+        this->loop_index[L] = index++;
     }
 }
 
@@ -2025,7 +2027,12 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
             while (!order_loops.empty()) {
                 auto L = order_loops.top();
                 auto Loc = L->getStartLoc();
-                auto Filename = getBaseName(Loc->getFilename().str());
+                string Filename = string();
+
+                if(Loc)
+                    Filename = getBaseName(Loc->getFilename().str());
+                else
+                    Filename = "tmp_file_name";
 
                 if (L->contains(&ins)) {
                     target_loop = L;
@@ -2061,7 +2068,7 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
                     instruction_info[dyn_cast<llvm::Instruction>(op_ins)].name);
 
             ins_template.set("loop_name",
-                             "loop_L_" + std::to_string(Loc.getLine()));
+                             "loop_L_" + std::to_string(loop_index[target_loop]));
             ins_template.set("loop_index",
                              static_cast<int>(this->ins_loop_header_idx[&ins]));
 
@@ -2216,7 +2223,11 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
                 while (!order_loops.empty()) {
                     auto L = order_loops.top();
                     auto Loc = L->getStartLoc();
-                    auto Filename = getBaseName(Loc->getFilename().str());
+                    string Filename = string();
+                    if(Loc)
+                        Filename = getBaseName(Loc->getFilename().str());
+                    else
+                        Filename = "tmp_file_name";
 
                     if (dyn_cast<Argument>(loop_edge->first)) {
                         target_loop = L;
@@ -2237,7 +2248,7 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
         };
 
         auto target_loop = loop_detector(ins, this->LoopEdges, this->LI);
-        if (target_loop != nullptr) errs() << "SUCESS!\n";
+        //if (target_loop != nullptr) errs() << "SUCESS!\n";
     }
 }
 
@@ -2315,7 +2326,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             while (!order_loops.empty()) {
                 auto L = order_loops.top();
                 auto Loc = L->getStartLoc();
-                auto Filename = getBaseName(Loc->getFilename().str());
+                string Filename = string();
+
+                if(Loc)
+                    Filename = getBaseName(Loc->getFilename().str());
+                else
+                    Filename = "tmp_file_name";
 
                 if (dyn_cast<Argument>(loop_edge->first)) {
                     target_loop = L;
@@ -2362,7 +2378,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(Loc.getLine()));
+                                 "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -2495,7 +2511,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(Loc.getLine()));
+                                 "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -2601,7 +2617,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(Loc.getLine()));
+                                 "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -2991,7 +3007,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                              ins.getOperand(c))]
                             .name);
                     ins_template.set("loop_name",
-                                     "loop_L_" + std::to_string(Loc.getLine()));
+                                     "loop_L_" + std::to_string(loop_index[target_loop]));
                     ins_template.set(
                         "loop_index",
                         static_cast<int>(this->ins_loop_end_idx[&ins]));
@@ -3317,7 +3333,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                          instruction_info[&ins].name);
                         ins_template.set(
                             "loop_name",
-                            "loop_L_" + std::to_string(Loc.getLine()));
+                            "loop_L_" + std::to_string(loop_index[target_loop]));
                         ins_template.set(
                             "loop_index",
                             static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -3512,7 +3528,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
                 LuaTemplater ex_template;
 
                 ex_template.set("loop_name",
-                                "loop_L_" + std::to_string(Loc.getLine()));
+                                "loop_L_" + std::to_string(loop_index[loop]));
                 ex_template.set("bb_name", basic_block_info[&BB].name);
                 ex_template.set(
                     "con_index",
@@ -3535,7 +3551,7 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
                 LuaTemplater ex_template;
 
                 ex_template.set("loop_name",
-                                "loop_L_" + std::to_string(Loc.getLine()));
+                                "loop_L_" + std::to_string(loop_index[loop]));
                 ex_template.set("bb_name", basic_block_info[&BB].name);
                 ex_template.set("con_index",
                                 static_cast<int>(BB.getInstList().size() +
@@ -3589,7 +3605,13 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
         for (auto &L : getLoops(*LI)) {
             auto Loc = L->getStartLoc();
-            auto Filename = getBaseName(Loc->getFilename().str());
+            //assert(Loc && "Loop information are empty!");
+            //
+            string Filename = string();
+            if(Loc)
+                Filename = getBaseName(Loc->getFilename().str());
+            else
+                Filename = "tmp_file_name";
 
             for (auto B : L->blocks()) {
                 for (auto &I : *B) {
@@ -3668,7 +3690,8 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         "ID = 0))";
 
                     ins_template.set("loop_name",
-                                     "loop_L_" + std::to_string(Loc.getLine()));
+                                     "loop_L_" + std::to_string(loop_index[L]));
+                                     //"loop_L_" + std::to_string(Loc.getLine()));
 
                     // TODO Change it to an array of outputs
                     ins_template.set("idx", static_cast<int>(index++));
@@ -3696,7 +3719,7 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                         "= 0))";
 
                     ins_template.set("loop_name",
-                                     "loop_L_" + std::to_string(Loc.getLine()));
+                                     "loop_L_" + std::to_string(loop_index[L]));
                     ins_template.set("index", static_cast<int>(index++));
                     ins_template.set(
                         "num_inputs",
@@ -3710,6 +3733,7 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
                     printCode(ins_template.render(loop_define));
                 }
             }
+            printCode("");
         }
     }
 }
@@ -3796,7 +3820,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
 
                                 ins_template.set(
                                     "loop_name",
-                                    "loop_L_" + std::to_string(Loc.getLine()));
+                                    "loop_L_" + std::to_string(loop_index[L]));
                                 ins_template.set("arg_index",
                                                  static_cast<int>(live_index));
 
@@ -3836,7 +3860,7 @@ void DataflowGeneratorPass::PrintLoopRegister(Function &F) {
 
                                 ins_template.set(
                                     "loop_name",
-                                    "loop_L_" + std::to_string(Loc.getLine()));
+                                    "loop_L_" + std::to_string(loop_index[L]));
                                 ins_template.set("arg_index",
                                                  static_cast<int>(live_index));
 
