@@ -27,7 +27,7 @@ namespace codegen {
 char DataflowGeneratorPass::ID = 0;
 
 RegisterPass<DataflowGeneratorPass> X("codegen", "Generating chisel code");
-}
+}  // namespace codegen
 
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
@@ -506,7 +506,6 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                            i++) {
                           bb_branch[branch_ins->getSuccessor(i)].push_back(ins);
                       }
-
                   });
 
     // XXX NOTE:
@@ -577,7 +576,6 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                            i++) {
                           bb_detach[detach_ins->getSuccessor(i)].push_back(ins);
                       }
-
                   });
     for (auto bb_to_detach : bb_detach) {
         final_command = "";
@@ -1318,7 +1316,6 @@ void DataflowGeneratorPass::PrintBitCastIns(Instruction &Ins) {
     raw_string_ostream out(init_test);
     out << Ins;
     printCode(out.str() + "\n" + result + "\n");
-
 }
 
 void DataflowGeneratorPass::PrintRetIns(Instruction &Ins) {
@@ -1461,7 +1458,8 @@ void DataflowGeneratorPass::PrintSyncIns(Instruction &Ins) {
     LuaTemplater ins_template;
     string ins_define =
         "  val {{ins_name}} = "
-        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = 1))";
+        "Module(new Sync(ID = {{ins_id}}, NumOuts = 1, NumInc = 1, NumDec = "
+        "1))";
 
     // TODO - NumInc, NumDec, NumOuts should be set properly
     ins_template.set("ins_name", instruction_info[&Ins].name);
@@ -1904,45 +1902,45 @@ void DataflowGeneratorPass::PrintBranchBasicBlockCon(Instruction &ins) {
  * @param ins input branch instruction
  */
 void DataflowGeneratorPass::PrintDetachBasicBlockCon(Instruction &ins) {
-  auto detach_ins = dyn_cast<llvm::DetachInst>(&ins);
+    auto detach_ins = dyn_cast<llvm::DetachInst>(&ins);
 
-  LuaTemplater ins_template;
+    LuaTemplater ins_template;
 
-  for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
-    auto tmp_bb = detach_ins->getSuccessor(i);
-    auto phi_c = CountPhiNode(*tmp_bb);
-    string comment = "  //Connecting {{ins_name}} to {{basic_block}}";
-    string command = "";
-    if (phi_c == 0) {
-      command =
-          "  "
-              "{{basic_block}}.io.predicateIn"
-              " <> "
-              "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
-              "}\")"
-              ")\n\n";
+    for (uint32_t i = 0; i < detach_ins->getNumSuccessors(); i++) {
+        auto tmp_bb = detach_ins->getSuccessor(i);
+        auto phi_c = CountPhiNode(*tmp_bb);
+        string comment = "  //Connecting {{ins_name}} to {{basic_block}}";
+        string command = "";
+        if (phi_c == 0) {
+            command =
+                "  "
+                "{{basic_block}}.io.predicateIn"
+                " <> "
+                "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
+                "}\")"
+                ")\n\n";
 
-    } else {
-      command =
-          "  "
-              "{{basic_block}}.io.predicateIn(param.{{basic_block}}_pred(\"{{"
-              "ins_"
-              "name}}\"))"
-              " <> "
-              "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
-              "}\")"
-              ")\n\n";
+        } else {
+            command =
+                "  "
+                "{{basic_block}}.io.predicateIn(param.{{basic_block}}_pred(\"{{"
+                "ins_"
+                "name}}\"))"
+                " <> "
+                "{{ins_name}}.io.Out(param.{{ins_name}}_brn_bb(\"{{basic_block}"
+                "}\")"
+                ")\n\n";
+        }
+        ins_template.set("ins_name", instruction_info[&ins].name);
+        ins_template.set("basic_block",
+                         basic_block_info[detach_ins->getSuccessor(i)].name);
+
+        string result = ins_template.render(comment);
+        printCode(result);
+
+        result = ins_template.render(command);
+        printCode(result);
     }
-    ins_template.set("ins_name", instruction_info[&ins].name);
-    ins_template.set("basic_block",
-                     basic_block_info[detach_ins->getSuccessor(i)].name);
-
-    string result = ins_template.render(comment);
-    printCode(result);
-
-    result = ins_template.render(command);
-    printCode(result);
-  }
 }
 #endif
 void DataflowGeneratorPass::HelperPrintBasicBlockPhi() {
@@ -2046,7 +2044,7 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
                 auto Loc = L->getStartLoc();
                 string Filename = string();
 
-                if(Loc)
+                if (Loc)
                     Filename = getBaseName(Loc->getFilename().str());
                 else
                     Filename = "tmp_file_name";
@@ -2084,8 +2082,9 @@ void DataflowGeneratorPass::PrintPHICon(llvm::Instruction &ins) {
                     "operand_name",
                     instruction_info[dyn_cast<llvm::Instruction>(op_ins)].name);
 
-            ins_template.set("loop_name",
-                             "loop_L_" + std::to_string(loop_index[target_loop]));
+            ins_template.set(
+                "loop_name",
+                "loop_L_" + std::to_string(loop_index[target_loop]));
             ins_template.set("loop_index",
                              static_cast<int>(this->ins_loop_header_idx[&ins]));
 
@@ -2200,9 +2199,9 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
                                        auto loop_info) -> Loop * {
             Loop *target_loop = nullptr;
             /**
-                     * Check if the edge in LoopEdges
-                     * This edge count is the loop header
-                     */
+             * Check if the edge in LoopEdges
+             * This edge count is the loop header
+             */
             auto loop_edge = std::find_if(
                 LoopEdges.begin(), LoopEdges.end(),
                 [&operand, &ins](const pair<Value *, Value *> &edge) {
@@ -2241,7 +2240,7 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
                     auto L = order_loops.top();
                     auto Loc = L->getStartLoc();
                     string Filename = string();
-                    if(Loc)
+                    if (Loc)
                         Filename = getBaseName(Loc->getFilename().str());
                     else
                         Filename = "tmp_file_name";
@@ -2265,7 +2264,7 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
         };
 
         auto target_loop = loop_detector(ins, this->LoopEdges, this->LI);
-        //if (target_loop != nullptr) errs() << "SUCESS!\n";
+        // if (target_loop != nullptr) errs() << "SUCESS!\n";
     }
 }
 
@@ -2345,7 +2344,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 auto Loc = L->getStartLoc();
                 string Filename = string();
 
-                if(Loc)
+                if (Loc)
                     Filename = getBaseName(Loc->getFilename().str());
                 else
                     Filename = "tmp_file_name";
@@ -2394,8 +2393,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 //"{{loop_name}}_start.io.outputArg({{loop_index}})\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(loop_index[target_loop]));
+                ins_template.set(
+                    "loop_name",
+                    "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -2527,8 +2527,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 //"io.{{operand_name}}\n\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(loop_index[target_loop]));
+                ins_template.set(
+                    "loop_name",
+                    "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -2610,7 +2611,6 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
             // arguments
             auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
             auto bit_ins = dyn_cast<llvm::BitCastInst>(ins.getOperand(c));
-            auto foo = ins.getOperand(c);
             // If the input is function argument then it should get connect
             // to
             // Cache system
@@ -2626,18 +2626,30 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 command =
                     "  {{ins_name}}.io.GepAddr <>"
-                    " {{loop_name}}_start.io.outputArg({{loop_index}})\n"
+                    " {{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n"
                     "  {{ins_name}}.io.memResp <> "
                     "CacheMem.io.ReadOut({{ins_index}})\n"
                     "  CacheMem.io.ReadIn({{ins_index}}) <> "
                     "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
-                ins_template.set("loop_name",
-                                 "loop_L_" + std::to_string(loop_index[target_loop]));
+                ins_template.set(
+                    "loop_name",
+                    "loop_L_" + std::to_string(loop_index[target_loop]));
                 ins_template.set(
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
+
+                if (isa<Argument>(op_ins))
+                    ins_template.set("operand_name",
+                                     argument_info[op_arg].name);
+
+                else if (isa<Instruction>(op_ins))
+                    ins_template.set(
+                        "operand_name",
+                        instruction_info[dyn_cast<llvm::Instruction>(op_ins)]
+                            .name);
 
             } else if (tmp_find_arg != function_argument.end()) {
                 // First get the instruction
@@ -2703,12 +2715,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 command =
                     // TODO fix the Out(0) index
                     "  {{ins_name}}.io.{{ins_input}} <> "
-                        "{{operand_name}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n\n";
-                    "  {{ins_name}}.io.memResp <> "
-                    "CacheMem.io.ReadOut({{ins_index}})\n"
-                    "  CacheMem.io.ReadIn({{ins_index}}) <> "
-                    "{{ins_name}}.io.memReq\n";
+                    "{{operand_name}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n\n";
+                "  {{ins_name}}.io.memResp <> "
+                "CacheMem.io.ReadOut({{ins_index}})\n"
+                "  CacheMem.io.ReadIn({{ins_index}}) <> "
+                "{{ins_name}}.io.memReq\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
                 ins_template.set("operand_name",
@@ -2748,8 +2760,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
          * Print Store instructions
          */
         else if (ins_type == TStore) {
-            auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
             auto operand = ins.getOperand(c);
+            auto gep_ins = dyn_cast<llvm::GetElementPtrInst>(ins.getOperand(c));
+            auto operand_const = dyn_cast<llvm::ConstantInt>(ins.getOperand(c));
 
             // If the input is from function argument
             auto tmp_fun_arg = dyn_cast<llvm::Argument>(operand);
@@ -2767,15 +2780,12 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         "  // Wiring Store instruction to the function "
                         "argument\n";
                     command =
-                        "  {{ins_name}}.io.inData <> InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
-                        //"  {{ins_name}}.io.inData <> io.{{operand_name}}\n";
-                        //"InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
+                        "  {{ins_name}}.io.inData <> "
+                        "InputSplitter.io.Out.data(\"{{operand_name}}\")\n";
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      argument_info[op_arg].name);
-                }
-
-                else if (operand_global) {
+                } else if (operand_global) {
                     // TODO handel global values as well
                     comment = "  // Wiring Store instruction to global value\n";
                     command =
@@ -2784,9 +2794,21 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     ins_template.set("ins_name", instruction_info[&ins].name);
                     ins_template.set("operand_name",
                                      global_info[operand_global].name);
-                }
 
-                else {
+                } else if (operand_const) {
+                    comment = "  // Wiring constant instructions to store\n";
+                    command =
+                        "  {{ins_name}}.io.inData.bits.data := "
+                        "{{value}}.U\n"
+                        "  {{ins_name}}.io.inData.bits.predicate := "
+                        "true.B\n"
+                        "  {{ins_name}}.io.inData.valid := true.B\n";
+                    ins_template.set("ins_name", instruction_info[&ins].name);
+                    ins_template.set(
+                        "value",
+                        static_cast<int>(operand_const->getSExtValue()));
+
+                } else {
                     // If the store input comes from an instruction
                     comment =
                         "  // Wiring Store instruction to the parent "
@@ -3025,8 +3047,9 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                         instruction_info[dyn_cast<llvm::Instruction>(
                                              ins.getOperand(c))]
                             .name);
-                    ins_template.set("loop_name",
-                                     "loop_L_" + std::to_string(loop_index[target_loop]));
+                    ins_template.set(
+                        "loop_name",
+                        "loop_L_" + std::to_string(loop_index[target_loop]));
                     ins_template.set(
                         "loop_index",
                         static_cast<int>(this->ins_loop_end_idx[&ins]));
@@ -3352,7 +3375,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                          instruction_info[&ins].name);
                         ins_template.set(
                             "loop_name",
-                            "loop_L_" + std::to_string(loop_index[target_loop]));
+                            "loop_L_" +
+                                std::to_string(loop_index[target_loop]));
                         ins_template.set(
                             "loop_index",
                             static_cast<int>(this->ins_loop_header_idx[&ins]));
@@ -3508,9 +3532,9 @@ void DataflowGeneratorPass::PrintBasicBlockEnableInstruction(Function &F) {
                 ins_template.set("bb_name", basic_block_info[&BB].name);
                 printCode(ins_template.render(command));
 
-            //} else if (InstructionTypeNode(ins) == TBitCast) {
-                 //Ignore bitcasts for now
-                //continue;
+                //} else if (InstructionTypeNode(ins) == TBitCast) {
+                // Ignore bitcasts for now
+                // continue;
             } else {
                 command =
                     "  {{ins_name}}.io.enable <> {{bb_name}}.io.Out"
@@ -3624,10 +3648,10 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
         for (auto &L : getLoops(*LI)) {
             auto Loc = L->getStartLoc();
-            //assert(Loc && "Loop information are empty!");
+            // assert(Loc && "Loop information are empty!");
             //
             string Filename = string();
-            if(Loc)
+            if (Loc)
                 Filename = getBaseName(Loc->getFilename().str());
             else
                 Filename = "tmp_file_name";
@@ -3710,7 +3734,7 @@ void DataflowGeneratorPass::PrintLoopHeader(Function &F) {
 
                     ins_template.set("loop_name",
                                      "loop_L_" + std::to_string(loop_index[L]));
-                                     //"loop_L_" + std::to_string(Loc.getLine()));
+                    //"loop_L_" + std::to_string(Loc.getLine()));
 
                     // TODO Change it to an array of outputs
                     ins_template.set("idx", static_cast<int>(index++));
