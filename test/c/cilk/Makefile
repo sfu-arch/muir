@@ -30,12 +30,10 @@ clean:
 
 # Notes
 # 
-# ~/amoeba/apala-generator/build/bin/xketch -fn-name=cilk_for_test05 cilk_for_test05.ll -o cilk_for_test05
+# ~/amoeba/apala-generator/build/bin/xketch -fn-name=cilk_for_test11 cilk_for_test11.bc -o cilk_for_test11
 # llvm-dis final.bc
-# e final.ll (rename function)
-# opt final.ll -dce -mem2reg -dot-cfg -o cilk_for_test05a.bc
-# llvm-dis cilk_for_test05a.bc
+# opt final.ll -S -dce -mem2reg -dot-cfg -o cilk_for_test11a.ll
 # May have to add "noinline" to functions in ll file 
-# ../../../build/bin/xketch -fn-name=cilk_for_test05 cilk_for_test05a.ll -o cilk_for_test05
-# ../../../build/bin/xketch -fn-name=cilk_for_test05_detach cilk_for_test05a.ll -o cilk_for_test05_detach
+# ../../../build/bin/xketch -fn-name=cilk_for_test11 cilk_for_test11a.ll -o cilk_for_test11
+# ../../../build/bin/xketch -fn-name=cilk_for_test11_detach1 cilk_for_test11a.ll -o cilk_for_test11_detach
 # make svg

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cilk/cilk.h>
 
+/*
 int cilk_for_test09_inner(int n) {
   int a = 0;
   for(int j = 0; j < n; ++j) {
@@ -8,11 +9,15 @@ int cilk_for_test09_inner(int n) {
   }
   return a;
 }
+*/
 
 int cilk_for_test09(int m, int n) {
   int a = 0;
   cilk_for (int i = 0; i < m; ++i) {
-    a += cilk_for_test09_inner(n);
+    for(int j = 0; j < n; ++j) {
+      a++;
+    }
+    //    a += cilk_for_test09_inner(n);
   }
   return a;
 }
