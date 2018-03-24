@@ -2934,6 +2934,8 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 // Getting datalayout to compute the size of the variables
                 auto DL = ins.getModule()->getDataLayout();
+                string init_test = "  //";
+                raw_string_ostream out(init_test);
 
                 // TODO handle struct type
                 if (alloca_type->isArrayTy()) {
@@ -2971,7 +2973,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     ins_template.set("num_byte", static_cast<int>(num_byte));
                     ins_template.set("sp_index", static_cast<int>(index));
 
-                } else if (alloca_type->isIntegerTy()) {
+                } else if (alloca_type->isIntegerTy() || alloca_type->isPointerTy()) {
                     // Connecting AllocaIO input
                     auto num_byte = DL.getTypeAllocSize(alloca_type);
                     command =
@@ -3008,9 +3010,11 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 
                 } else if (alloca_type->isStructTy())
                     assert(!"We don't support alloca for struct for now!");
-                else
+                else {
+                    out << ins;
+                    printCode(out.str());
                     assert(!"Unknown Alloca type!");
-
+                }
                 printCode(comment + ins_template.render(command) + "\n");
 
             } else
