@@ -5,6 +5,7 @@ SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
+APALA=~/amoeba/apala-generator/build/bin/xketch
 
 .PRECIOUS: %.ll
 
@@ -27,6 +28,13 @@ svg: $(SVG)
 
 clean:
 	rm -f *.bc *.ll *.dot *.scala *.svg *~
+
+%.split: %.bc
+	$(APALA) -fn-name=$* $< -o $*
+	llvm-dis final.bc
+	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
+	../../../build/bin/xketch -fn-name=$* $*a.ll -o $*
+	../../../build/bin/xketch -fn-name=$*_detach1 $*a.ll -o $*_detach1
 
 # Notes
 # 
