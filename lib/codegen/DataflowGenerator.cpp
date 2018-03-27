@@ -2372,24 +2372,24 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                 auto Loc = target_loop->getStartLoc();
 
                 comment = "  // Wiring Binary instruction to the loop header\n";
-
+              if (tmp_find_arg != function_argument.end()) {
                 // int idx = 0;
                 auto op_ins = ins.getOperand(c);
                 auto op_arg = dyn_cast<llvm::Argument>(op_ins);
                 auto op_name = argument_info[op_arg].name;
                 DEBUG(dbgs() << "op_name: " << op_name << "\n");
                 if (c == 0)
-                    command =
-                        "  {{ins_name}}.io.LeftIO <>"
-                        "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
-                //"{{loop_name}}_start.io.outputArg({{loop_index}})\n";
+                  command =
+                      "  {{ins_name}}.io.LeftIO <>"
+                          "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                          "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                  //"{{loop_name}}_start.io.outputArg({{loop_index}})\n";
 
                 else
-                    command =
-                        "  {{ins_name}}.io.RightIO <> "
-                        "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
-                        "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                  command =
+                      "  {{ins_name}}.io.RightIO <> "
+                          "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                          "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
                 //"{{loop_name}}_start.io.outputArg({{loop_index}})\n";
 
                 ins_template.set("ins_name", instruction_info[&ins].name);
@@ -2400,6 +2400,32 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                     "loop_index",
                     static_cast<int>(this->ins_loop_header_idx[&ins]));
                 ins_template.set("operand_name", op_name);
+              } else   {              // First get the instruction
+                comment = "  // Wiring instructions\n";
+                command = "";
+                if (c == 0)
+                  command =
+                      "  {{ins_name}}.io.LeftIO <> "
+                          "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                          "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                else
+                  command =
+                      "  {{ins_name}}.io.RightIO <> "
+                          "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                          "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                ins_template.set("ins_name", instruction_info[&ins].name);
+                ins_template.set(
+                    "loop_name",
+                    "loop_L_" + std::to_string(loop_index[target_loop]));
+                ins_template.set(
+                    "loop_index",
+                    static_cast<int>(this->ins_loop_header_idx[&ins]));
+                ins_template.set("operand_name",
+                                 instruction_info[dyn_cast<llvm::Instruction>(
+                                     ins.getOperand(c))]
+                                     .name);
+              }
+
                 // If the operand is constant
             } else if (operand_const || operand_constFloat || operand_null) {
                 comment = "  // Wiring constant\n";
