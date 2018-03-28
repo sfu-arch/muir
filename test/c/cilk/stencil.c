@@ -10,7 +10,7 @@
 #define NSTEPS (5)
 #define FILTCOLS (1 + NBRROWS * 2)
 #define FILTROWS (1 + NBRCOLS * 2)
-//#define UNSIGNED
+#define UNSIGNED
 
 void print (unsigned x[]) {
   printf("------------------------------------------------------------------------------------------------\n");
@@ -23,11 +23,7 @@ void print (unsigned x[]) {
 }
 
 #ifdef UNSIGNED
-void stencil (unsigned in[], unsigned out[]) {
-  cilk_for (unsigned pos = 0; pos < NROWS * NCOLS; pos ++) {
-    unsigned i = pos / NCOLS;
-    unsigned j = pos & (NCOLS-1);
-    for (unsigned nr = 0; nr <= 2*NBRROWS; nr ++) {
+void stencil_inner(unsigned in[], unsigned out[], unsigned i, unsigned j, unsigned nr) {
       for (unsigned nc = 0; nc <= 2*NBRCOLS; nc ++) {
 	unsigned row = i + nr - NBRROWS;
 	unsigned col = j + nc - NBRCOLS;
@@ -37,6 +33,25 @@ void stencil (unsigned in[], unsigned out[]) {
 	  }
 	}
       }
+}
+
+void stencil (unsigned in[], unsigned out[]) {
+  cilk_for (unsigned pos = 0; pos < NROWS * NCOLS; pos ++) {
+    unsigned i = pos / NCOLS;
+    unsigned j = pos & (NCOLS-1);
+    for (unsigned nr = 0; nr <= 2*NBRROWS; nr ++) {
+      stencil_inner(in,out,i,j,nr);
+      /*
+      for (unsigned nc = 0; nc <= 2*NBRCOLS; nc ++) {
+	unsigned row = i + nr - NBRROWS;
+	unsigned col = j + nc - NBRCOLS;
+	if ((row < NROWS)) {
+	  if ((col < NCOLS)) {
+	    out[i * NCOLS + j] += in[row * NCOLS + col];
+	  }
+	}
+      }
+      */ 
     }
     out[i * NCOLS + j] = (out[i * NCOLS + j] + (FILTROWS * FILTCOLS)) /
       (FILTROWS * FILTCOLS);
@@ -49,8 +64,8 @@ void stencil (unsigned in[], unsigned out[]) {
     int j = pos & (NCOLS-1);
         for (int nr = -NBRROWS; nr <= NBRROWS; nr ++) {
           for (int nc = -NBRCOLS; nc <= NBRCOLS; nc ++) {
-	    int row = i + nr - NBRROWS;
-	    int col = j + nc - NBRCOLS;
+	    int row = i + nr;
+	    int col = j + nc;
 	    if ((row >= 0) && (row < NROWS)) {
 	      if ((col >=0) && (col < NCOLS)) {
 		out[i * NCOLS + j] += in[row * NCOLS + col];
