@@ -12,28 +12,28 @@
 int q[QSIZE];
 
 
-void print (char x[]) {
+void print (int x[]) {
 
 	printf("------------------------------------------------------------------------------------------------\n");
 
 	for (int i = 0; i < N; i ++ ) {
-		printf("\t%c", x[i]);
+	  printf("\t%c", (char)x[i]);
 	}
 	printf("\n");
 
 }//print
 
-void S4 (char x[], char y[]) {
+void S4 (int x[], int y[]) {
 
 
-	int iter = 0;
+	unsigned iter = 0;
 	
 	
 	while (q[iter % QSIZE] != EOT) {
 
 		while (q[iter % QSIZE] == INVALID) {}
 
-		int pos = q[iter % QSIZE];
+		unsigned pos = q[iter % QSIZE];
 		y[pos] = x[pos];
 		y[pos + 1] = x[pos + 1];
 
@@ -48,7 +48,7 @@ void S4 (char x[], char y[]) {
 }//S4
 
 
-void S3 (char chunk[], int pos, int iter) {
+void S3 (int chunk[], int pos, unsigned iter) {
 
 	//compress with RLE
 	chunk[1] = '2';
@@ -60,9 +60,9 @@ void S3 (char chunk[], int pos, int iter) {
 }//S3
 
 
-void S2 (char x[], int pos, int iter) {
+void S2 (int x[], int pos, unsigned iter) {
 
-	char* chunk = &x[pos];
+	int* chunk = &x[pos];
 
 
 	//check for duplicates
@@ -77,12 +77,12 @@ void S2 (char x[], int pos, int iter) {
 
 
 
-void dedup (char x[], char y[]) {
+void dedup (int x[], int y[]) {
 
 	int pos = 0;
 	int outpos = 0;
 	int done = 0;
-	int iter = 0;
+	unsigned iter = 0;
 
 	
 	cilk_spawn S4 (x, y);
@@ -118,8 +118,8 @@ void dedup (char x[], char y[]) {
 
 int main () {
 
-	char a[N + 1];
-	char out[N];
+	int a[N + 1];
+	int out[N];
 
 	a[0] = a[1] = 'a';
 	for (int i = 2; i < N; i++) {
