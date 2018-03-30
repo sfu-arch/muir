@@ -17,7 +17,7 @@ void print (int x[]) {
 	printf("------------------------------------------------------------------------------------------------\n");
 
 	for (int i = 0; i < N; i ++ ) {
-	  printf("\t%c", (char)x[i]);
+	  printf("%d,", (char)x[i]);
 	}
 	printf("\n");
 
@@ -63,17 +63,21 @@ void S3 (int chunk[], int pos, unsigned iter) {
 void S2 (int x[], int pos, unsigned iter) {
 
 	int* chunk = &x[pos];
-
+	int is_dup;
 
 	//check for duplicates
-	int is_dup = chunk[0] == chunk[1]? 1: 0;
+	if (chunk[0] == chunk[1])
+	  is_dup = 1;
+	else
+	  is_dup = 0;
 
-	if (is_dup) cilk_spawn S3 (chunk, pos, iter);
-	else {
-		q[iter % QSIZE] = pos;
-	}
+	if (is_dup)
+	  cilk_spawn S3 (chunk, pos, iter);
+	else 
+	  q[iter % QSIZE] = pos;
+	
 
-}//S1
+}//S2
 
 
 
