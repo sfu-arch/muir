@@ -5,11 +5,10 @@
 int cilk_for_test09(int m, int n) {
   int a = 0;
   cilk_for (int i = 0; i < m; ++i) {
-    int b = 0;
-    for(int j = 0; j < n; ++j) {
-      b++;
-    }
-    a += b;
+    //    int b = 0;
+    //    for(int j = 0; j < n; ++j) {
+      a += n;
+    //    }
   }
   return a;
 }

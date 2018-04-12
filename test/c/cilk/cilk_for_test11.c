@@ -23,28 +23,28 @@ inline void swap(int *a, int *b) {
   *b = c;
 }
 
-int cilk_for_test11(edge_t *E, int n) {
-  //int cilk_for_test11(int E[][2], int n) {
+//int cilk_for_test11(edge_t *E, int n) {
+int cilk_for_test11(int E[][2], int n) {
   cilk_for (int i = 0; i < n; ++i) {
-    if (E[i].u > E[i].v) swap(&(E[i].u),&(E[i].v));
-    //if (E[i][0] > E[i][1]) swap(&(E[i][0]),&(E[i][1]));
+    //if (E[i].u > E[i].v) swap(&(E[i].u),&(E[i].v));
+    if (E[i][0] > E[i][1]) swap(&(E[i][0]),&(E[i][1]));
   }
   return 1;
 }
 
 int main() {
-
+  /*
   edge_t E[]= {{.u = 0,.v = 1},
 	      {.u = 4,.v = 2},
 	      {.u = 1,.v = 2},
 	      {.u = 3,.v = 7}};
-  /*
+  */
 
   int E[4][2]= {{0,1},
 	      {4,2},
 	      {1,2},
 	      {3,7}};
-  */
+  
   int result = cilk_for_test11(E,4);
   printf("%d\n",result);
 }
