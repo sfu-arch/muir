@@ -18,6 +18,7 @@ using namespace dandelion;
 //===----------------------------------------------------------------------===//
 //
 
+
 /**
  * init function accepts graph elements and build a new graph containing all the
  * elements
@@ -74,3 +75,42 @@ void Graph::printBasicBlocks(PrintType _pt){
     }
 
 }
+
+/**
+ * Returning instruction list
+ */
+const InstructionList Graph::getInstructionList(){
+    return this->inst_list;
+}
+
+/**
+ * Insert a new instruction
+ */
+const Node* Graph::insertInstruction(llvm::Instruction){
+}
+
+/**
+ * Insert a new instruction
+ */
+const SuperNode* Graph::insertSuperNode(BasicBlock &BB){
+    super_node_list.push_back(SuperNode(&BB));
+    auto ff = std::find_if(
+        super_node_list.begin(), super_node_list.end(),
+        [&BB](SuperNode &arg) -> bool { return arg.getBasicBlock() == &BB; });
+
+    return &*ff;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

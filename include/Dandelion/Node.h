@@ -91,7 +91,6 @@ class Node {
     // virtual void PrintDataflow();
     // virtual void PrintControlFlow();
     // virtual void PrintMemory();
-    //
 };
 
 /**
@@ -122,7 +121,7 @@ class SuperNode : public Node {
     void addPhiInstruction(PhiNode *);
 
     bool hasPhi() { return !phi_list.empty(); }
-    uint32_t getNumPhi() { return phi_list.size(); }
+    uint32_t getNumPhi() const { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
     void PrintDefinition(PrintType);

@@ -23,7 +23,7 @@ class Graph {
    private:
     InstructionList inst_list;
     ArgumentList arg_list;
-    BasicBlockList bb_list;
+    BasicBlockList super_node_list;
     GlobalValueList glob_list;
     ConstIntList const_list;
     EdgeList edge_list;
@@ -35,7 +35,7 @@ class Graph {
     explicit Graph(BasicBlockList _bb_ll, InstructionList &_ins_ll,
                    ArgumentList &_arg_ll, GlobalValueList &_glb_ll,
                    ConstIntList &_con_ll, EdgeList &_edge):graph_empty(true) {
-        std::copy(_bb_ll.begin(), _bb_ll.end(), bb_list.begin());
+        std::copy(_bb_ll.begin(), _bb_ll.end(), super_node_list.begin());
         std::copy(inst_list.begin(), inst_list.end(), _ins_ll.begin());
         std::copy(arg_list.begin(), arg_list.end(), _arg_ll.begin());
         std::copy(glob_list.begin(), glob_list.end(), _glb_ll.begin());
@@ -49,6 +49,10 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty(){return graph_empty;}
+
+    const InstructionList getInstructionList();
+    void insertInstruction();
+    const SuperNode *insertSuperNode(BasicBlock &);
 
    protected:
     void printBasicBlocks(PrintType);

@@ -58,7 +58,7 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
 }
 
 bool GraphGeneratorPass::doFinalization(Module &M) {
-    cout << "Number of instruction nodes: " << instruction_list.size() << endl;
+    cout << "Number of instruction nodes: " << this->GraphDependency.getInstructionList().size() << endl;
     // TODO: Add code here to do post pass
     return false;
 }
@@ -68,11 +68,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
  * then make supernode for each of them and add them to the node list
  */
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
-    this->super_node_list.push_back(SuperNode(&BB));
-    auto ff = std::find_if(
-        super_node_list.begin(), super_node_list.end(),
-        [&BB](SuperNode &arg) -> bool { return arg.getBasicBlock() == &BB; });
-    this->map_value_node[&BB] = &*ff;
+    map_value_node[&BB] = this->GraphDependency.insertSuperNode(BB);
 }
 
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
@@ -83,7 +79,6 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
     this->instruction_list.push_back(BinaryOperatorNode(&I));
-
     HelperInsertInstructionMap(instruction_list, map_value_node, I);
 }
 
