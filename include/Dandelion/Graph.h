@@ -32,17 +32,6 @@ class Graph {
 
    public:
     explicit Graph():graph_empty(false) {}
-    explicit Graph(BasicBlockList _bb_ll, InstructionList &_ins_ll,
-                   ArgumentList &_arg_ll, GlobalValueList &_glb_ll,
-                   ConstIntList &_con_ll, EdgeList &_edge):graph_empty(true) {
-        std::copy(_bb_ll.begin(), _bb_ll.end(), super_node_list.begin());
-        std::copy(inst_list.begin(), inst_list.end(), _ins_ll.begin());
-        std::copy(arg_list.begin(), arg_list.end(), _arg_ll.begin());
-        std::copy(glob_list.begin(), glob_list.end(), _glb_ll.begin());
-        std::copy(const_list.begin(), const_list.end(), _con_ll.begin());
-        std::copy(edge_list.begin(), edge_list.end(), _edge.begin());
-    }
-
     void init(BasicBlockList &, InstructionList &, ArgumentList &,
               GlobalValueList &, ConstIntList &, EdgeList &);
 
@@ -51,8 +40,23 @@ class Graph {
     bool isEmpty(){return graph_empty;}
 
     const InstructionList getInstructionList();
-    void insertInstruction();
-    const SuperNode *insertSuperNode(BasicBlock &);
+    void insertInstruction(llvm::Instruction &);
+    SuperNode * const insertSuperNode(llvm::BasicBlock &);
+    InstructionNode * const insertBinaryOperatorNode(llvm::BinaryOperator &);
+    InstructionNode * const insertIcmpOperatorNode(llvm::ICmpInst &);
+    InstructionNode * const insertBranchNode(llvm::BranchInst &);
+    InstructionNode * const insertPhiNode(llvm::PHINode &);
+    InstructionNode * const insertAllocaNode(llvm::AllocaInst &);
+    InstructionNode * const insertGepNode(llvm::GetElementPtrInst &);
+    InstructionNode * const insertLoadNode(llvm::LoadInst &);
+    InstructionNode * const insertStoreNode(llvm::StoreInst &);
+    InstructionNode * const insertReturnNode(llvm::ReturnInst &);
+    InstructionNode * const insertCallNode(llvm::CallInst &);
+    ArgumentNode * const insertFunctionArgument(llvm::Argument &);
+    GlobalValueNode * const insertFunctionGlobalValue(llvm::GlobalValue &);
+    ConstIntNode* const insertConstIntNode(llvm::ConstantInt &);
+
+    Edge * const insertEdge(Edge::EdgeType , Node * const, Node * const);
 
    protected:
     void printBasicBlocks(PrintType);

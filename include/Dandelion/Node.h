@@ -19,23 +19,23 @@ class Node;
 class SuperNode;
 class MemoryNode;
 class InstructionNode;
-class PhiNode;
+class PhiSelectNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
 struct DataPort {
-    std::list<Node *> data_input_port;
-    std::list<Node *> data_output_port;
+    std::list<Node * const> data_input_port;
+    std::list<Node * const> data_output_port;
 };
 
 struct ControlPort {
-    std::list<Node *> control_input_port;
-    std::list<Node *> control_output_port;
+    std::list<Node * const> control_input_port;
+    std::list<Node * const> control_output_port;
 };
 
 struct MemoryPort {
-    std::list<MemoryNode *> memory_input_port;
-    std::list<MemoryNode *> memory_output_port;
+    std::list<MemoryNode * const> memory_input_port;
+    std::list<MemoryNode * const> memory_output_port;
 };
 
 class Node {
@@ -72,11 +72,11 @@ class Node {
     uint32_t returnControlOutputPortIndex(Node &);
     uint32_t returnMemoryOutputPortIndex(Node &);
 
-    void addDataInputPort(Node *);
-    void addDataOutputPort(Node *);
+    void addDataInputPort(Node *) ;
+    void addDataOutputPort(Node *) ;
 
-    void addControlInputPort(Node *);
-    void addControlOutputPort(Node *);
+    void addControlInputPort(Node *const) ;
+    void addControlOutputPort(Node *) ;
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
@@ -99,7 +99,7 @@ class Node {
 class SuperNode : public Node {
    public:
     // List of the instructions
-    using PhiNodeList = std::list<PhiNode *>;
+    using PhiNodeList = std::list<PhiSelectNode *>;
 
    private:
     llvm::BasicBlock *basic_block;
@@ -118,7 +118,7 @@ class SuperNode : public Node {
 
     llvm::BasicBlock *getBasicBlock();
     void addInstruction(InstructionNode *);
-    void addPhiInstruction(PhiNode *);
+    void addPhiInstruction(PhiSelectNode *);
 
     bool hasPhi() { return !phi_list.empty(); }
     uint32_t getNumPhi() const { return phi_list.size(); }
@@ -222,9 +222,9 @@ class BranchNode : public InstructionNode {
     }
 };
 
-class PhiNode : public InstructionNode {
+class PhiSelectNode: public InstructionNode {
    public:
-    PhiNode(llvm::PHINode *_ins = nullptr)
+    PhiSelectNode(llvm::PHINode *_ins = nullptr)
         : InstructionNode(Node::InstructionNodeTy, InstType::PhiInstructionTy,
                           _ins) {}
 

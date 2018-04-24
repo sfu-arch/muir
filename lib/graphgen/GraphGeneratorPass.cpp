@@ -36,7 +36,7 @@ namespace graphgen {
 char GraphGeneratorPass::ID = 0;
 
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
-}
+}  // namespace graphgen
 
 /**
  * This function is a helper function which only gets a new instruction
@@ -58,7 +58,8 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
 }
 
 bool GraphGeneratorPass::doFinalization(Module &M) {
-    cout << "Number of instruction nodes: " << this->GraphDependency.getInstructionList().size() << endl;
+    cout << "Number of instruction nodes: "
+         << this->dependency_graph.getInstructionList().size() << endl;
     // TODO: Add code here to do post pass
     return false;
 }
@@ -68,7 +69,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
  * then make supernode for each of them and add them to the node list
  */
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
-    map_value_node[&BB] = this->GraphDependency.insertSuperNode(BB);
+    map_value_node[&BB] = this->dependency_graph.insertSuperNode(BB);
 }
 
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
@@ -78,58 +79,43 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
-    this->instruction_list.push_back(BinaryOperatorNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertBinaryOperatorNode(I);
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
-    this->instruction_list.push_back(IcmpNode(&I));
-    auto ff = std::find_if(instruction_list.begin(), instruction_list.end(),
-                           [&I](InstructionNode &arg) -> bool {
-                               return arg.getInstruction() == &I;
-                           });
-
-    map_value_node[&I] = &*ff;
+    map_value_node[&I] = this->dependency_graph.insertIcmpOperatorNode(I);
 }
 
 void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
-    this->instruction_list.push_back(BranchNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertBranchNode(I);
 }
 
 void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
-    this->instruction_list.push_back(PhiNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertPhiNode(I);
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
-    this->instruction_list.push_back(AllocaNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertAllocaNode(I);
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    this->instruction_list.push_back(GEPNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertGepNode(I);
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
-    this->instruction_list.push_back(LoadNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertLoadNode(I);
 }
 
 void GraphGeneratorPass::visitStoreInst(llvm::StoreInst &I) {
-    this->instruction_list.push_back(StoreNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertStoreNode(I);
 }
 
 void GraphGeneratorPass::visitReturnInst(llvm::ReturnInst &I) {
-    this->instruction_list.push_back(ReturnNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertReturnNode(I);
 }
 
 void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
-    this->instruction_list.push_back(CallNode(&I));
-    HelperInsertInstructionMap(instruction_list, map_value_node, I);
+    map_value_node[&I] = this->dependency_graph.insertCallNode(I);
 }
 
 void GraphGeneratorPass::visitFunction(Function &F) {
@@ -137,25 +123,14 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Here we make a graph
     // Graph gg()
     // Filling function argument nodes
-    for (auto &f_arg : F.getArgumentList()) {
-        this->argument_list.push_back(ArgumentNode(&f_arg));
-        auto ff = std::find_if(argument_list.begin(), argument_list.end(),
-                               [&f_arg](ArgumentNode &arg_nd) -> bool {
-                                   return arg_nd.getArgumentValue() == &f_arg;
-                               });
+    for (auto &f_arg : F.args())
+        map_value_node[&f_arg] =
+            this->dependency_graph.insertFunctionArgument(f_arg);
 
-        map_value_node[&f_arg] = &*ff;
-    }
-
-    // Filling global variables
+    // Filling function global nodes
     for (auto &g_var : F.getParent()->getGlobalList()) {
-        this->glob_list.push_back(GlobalValueNode(&g_var));
-        auto ff = std::find_if(glob_list.begin(), glob_list.end(),
-                               [&g_var](GlobalValueNode &arg_nd) -> bool {
-                                   return arg_nd.getGlobalValue() == &g_var;
-                               });
-
-        map_value_node[&g_var] = &*ff;
+        map_value_node[&g_var] =
+            this->dependency_graph.insertFunctionGlobalValue(g_var);
     }
 }
 
@@ -179,35 +154,28 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 // 1) First find the basicblock node
                 // 2) Add the bb as a control output
                 // 3) Add the ins ass a control input
-                //
                 auto _node_dest = this->map_value_node.find(
                     operand);  // it should be supernode
                 assert(isa<SuperNode>(_node_dest->second) &&
                        "Destination node should be super node!");
 
-                auto _node_src =
-                    this->map_value_node.find(&*ins_it);  // it should be node
+                auto _node_src = this->map_value_node.find(
+                    &*ins_it);  // it should be Insnode
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
                 _node_dest->second->addControlInputPort(_node_src->second);
                 _node_src->second->addControlOutputPort(_node_dest->second);
 
-                edge_list.push_back(Edge(Edge::DataToControlTypeEdge,
-                                         _node_src->second,
-                                         _node_dest->second));
+                this->dependency_graph.insertEdge(Edge::DataToControlTypeEdge,
+                                                  _node_src->second,
+                                                  _node_dest->second);
 
             } else {
                 // If the operand is constant we have to create a new node
-                if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
-                    this->const_int_list.push_back(ConstIntNode(const_value));
-                    auto ff = std::find_if(
-                        const_int_list.begin(), const_int_list.end(),
-                        [const_value](ConstIntNode &nd) -> bool {
-                            return nd.getConstantParent() == const_value;
-                        });
-                    map_value_node[operand] = &*ff;
-                }
+                if (auto const_value = dyn_cast<llvm::ConstantInt>(operand))
+                    map_value_node[operand] =
+                        this->dependency_graph.insertConstIntNode(*const_value);
 
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
@@ -225,8 +193,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 _node_src->second->addDataOutputPort(_node_dest->second);
                 _node_dest->second->addDataInputPort(_node_src->second);
 
-                edge_list.push_back(Edge(Edge::DataTypeEdge, _node_src->second,
-                                         _node_dest->second));
+                this->dependency_graph.insertEdge(
+                    Edge::DataTypeEdge, _node_src->second, _node_dest->second);
             }
         }
     }
@@ -245,20 +213,18 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 // Iterate over the basicblock's instructions
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
+
                     _bb->addInstruction(_ins);
 
                     // Detect Phi instrucctions
-                    if (auto _phi_ins = dyn_cast<PhiNode>(_ins))
+                    if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins))
                         _bb->addPhiInstruction(_phi_ins);
 
                     // Make a control edge
-                    edge_list.push_back(Edge(Edge::ControlTypeEdge, _bb, _ins));
+                    this->dependency_graph.insertEdge(Edge::ControlTypeEdge, _bb, _ins);
                 } else
                     assert(!"The instruction is not visited!");
 
-                // Iterate over the basicblock's predecessors
-                // for (auto _bb_pp : llvm::predecessors(&BB)) {
-                //}
             }
 
         } else
@@ -270,15 +236,14 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
  * Does all the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
-
-    //Running analysis on the elements
+    // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
 
     // Initilizing the graph
-    graph.init(super_node_list, instruction_list, argument_list, glob_list,
-               const_int_list, edge_list);
-    graph.printGraph(PrintType::Scala);
+    // graph.init(super_node_list, instruction_list, argument_list, glob_list,
+    // const_int_list, edge_list);
+    // graph.printGraph(PrintType::Scala);
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {

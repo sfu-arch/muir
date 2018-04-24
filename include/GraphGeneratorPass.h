@@ -14,9 +14,9 @@
 #include "Common.h"
 #include "NodeType.h"
 
-#include "Dandelion/Node.h"
 #include "Dandelion/Edge.h"
 #include "Dandelion/Graph.h"
+#include "Dandelion/Node.h"
 
 #include <map>
 #include <set>
@@ -38,16 +38,16 @@ class GraphGeneratorPass : public llvm::FunctionPass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
-    //BasicBlockList super_node_list;
-    //InstructionList instruction_list;
-    //ArgumentList argument_list;
-    //GlobalValueList glob_list;
-    //ConstIntList const_int_list;
-    //EdgeList edge_list;
+    // BasicBlockList super_node_list;
+    // InstructionList instruction_list;
+    // ArgumentList argument_list;
+    // GlobalValueList glob_list;
+    // ConstIntList const_int_list;
+    // EdgeList edge_list;
 
-    Graph GraphDependency;
+    Graph dependency_graph;
 
-    std::map<llvm::Value *, const Node *> map_value_node;
+    std::map<llvm::Value *, Node * > map_value_node;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -86,6 +86,6 @@ class GraphGeneratorPass : public llvm::FunctionPass,
 
     virtual bool runOnFunction(llvm::Function &) override;
 };
-}
+}  // namespace graphgen
 
 #endif
