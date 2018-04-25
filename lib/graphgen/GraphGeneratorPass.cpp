@@ -147,6 +147,9 @@ void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
 }
 
 void GraphGeneratorPass::visitFunction(Function &F) {
+
+    dependency_graph.setFunction(&F);
+
     // TODO
     // Here we make a graph
     // Graph gg()

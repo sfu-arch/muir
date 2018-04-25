@@ -14,31 +14,39 @@ using namespace std;
 using namespace llvm;
 using namespace dandelion;
 
+/**
+ * HELPER FUNCTIONS
+ * Printing header part of each section of the code
+ */
+std::string helperScalaPrintHeader(string header) {
+    std::transform(header.begin(), header.end(), header.begin(), ::toupper);
+    string tmp_line =
+        "   * "
+        "================================================================== "
+        "*/\n\n";
+
+    uint32_t remain_space = tmp_line.length() - 2 - header.length() - 23;
+
+    // Append space to the string
+    string header_final = "";
+    for (uint32_t i = 0; i < remain_space - 2; i++) {
+        header_final.append(" ");
+    }
+    header_final.append("*\n");
+
+    tmp_line =
+        "\n\n  /* "
+        "================================================================== "
+        "*\n"
+        "   *                   " +
+        header + header_final + tmp_line;
+    return tmp_line;
+}
+
 //===----------------------------------------------------------------------===//
 //                           Graph Class
 //===----------------------------------------------------------------------===//
 //
-
-/**
- * init function accepts graph elements and build a new graph containing all the
- * elements
- */
-// void Graph::init(BasicBlockList &_bb_ll, InstructionList &_ins_ll,
-// ArgumentList &_arg_ll, GlobalValueList &_glb_ll,
-// ConstIntList &_con_ll, EdgeList &_edge) {
-//// std::copy(_bb_ll.begin(), _bb_ll.end(), std::back_inserter(_bb_ll));
-//// std::copy(bb_list.begin(), bb_list.end(), _bb_ll.begin());
-// std::copy(inst_list.begin(), inst_list.end(), _ins_ll.begin());
-// std::copy(arg_list.begin(), arg_list.end(), _arg_ll.begin());
-// std::copy(glob_list.begin(), glob_list.end(), _glb_ll.begin());
-// std::copy(const_list.begin(), const_list.end(), _con_ll.begin());
-// std::copy(edge_list.begin(), edge_list.end(), _edge.begin());
-
-// outs() << "Init the graph\n";
-// outs() << "Size" << super_node_list.size() << "\n";
-
-// graph_empty = true;
-//}
 
 /**
  * Print function prints the generated graph in the choosen format
@@ -47,7 +55,10 @@ void Graph::printGraph(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(outs() << "Print Graph information!\n");
-            printScalaHeader();
+
+            // TODO: pass the corect config path
+            printScalaHeader("config.json", "dataflow");
+            printScalaFunctionHeader();
             printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
@@ -78,26 +89,121 @@ void Graph::printBasicBlocks(PrintType _pt) {
 }
 
 /**
+ * Print the basicblock definition
+ */
+void Graph::printScalaFunctionHeader() {
+    // print the header
+    this->outCode << helperScalaPrintHeader("Printing ports definition");
+
+    LuaTemplater ins_template;
+    string final_command;
+    string command =
+        "abstract class {{module_name}}DFIO"
+        "(implicit val p: Parameters) extends Module with CoreParams {\n"
+        "  val io = IO(new Bundle {\n";
+    ins_template.set("module_name", this->graph_info.Name);
+    final_command.append(ins_template.render(command));
+
+    // Print input call parameters
+    command = "    val in = Flipped(new CallDecoupled(List(";
+    final_command.append(ins_template.render(command));
+    for (uint32_t c = 0; c < this->arg_list.size(); c++) {
+        command = "32,";
+        ins_template.set("index", static_cast<int>(c));
+        final_command.append(ins_template.render(command));
+    }
+    final_command.pop_back();
+    command = ")))\n";
+    final_command.append(ins_template.render(command));
+
+    // Print sub-function call interface
+    uint32_t c = 0;
+    for (auto &_ins : this->inst_list) {
+        if (auto _fc = dyn_cast<CallNode>(&_ins)) {
+            // Call arguments to subroutine
+            command = "    val {{call}}_out = new CallDecoupled(List(";
+            ins_template.set("call", _ins.getName());
+            final_command.append(ins_template.render(command));
+            // TODO: Make sure there is no inconsistancy here
+            for (auto &ag :
+                 _fc->getInstruction()->getFunction()->getArgumentList()) {
+                command = "32,";
+                ins_template.set("index", static_cast<int>(c++));
+                final_command.append(ins_template.render(command));
+            }
+            final_command.pop_back();
+            command = "))\n";
+            final_command.append(ins_template.render(command));
+            // Return values from sub-routine.
+            // Only supports a single 32 bit data bundle for now
+            command =
+                "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
+            ins_template.set("call", _fc->getName());
+            final_command.append(ins_template.render(command));
+        }
+    }
+
+    // Print global memory interface
+    c = 0;
+    for (uint32_t c = 0; c < this->glob_list.size(); c++) {
+        command =
+            "    val glob_{{index}} = Flipped(Decoupled(new "
+            "DataBundle))\n";
+        ins_template.set("index", static_cast<int>(c++));
+        final_command.append(ins_template.render(command));
+        break;
+    }
+
+    // Print cache memory interface
+    final_command.append(
+        "    val CacheResp = Flipped(Valid(new CacheRespT))\n"
+        "    val CacheReq = Decoupled(new CacheReq)\n");
+
+    // Print output (return) parameters
+    if (!function_ptr->getReturnType()->isVoidTy()) {
+        final_command.append("    val out = new CallDecoupled(List(32))\n");
+    }
+
+    final_command.append(
+        "  })\n"
+        "}\n\n");
+
+    // Printing Abstract
+    outCode << ins_template.render(final_command);
+
+    final_command =
+        "class {{module_name}}DF(implicit p: Parameters)"
+        " extends {{module_name}}DFIO()(p) {\n";
+    ins_template.set("module_name", graph_info.Name);
+
+    helperScalaPrintHeader("Printing Module Definition");
+    outCode << ins_template.render(final_command);
+}
+
+/**
  * Print specific scala header files
  */
-void Graph::printScalaHeader(){
-
-    std::ifstream _in_file("config.json");
+void Graph::printScalaHeader(string config_path, string package_name) {
+    std::ifstream _in_file(config_path);
     Json::Value _root_json;
 
     _in_file >> _root_json;
 
-    for(auto _it_obj =  _root_json["import"].begin(); _it_obj != _root_json["import"].end(); _it_obj++){
+    assert(!_root_json["import"].empty() && "Config should contain import key");
 
-        if(_it_obj->isArray()){
-            outs() << _it_obj.key().asString() << "\n";
-            for(auto &elem : *_it_obj){
-                outs() << elem.asString() << "\n";
+    // TODO add one level of package to the config json file
+    outCode << "package " << package_name << "\n\n";
+
+    for (auto _it_obj = _root_json["import"].begin();
+         _it_obj != _root_json["import"].end(); _it_obj++) {
+        if (_it_obj->isArray()) {
+            outCode << "import " << _it_obj.key().asString() << "._\n";
+            for (auto &elem : *_it_obj) {
+                outCode << "import " << _it_obj.key().asString() << "."
+                        << elem.asString() << "._\n";
             }
         }
     }
-
-
 }
 
 /**
@@ -310,8 +416,9 @@ Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
  */
 ConstIntNode *const Graph::insertConstIntNode(ConstantInt &C) {
     const_list.push_back(
-            ConstIntNode(
-                NodeInfo(const_list.size(),"const" + std::to_string(const_list.size())),&C));
+        ConstIntNode(NodeInfo(const_list.size(),
+                              "const" + std::to_string(const_list.size())),
+                     &C));
 
     auto ff = std::find_if(const_list.begin(), const_list.end(),
                            [&C](ConstIntNode &cs) -> bool {
@@ -319,3 +426,8 @@ ConstIntNode *const Graph::insertConstIntNode(ConstantInt &C) {
                            });
     return &*ff;
 }
+
+/**
+ * Set function pointer
+ */
+void Graph::setFunction(Function *_fn) { this->function_ptr = _fn; }

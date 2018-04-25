@@ -321,7 +321,7 @@ static void graphGen(Module &m) {
  */
 static void runGraphGen(Function &F) {
     legacy::FunctionPassManager FPM(F.getParent());
-    FPM.add(new graphgen::GraphGeneratorPass());
+    FPM.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));
     FPM.doInitialization();
     FPM.run(F);
     FPM.doFinalization();
