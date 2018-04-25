@@ -45,7 +45,7 @@ void SuperNode::addPhiInstruction(PhiSelectNode *node) {
 void SuperNode::PrintDefinition(PrintType pt) {
     switch (pt) {
         case PrintType::Scala:
-            outs() << "\t\tPrint BB!\n";
+            DEBUG(outs() << "\t\tBB: Name: " << this->getName() << "\n\t\t    ID: " << this->getID() << "\n");
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");

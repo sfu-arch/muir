@@ -7,6 +7,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -17,6 +18,7 @@ namespace dandelion {
 
 class Node;
 class SuperNode;
+class LoopNode;
 class MemoryNode;
 class InstructionNode;
 class PhiSelectNode;
@@ -24,24 +26,32 @@ class PhiSelectNode;
 enum PrintType { Scala = 0, Dot, Json };
 
 struct DataPort {
-    std::list<Node * const> data_input_port;
-    std::list<Node * const> data_output_port;
+    std::list<Node *const> data_input_port;
+    std::list<Node *const> data_output_port;
 };
 
 struct ControlPort {
-    std::list<Node * const> control_input_port;
-    std::list<Node * const> control_output_port;
+    std::list<Node *const> control_input_port;
+    std::list<Node *const> control_output_port;
 };
 
 struct MemoryPort {
-    std::list<MemoryNode * const> memory_input_port;
-    std::list<MemoryNode * const> memory_output_port;
+    std::list<MemoryNode *const> memory_input_port;
+    std::list<MemoryNode *const> memory_output_port;
+};
+
+struct NodeInfo {
+    uint32_t ID;
+    std::string Name;
+
+    NodeInfo(uint32_t _id, std::string _n) : ID(_id), Name(_n){};
 };
 
 class Node {
    public:
     enum NodeType {
         SuperNodeTy = 0,
+        LoopNodeTy,
         InstructionNodeTy,
         FunctionArgTy,
         GlobalValueTy,
@@ -51,6 +61,11 @@ class Node {
     };
 
    private:
+    // Type of the Node
+    NodeType node_type;
+    // Node information
+    NodeInfo info;
+
     // List of data ports
     DataPort port_data;
     // List of Control ports
@@ -58,11 +73,8 @@ class Node {
     // List of Memory ports
     MemoryPort port_memory;
 
-    // Type of the Node
-    NodeType node_type;
-
    public:  // Public methods
-    Node(NodeType _nt) : node_type(_nt) {}
+    Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
 
     uint32_t returnDataInputPortIndex(Node &);
     uint32_t returnControlInputPortIndex(Node &);
@@ -72,14 +84,17 @@ class Node {
     uint32_t returnControlOutputPortIndex(Node &);
     uint32_t returnMemoryOutputPortIndex(Node &);
 
-    void addDataInputPort(Node *) ;
-    void addDataOutputPort(Node *) ;
+    void addDataInputPort(Node *);
+    void addDataOutputPort(Node *);
 
-    void addControlInputPort(Node *const) ;
-    void addControlOutputPort(Node *) ;
+    void addControlInputPort(Node *const);
+    void addControlOutputPort(Node *);
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
+
+    uint32_t getID() {return info.ID;}
+    std::string getName() {return info.Name;}
 
     // TODO how to define virtual functions?
     // virtual void printInitilization() {}
@@ -88,9 +103,9 @@ class Node {
     virtual void printDefinition() {}
 
    protected:  // Private methods
-    // virtual void PrintDataflow();
-    // virtual void PrintControlFlow();
-    // virtual void PrintMemory();
+               // virtual void PrintDataflow();
+               // virtual void PrintControlFlow();
+               // virtual void PrintMemory();
 };
 
 /**
@@ -108,8 +123,8 @@ class SuperNode : public Node {
     PhiNodeList phi_list;
 
    public:
-    explicit SuperNode(llvm::BasicBlock *_bb = nullptr)
-        : Node(Node::SuperNodeTy), basic_block(_bb) {}
+    explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
+        : Node(Node::SuperNodeTy, _nf), basic_block(_bb) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -126,6 +141,41 @@ class SuperNode : public Node {
 
     void PrintDefinition(PrintType);
 };
+
+/**
+ * LoopNode contains all the instructions and useful information about the loops
+ */
+class LoopNode: public Node {
+   public:
+    using PhiNodeList = std::list<PhiSelectNode *>;
+
+   private:
+    llvm::Loop *loop;
+
+    llvm::SmallVector<InstructionNode *, 16> instruction_list;
+    PhiNodeList phi_list;
+
+   public:
+    explicit LoopNode(NodeInfo _nf, llvm::Loop *_ll = nullptr)
+        : Node(Node::LoopNodeTy, _nf), loop(_ll) {}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::LoopNodeTy;
+    }
+
+    llvm::BasicBlock *getBasicBlock();
+    void addInstruction(InstructionNode *);
+    void addPhiInstruction(PhiSelectNode *);
+
+    bool hasPhi() { return !phi_list.empty(); }
+    uint32_t getNumPhi() const { return phi_list.size(); }
+    const PhiNodeList &getPhiList() const { return phi_list; }
+
+    void PrintDefinition(PrintType);
+};
+
+
 
 /**
  * This class is basic implementation of Instruction nodes
@@ -162,9 +212,9 @@ class InstructionNode : public Node {
     llvm::Instruction *parent_instruction;
 
    public:
-    InstructionNode(NodeType _nd, InstType _ins_t,
+    InstructionNode(NodeType _nd, NodeInfo _ni, InstType _ins_t,
                     llvm::Instruction *_ins = nullptr)
-        : Node(Node::InstructionNodeTy),
+        : Node(Node::InstructionNodeTy, _ni),
           ins_type(_ins_t),
           parent_instruction(_ins) {}
 
@@ -181,8 +231,8 @@ class InstructionNode : public Node {
 
 class BinaryOperatorNode : public InstructionNode {
    public:
-    BinaryOperatorNode(llvm::BinaryOperator *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    BinaryOperatorNode(NodeInfo _ni, llvm::BinaryOperator *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::BinaryInstructionTy, _ins) {}
 
     // Overloading isa<>, dyn_cast from llvm
@@ -196,8 +246,8 @@ class BinaryOperatorNode : public InstructionNode {
 
 class IcmpNode : public InstructionNode {
    public:
-    IcmpNode(llvm::ICmpInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    IcmpNode(NodeInfo _ni, llvm::ICmpInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::IcmpInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *I) {
@@ -210,8 +260,8 @@ class IcmpNode : public InstructionNode {
 
 class BranchNode : public InstructionNode {
    public:
-    BranchNode(llvm::BranchInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstType::BranchInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -222,11 +272,11 @@ class BranchNode : public InstructionNode {
     }
 };
 
-class PhiSelectNode: public InstructionNode {
+class PhiSelectNode : public InstructionNode {
    public:
-    PhiSelectNode(llvm::PHINode *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, InstType::PhiInstructionTy,
-                          _ins) {}
+    PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
+                          InstType::PhiInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::PhiInstructionTy;
@@ -238,8 +288,8 @@ class PhiSelectNode: public InstructionNode {
 
 class AllocaNode : public InstructionNode {
    public:
-    AllocaNode(llvm::AllocaInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    AllocaNode(NodeInfo _ni, llvm::AllocaInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::AllocaInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -252,8 +302,8 @@ class AllocaNode : public InstructionNode {
 
 class GEPNode : public InstructionNode {
    public:
-    GEPNode(llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    GEPNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::GetElementPtrInstTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -266,8 +316,8 @@ class GEPNode : public InstructionNode {
 
 class LoadNode : public InstructionNode {
    public:
-    LoadNode(llvm::LoadInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy,
+    LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::LoadInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -280,8 +330,9 @@ class LoadNode : public InstructionNode {
 
 class StoreNode : public InstructionNode {
    public:
-    StoreNode(llvm::StoreInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy,
+    StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
+              NodeType _nd = UnkonwTy)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::StoreInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -294,8 +345,9 @@ class StoreNode : public InstructionNode {
 
 class ReturnNode : public InstructionNode {
    public:
-    ReturnNode(llvm::ReturnInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy,
+    ReturnNode(NodeInfo _ni, llvm::ReturnInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::ReturnInstrunctionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -308,8 +360,9 @@ class ReturnNode : public InstructionNode {
 
 class CallNode : public InstructionNode {
    public:
-    CallNode(llvm::CallInst *_ins = nullptr, NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy,
+    CallNode(NodeInfo _ni, llvm::CallInst *_ins = nullptr,
+             NodeType _nd = UnkonwTy)
+        : InstructionNode(Node::InstructionNodeTy, _ni,
                           InstructionNode::CallInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -325,8 +378,8 @@ class ArgumentNode : public Node {
     llvm::Argument *parent_argument;
 
    public:
-    ArgumentNode(llvm::Argument *_arg = nullptr)
-        : Node(Node::FunctionArgTy), parent_argument(_arg) {}
+    ArgumentNode(NodeInfo _ni, llvm::Argument *_arg = nullptr)
+        : Node(Node::FunctionArgTy, _ni), parent_argument(_arg) {}
 
     llvm::Argument *getArgumentValue();
 };
@@ -336,8 +389,8 @@ class GlobalValueNode : public Node {
     llvm::GlobalValue *parent_glob;
 
    public:
-    GlobalValueNode(llvm::GlobalValue *_glb = nullptr)
-        : Node(Node::GlobalValueTy), parent_glob(_glb) {}
+    GlobalValueNode(NodeInfo _ni, llvm::GlobalValue *_glb = nullptr)
+        : Node(Node::GlobalValueTy, _ni), parent_glob(_glb) {}
 
     llvm::GlobalValue *getGlobalValue();
 };
@@ -347,11 +400,11 @@ class ConstIntNode : public Node {
     llvm::ConstantInt *parent_const_int;
 
    public:
-    ConstIntNode(llvm::ConstantInt *_cint = nullptr)
-        : Node(Node::ConstIntTy), parent_const_int(_cint) {}
+    ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
+        : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {}
 
     llvm::ConstantInt *getConstantParent();
 };
-}
+}  // namespace dandelion
 
 #endif  // end of DANDDELION_NODE_H

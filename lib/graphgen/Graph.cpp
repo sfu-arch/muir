@@ -8,6 +8,7 @@
 #include "luacpptemplater/LuaTemplater.h"
 
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 using namespace llvm;
@@ -46,6 +47,7 @@ void Graph::printGraph(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(outs() << "Print Graph information!\n");
+            printScalaHeader();
             printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
@@ -62,7 +64,8 @@ void Graph::printBasicBlocks(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(outs() << "\t Print BasicBlocks information!\n");
-            DEBUG(outs() << "Size: " << super_node_list.size() << "\n");
+            DEBUG(outs() << "\t Number of BB: " << super_node_list.size()
+                         << "\n");
             for (auto &bb_node : this->super_node_list) {
                 bb_node.PrintDefinition(PrintType::Scala);
             }
@@ -72,6 +75,29 @@ void Graph::printBasicBlocks(PrintType _pt) {
         default:
             assert(!"Uknown print type!");
     }
+}
+
+/**
+ * Print specific scala header files
+ */
+void Graph::printScalaHeader(){
+
+    std::ifstream _in_file("config.json");
+    Json::Value _root_json;
+
+    _in_file >> _root_json;
+
+    for(auto _it_obj =  _root_json["import"].begin(); _it_obj != _root_json["import"].end(); _it_obj++){
+
+        if(_it_obj->isArray()){
+            outs() << _it_obj.key().asString() << "\n";
+            for(auto &elem : *_it_obj){
+                outs() << elem.asString() << "\n";
+            }
+        }
+    }
+
+
 }
 
 /**
@@ -88,7 +114,8 @@ void Graph::insertInstruction(llvm::Instruction &ins) {}
  * Insert a new basic block
  */
 SuperNode *const Graph::insertSuperNode(BasicBlock &BB) {
-    super_node_list.push_back(SuperNode(&BB));
+    super_node_list.push_back(
+        SuperNode(NodeInfo(super_node_list.size(), BB.getName().str()), &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
         [&BB](SuperNode &arg) -> bool { return arg.getBasicBlock() == &BB; });
@@ -100,7 +127,8 @@ SuperNode *const Graph::insertSuperNode(BasicBlock &BB) {
  * Insert a new computation instruction
  */
 InstructionNode *const Graph::insertBinaryOperatorNode(BinaryOperator &I) {
-    inst_list.push_back(BinaryOperatorNode(&I));
+    inst_list.push_back(
+        BinaryOperatorNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -113,7 +141,8 @@ InstructionNode *const Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *const Graph::insertIcmpOperatorNode(ICmpInst &I) {
-    inst_list.push_back(IcmpNode(&I));
+    inst_list.push_back(
+        IcmpNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -126,7 +155,8 @@ InstructionNode *const Graph::insertIcmpOperatorNode(ICmpInst &I) {
  * Insert a new computation Branch
  */
 InstructionNode *const Graph::insertBranchNode(BranchInst &I) {
-    inst_list.push_back(BranchNode(&I));
+    inst_list.push_back(
+        BranchNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -139,7 +169,8 @@ InstructionNode *const Graph::insertBranchNode(BranchInst &I) {
  * Insert a new computation PhiNode
  */
 InstructionNode *const Graph::insertPhiNode(PHINode &I) {
-    inst_list.push_back(PhiSelectNode(&I));
+    inst_list.push_back(
+        PhiSelectNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -152,7 +183,8 @@ InstructionNode *const Graph::insertPhiNode(PHINode &I) {
  * Insert a new Alloca node
  */
 InstructionNode *const Graph::insertAllocaNode(AllocaInst &I) {
-    inst_list.push_back(AllocaNode(&I));
+    inst_list.push_back(
+        AllocaNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -165,7 +197,8 @@ InstructionNode *const Graph::insertAllocaNode(AllocaInst &I) {
  * Insert a new GEP node
  */
 InstructionNode *const Graph::insertGepNode(GetElementPtrInst &I) {
-    inst_list.push_back(GEPNode(&I));
+    inst_list.push_back(
+        GEPNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -178,7 +211,8 @@ InstructionNode *const Graph::insertGepNode(GetElementPtrInst &I) {
  * Insert a new Load node
  */
 InstructionNode *const Graph::insertLoadNode(LoadInst &I) {
-    inst_list.push_back(LoadNode(&I));
+    inst_list.push_back(
+        LoadNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -191,7 +225,8 @@ InstructionNode *const Graph::insertLoadNode(LoadInst &I) {
  * Insert a new Store node
  */
 InstructionNode *const Graph::insertStoreNode(StoreInst &I) {
-    inst_list.push_back(StoreNode(&I));
+    inst_list.push_back(
+        StoreNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -204,7 +239,8 @@ InstructionNode *const Graph::insertStoreNode(StoreInst &I) {
  * Insert a new Call node
  */
 InstructionNode *const Graph::insertCallNode(CallInst &I) {
-    inst_list.push_back(CallNode(&I));
+    inst_list.push_back(
+        CallNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -217,7 +253,8 @@ InstructionNode *const Graph::insertCallNode(CallInst &I) {
  * Insert a new Store node
  */
 InstructionNode *const Graph::insertReturnNode(ReturnInst &I) {
-    inst_list.push_back(ReturnNode(&I));
+    inst_list.push_back(
+        ReturnNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -230,7 +267,8 @@ InstructionNode *const Graph::insertReturnNode(ReturnInst &I) {
  * Insert a new function argument
  */
 ArgumentNode *const Graph::insertFunctionArgument(Argument &AR) {
-    arg_list.push_back(ArgumentNode(&AR));
+    arg_list.push_back(
+        ArgumentNode(NodeInfo(arg_list.size(), AR.getName().str()), &AR));
 
     auto ff = std::find_if(arg_list.begin(), arg_list.end(),
                            [&AR](ArgumentNode &arg) -> bool {
@@ -243,7 +281,8 @@ ArgumentNode *const Graph::insertFunctionArgument(Argument &AR) {
  * Insert a new Store node
  */
 GlobalValueNode *const Graph::insertFunctionGlobalValue(GlobalValue &G) {
-    glob_list.push_back(GlobalValueNode(&G));
+    glob_list.push_back(
+        GlobalValueNode(NodeInfo(glob_list.size(), G.getName().str()), &G));
 
     auto ff = std::find_if(glob_list.begin(), glob_list.end(),
                            [&G](GlobalValueNode &gl) -> bool {
@@ -269,8 +308,10 @@ Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
 /**
  * Insert a new Store node
  */
-ConstIntNode* const Graph::insertConstIntNode(ConstantInt& C) {
-    const_list.push_back(ConstIntNode(&C));
+ConstIntNode *const Graph::insertConstIntNode(ConstantInt &C) {
+    const_list.push_back(
+            ConstIntNode(
+                NodeInfo(const_list.size(),"const" + std::to_string(const_list.size())),&C));
 
     auto ff = std::find_if(const_list.begin(), const_list.end(),
                            [&C](ConstIntNode &cs) -> bool {

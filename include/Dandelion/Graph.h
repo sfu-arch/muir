@@ -7,8 +7,14 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
 
+#include <fstream>
+#include <ostream>
+
+#include "json/json.h"
+
 #include "Dandelion/Edge.h"
 #include "Dandelion/Node.h"
+
 
 namespace dandelion {
 
@@ -20,6 +26,7 @@ using ConstIntList = std::list<ConstIntNode>;
 using EdgeList = std::list<Edge>;
 
 class Graph {
+
    private:
     InstructionList inst_list;
     ArgumentList arg_list;
@@ -60,6 +67,9 @@ class Graph {
 
    protected:
     void printBasicBlocks(PrintType);
+
+    // Scala specific functions
+    void printScalaHeader();
 };
 }
 

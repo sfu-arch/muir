@@ -38,6 +38,27 @@ char GraphGeneratorPass::ID = 0;
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
 }  // namespace graphgen
 
+
+void inline findAllLoops(Loop *L, SetVector<Loop *> &Loops) {
+    // Recursively find all subloops.
+    for (Loop *SL : L->getSubLoops()) {
+        findAllLoops(SL, Loops);
+    }
+    // Store current loop
+    Loops.insert(L);
+}
+
+static SetVector<Loop *> getLoops(LoopInfo &LI) {
+    SetVector<Loop *> Loops;
+
+    // iterate through top level loops. Store all subloops
+    // and top level loop in Loops SetVector.
+    for (auto &L : LI) {
+        findAllLoops(L, Loops);
+    }
+    return Loops;
+}
+
 /**
  * This function is a helper function which only gets a new instruction
  * and insert a new entry to our map to instruction value map
@@ -54,12 +75,19 @@ void inline HelperInsertInstructionMap(
 
 bool GraphGeneratorPass::doInitialization(Module &M) {
     // TODO: Add code here if it's needed before pas
+
+    // TODO: Uncomment to grab all the loop information
+    //for (auto &F : M) {
+        //if (F.isDeclaration()) continue;
+        //if (F.getName() == XKETCHName) {
+            //this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+        //}
+    //}
+
     return false;
 }
 
 bool GraphGeneratorPass::doFinalization(Module &M) {
-    cout << "Number of instruction nodes: "
-         << this->dependency_graph.getInstructionList().size() << endl;
     // TODO: Add code here to do post pass
     return false;
 }
@@ -148,7 +176,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
-
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
                 // Here we have to add a new edge from instruction to BB
                 // 1) First find the basicblock node
@@ -167,7 +194,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 _node_dest->second->addControlInputPort(_node_src->second);
                 _node_src->second->addControlOutputPort(_node_dest->second);
 
-                this->dependency_graph.insertEdge(Edge::DataToControlTypeEdge,
+                this->dependency_graph.insertEdge(Edge::ControlTypeEdge,
                                                   _node_src->second,
                                                   _node_dest->second);
 
@@ -202,8 +229,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
 /**
  * This function has two tasks:
- * 1) Iterate over the basicblock's insturcitons and make a list of those
- * instructions
+ * 1) Iterate over the basicblock's insturcitons and make a list of instructions
  * 2) Make control dependnce edges
  */
 void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
@@ -213,7 +239,6 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 // Iterate over the basicblock's instructions
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
-
                     _bb->addInstruction(_ins);
 
                     // Detect Phi instrucctions
@@ -221,10 +246,10 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         _bb->addPhiInstruction(_phi_ins);
 
                     // Make a control edge
-                    this->dependency_graph.insertEdge(Edge::ControlTypeEdge, _bb, _ins);
+                    this->dependency_graph.insertEdge(Edge::ControlTypeEdge,
+                                                      _bb, _ins);
                 } else
                     assert(!"The instruction is not visited!");
-
             }
 
         } else
@@ -233,17 +258,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 }
 
 /**
- * Does all the initializations for function members
+ * All the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
 
-    // Initilizing the graph
-    // graph.init(super_node_list, instruction_list, argument_list, glob_list,
-    // const_int_list, edge_list);
-    // graph.printGraph(PrintType::Scala);
+    // Printing the graph
+    dependency_graph.printGraph(PrintType::Scala);
 }
 
 bool GraphGeneratorPass::runOnFunction(Function &F) {

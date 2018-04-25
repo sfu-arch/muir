@@ -11,6 +11,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "json/json.h"
+
 #include "Common.h"
 #include "NodeType.h"
 
@@ -38,16 +40,12 @@ class GraphGeneratorPass : public llvm::FunctionPass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
-    // BasicBlockList super_node_list;
-    // InstructionList instruction_list;
-    // ArgumentList argument_list;
-    // GlobalValueList glob_list;
-    // ConstIntList const_int_list;
-    // EdgeList edge_list;
-
     Graph dependency_graph;
 
     std::map<llvm::Value *, Node * > map_value_node;
+
+    // Loop Info
+    //llvm::LoopInfo *LI;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -75,6 +73,7 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     void visitCallInst(llvm::CallInst &);
 
     void fillBasicBlockDependencies(llvm::Function &);
+    void fillLoopDependencies(llvm::Function &);
     void findDataPort(llvm::Function &);
 
     void buildingGraph();
