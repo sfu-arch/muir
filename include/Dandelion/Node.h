@@ -92,6 +92,8 @@ class Node {
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
+    uint32_t numControlInputPort() { return port_control.control_input_port.size(); }
+    uint32_t numControlOutputPort() { return port_control.control_output_port.size(); }
 
     uint32_t getID() {return info.ID;}
     std::string getName() {return info.Name;}
@@ -100,7 +102,7 @@ class Node {
     // virtual void printInitilization() {}
 
     uint32_t getType() const { return node_type; }
-    virtual void printDefinition() {}
+    virtual std::string printDefinition() {return std::string();}
 
    protected:  // Private methods
                // virtual void PrintDataflow();
@@ -139,7 +141,7 @@ class SuperNode : public Node {
     uint32_t getNumPhi() const { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
-    void PrintDefinition(PrintType);
+    std::string PrintDefinition(PrintType);
 };
 
 /**

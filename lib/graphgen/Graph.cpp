@@ -74,11 +74,11 @@ void Graph::printGraph(PrintType _pt) {
 void Graph::printBasicBlocks(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
-            DEBUG(outs() << "\t Print BasicBlocks information!\n");
-            DEBUG(outs() << "\t Number of BB: " << super_node_list.size()
+            DEBUG(dbgs() << "\t Print BasicBlocks information!\n");
+            DEBUG(dbgs() << "\t Number of BB: " << super_node_list.size()
                          << "\n");
             for (auto &bb_node : this->super_node_list) {
-                bb_node.PrintDefinition(PrintType::Scala);
+                outCode << bb_node.PrintDefinition(PrintType::Scala);
             }
             break;
         case PrintType::Dot:
