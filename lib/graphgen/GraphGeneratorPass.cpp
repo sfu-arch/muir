@@ -38,7 +38,6 @@ char GraphGeneratorPass::ID = 0;
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
 }  // namespace graphgen
 
-
 void inline findAllLoops(Loop *L, SetVector<Loop *> &Loops) {
     // Recursively find all subloops.
     for (Loop *SL : L->getSubLoops()) {
@@ -77,11 +76,11 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
     // TODO: Add code here if it's needed before pas
 
     // TODO: Uncomment to grab all the loop information
-    //for (auto &F : M) {
-        //if (F.isDeclaration()) continue;
-        //if (F.getName() == XKETCHName) {
-            //this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-        //}
+    // for (auto &F : M) {
+    // if (F.isDeclaration()) continue;
+    // if (F.getName() == XKETCHName) {
+    // this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    //}
     //}
 
     return false;
@@ -147,7 +146,6 @@ void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
 }
 
 void GraphGeneratorPass::visitFunction(Function &F) {
-
     dependency_graph.setFunction(&F);
 
     // TODO
@@ -177,6 +175,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
+        // Connecting DFG and CFG edges
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
@@ -226,6 +225,31 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph.insertEdge(
                     Edge::DataTypeEdge, _node_src->second, _node_dest->second);
             }
+        }
+
+        // Connecting LD and ST nodes to Memory system
+        if (auto _ld_node =
+                dyn_cast<LoadNode>(this->map_value_node.find(&*ins_it)->second)) {
+
+            //TODO right now we consider all the connections to the cache or regfile
+            //We need a pass to trace the pointers
+            switch(this->mem_mode){
+                case MemoryMode::Cache:
+                    break;
+                case MemoryMode::Reg:
+                    this->dependency_graph.register_file.addReadMemoryReqPort(_ld_node);
+                    this->dependency_graph.register_file.addReadMemoryRespPort(_ld_node);
+                    _ld_node->addReadMemoryReqPort(this->dependency_graph.getRegisterFile());
+                    _ld_node->addReadMemoryRespPort(this->dependency_graph.getRegisterFile());
+                    break;
+                default:
+                        assert("Wrong memory mode!");
+
+            }
+        } else if (auto _ld_node = isa<StoreNode>(
+                       this->map_value_node.find(&*ins_it)->second)) {
+            //TODO right now we consider all the connections to the cache or regfile
+            //We need a pass to trace the pointers
         }
     }
 }

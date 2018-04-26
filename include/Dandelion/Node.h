@@ -3,11 +3,11 @@
 #include <stdint.h>
 #include <list>
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,6 +25,8 @@ class PhiSelectNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
+enum MemoryMode { Cache = 0, Reg };
+
 struct DataPort {
     std::list<Node *const> data_input_port;
     std::list<Node *const> data_output_port;
@@ -35,9 +37,14 @@ struct ControlPort {
     std::list<Node *const> control_output_port;
 };
 
+struct DependencyPort {
+    std::list<Node *const> depen_input_port;
+    std::list<Node *const> depen_output_port;
+};
+
 struct MemoryPort {
-    std::list<MemoryNode *const> memory_input_port;
-    std::list<MemoryNode *const> memory_output_port;
+    std::list<Node *const> memory_req_port;
+    std::list<Node *const> memory_resp_port;
 };
 
 struct NodeInfo {
@@ -56,6 +63,8 @@ class Node {
         FunctionArgTy,
         GlobalValueTy,
         ConstIntTy,
+        StackAllocatorTy,
+        RegisterFileTy,
         UnkonwTy
 
     };
@@ -68,10 +77,12 @@ class Node {
 
     // List of data ports
     DataPort port_data;
+
     // List of Control ports
     ControlPort port_control;
-    // List of Memory ports
-    MemoryPort port_memory;
+
+    // List of Dependency port
+    DependencyPort port_depen;
 
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
@@ -92,17 +103,21 @@ class Node {
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
-    uint32_t numControlInputPort() { return port_control.control_input_port.size(); }
-    uint32_t numControlOutputPort() { return port_control.control_output_port.size(); }
+    uint32_t numControlInputPort() {
+        return port_control.control_input_port.size();
+    }
+    uint32_t numControlOutputPort() {
+        return port_control.control_output_port.size();
+    }
 
-    uint32_t getID() {return info.ID;}
-    std::string getName() {return info.Name;}
+    uint32_t getID() { return info.ID; }
+    std::string getName() { return info.Name; }
 
     // TODO how to define virtual functions?
     // virtual void printInitilization() {}
 
     uint32_t getType() const { return node_type; }
-    virtual std::string printDefinition() {return std::string();}
+    virtual std::string printDefinition() { return std::string(); }
 
    protected:  // Private methods
                // virtual void PrintDataflow();
@@ -145,9 +160,68 @@ class SuperNode : public Node {
 };
 
 /**
+ * StackAllocator allocats new memory addresses from stack space
+ * to each request
+ */
+class StackAllocatorNode : public Node {
+   public:
+    explicit StackAllocatorNode(NodeInfo _nf)
+        : Node(Node::StackAllocatorTy, _nf) {}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::StackAllocatorTy;
+    }
+
+    std::string PrintDefinition(PrintType);
+};
+
+/**
+ * Registerfile works as a local memory for each graph
+ */
+class RegisterFileNode : public Node {
+   private:
+    MemoryPort read_port_data;
+    MemoryPort write_port_data;
+
+   public:
+    explicit RegisterFileNode(NodeInfo _nf) : Node(Node::RegisterFileTy, _nf) {}
+
+    // Restrict access to data input ports
+    void addDataInputPort(Node *) = delete;
+    void addDataOutputPort(Node *) = delete;
+    uint32_t numDataInputPort() = delete;
+    uint32_t numDataOutputPort() = delete;
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::RegisterFileTy;
+    }
+
+    std::string PrintDefinition(PrintType);
+
+    void addReadMemoryReqPort(Node *);
+    void addReadMemoryRespPort(Node *);
+    void addWriteMemoryReqPort(Node *);
+    void addWriteMemoryRespPort(Node *);
+    uint32_t numReadDataInputPort() {
+        return read_port_data.memory_req_port.size();
+    }
+    uint32_t numReadDataOutputPort() {
+        return read_port_data.memory_resp_port.size();
+    }
+    uint32_t numWriteDataInputPort() {
+        return write_port_data.memory_req_port.size();
+    }
+    uint32_t numWriteDataOutputPort() {
+        return write_port_data.memory_resp_port.size();
+    }
+};
+
+/**
  * LoopNode contains all the instructions and useful information about the loops
  */
-class LoopNode: public Node {
+class LoopNode : public Node {
    public:
     using PhiNodeList = std::list<PhiSelectNode *>;
 
@@ -176,8 +250,6 @@ class LoopNode: public Node {
 
     void PrintDefinition(PrintType);
 };
-
-
 
 /**
  * This class is basic implementation of Instruction nodes
@@ -317,6 +389,9 @@ class GEPNode : public InstructionNode {
 };
 
 class LoadNode : public InstructionNode {
+   private:
+    MemoryPort read_port_data;
+
    public:
     LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr)
         : InstructionNode(Node::InstructionNodeTy, _ni,
@@ -328,9 +403,16 @@ class LoadNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    void addReadMemoryReqPort(Node *);
+    void addReadMemoryRespPort(Node *);
+
 };
 
 class StoreNode : public InstructionNode {
+   private:
+    MemoryPort write_port_data;
+
    public:
     StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
               NodeType _nd = UnkonwTy)

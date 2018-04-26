@@ -54,11 +54,13 @@ std::string helperScalaPrintHeader(string header) {
 void Graph::printGraph(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
-            DEBUG(outs() << "Print Graph information!\n");
+            DEBUG(dbgs() << "Print Graph information!\n");
 
             // TODO: pass the corect config path
             printScalaHeader("config.json", "dataflow");
+
             printScalaFunctionHeader();
+            printMemoryModules(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
@@ -74,12 +76,28 @@ void Graph::printGraph(PrintType _pt) {
 void Graph::printBasicBlocks(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
-            DEBUG(dbgs() << "\t Print BasicBlocks information!\n");
-            DEBUG(dbgs() << "\t Number of BB: " << super_node_list.size()
-                         << "\n");
+            DEBUG(dbgs() << "\t Print BasicBlocks information\n");
             for (auto &bb_node : this->super_node_list) {
                 outCode << bb_node.PrintDefinition(PrintType::Scala);
             }
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print memory modules definition
+ */
+void Graph::printMemoryModules(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Memory modules:\n");
+            this->outCode << helperScalaPrintHeader("Printing Memory modules");
+            outCode << stack_alloca.PrintDefinition(PrintType::Scala);
+            outCode << register_file.PrintDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -409,6 +427,21 @@ Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
                                       (e.ReturnTar() == _node_dst);
                            });
     return &*ff;
+}
+
+/**
+ * Inserting memory edges
+ */
+Edge *const Graph::insertMemoryEdge(dandelion::MemoryMode _m_mode,
+                                    Edge::EdgeType _edge_type,
+                                    Node *const _node_src,
+                                    Node *const _node_dst) {
+    edge_list.push_back(Edge(_edge_type, _node_src, _node_dst));
+    auto ff = std::find_if(edge_list.begin(), edge_list.end(),
+                           [_node_src, _node_dst](Edge &e) -> bool {
+                               return (e.ReturnSrc() == _node_src) &&
+                                      (e.ReturnTar() == _node_dst);
+                           });
 }
 
 /**

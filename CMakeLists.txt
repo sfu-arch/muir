@@ -51,7 +51,7 @@ message("LLVM STATUS:
 # Now set the LLVM header and library paths:
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
-link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
+#link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
 add_definitions(${LLVM_DEFINITIONS})
 
 ############## LLVM CONFIGURATION #################

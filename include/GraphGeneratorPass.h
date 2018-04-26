@@ -42,10 +42,12 @@ class GraphGeneratorPass : public llvm::FunctionPass,
 
     Graph dependency_graph;
 
-    std::map<llvm::Value *, Node * > map_value_node;
+    std::map<llvm::Value *, Node *> map_value_node;
+
+    dandelion::MemoryMode mem_mode;
 
     // Loop Info
-    //llvm::LoopInfo *LI;
+    // llvm::LoopInfo *LI;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -81,8 +83,16 @@ class GraphGeneratorPass : public llvm::FunctionPass,
    public:
     static char ID;
 
-    GraphGeneratorPass() : llvm::FunctionPass(ID), dependency_graph(NodeInfo(0,"dummy")), code_out(llvm::outs()) {}
-    GraphGeneratorPass(NodeInfo _n_info) : llvm::FunctionPass(ID), dependency_graph(_n_info), code_out(llvm::outs()) {}
+    GraphGeneratorPass()
+        : llvm::FunctionPass(ID),
+          mem_mode(MemoryMode::Reg),
+          dependency_graph(NodeInfo(0, "dummy")),
+          code_out(llvm::outs()) {}
+    GraphGeneratorPass(NodeInfo _n_info)
+        : llvm::FunctionPass(ID),
+          mem_mode(MemoryMode::Reg),
+          dependency_graph(_n_info),
+          code_out(llvm::outs()) {}
 
     virtual bool runOnFunction(llvm::Function &) override;
 };
