@@ -44,8 +44,6 @@ class GraphGeneratorPass : public llvm::FunctionPass,
 
     std::map<llvm::Value *, Node *> map_value_node;
 
-    dandelion::MemoryMode mem_mode;
-
     // Loop Info
     // llvm::LoopInfo *LI;
 
@@ -85,12 +83,10 @@ class GraphGeneratorPass : public llvm::FunctionPass,
 
     GraphGeneratorPass()
         : llvm::FunctionPass(ID),
-          mem_mode(MemoryMode::Reg),
           dependency_graph(NodeInfo(0, "dummy")),
           code_out(llvm::outs()) {}
     GraphGeneratorPass(NodeInfo _n_info)
         : llvm::FunctionPass(ID),
-          mem_mode(MemoryMode::Reg),
           dependency_graph(_n_info),
           code_out(llvm::outs()) {}
 

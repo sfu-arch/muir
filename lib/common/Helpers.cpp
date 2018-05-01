@@ -9,6 +9,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <experimental/iterator>
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -686,3 +687,59 @@ void helpers::PDGPrinter(Function &F) {
     FPM.run(F);
     FPM.doFinalization();
 }
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                   const std::string &to) {
+    bool _ret = false;
+    while(true){
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), to);
+        _ret = true;
+    }
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                   std::vector<const std::string> &to, const std::string &split) {
+    bool _ret = false;
+    //while(true){
+        //size_t start_pos = str.find(from);
+        //if (start_pos == std::string::npos) break;
+        //str.replace(start_pos, from.length(), to);
+        //_ret = true;
+    //}
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                   std::vector<uint32_t> &&to, const std::string &split) {
+    bool _ret = false;
+    std::stringstream test;
+    std::copy(to.begin(), to.end(), std::experimental::make_ostream_joiner(test, split));
+
+    while(true){
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), test.str());
+        _ret = true;
+    }
+    return _ret;
+}
+
+
+
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                   const uint32_t to) {
+    bool _ret = false;
+    while(true){
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), std::to_string(to));
+        _ret = true;
+    }
+    return _ret;
+}
+
+

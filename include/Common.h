@@ -48,6 +48,15 @@ InstructionType getLLVMOpcodeName(uint32_t OpCode);
 namespace helpers {
 
 /**
+ * Print helper function
+ */
+bool helperReplace(std::string &, const std::string &, const std::string &);
+bool helperReplace(std::string &, const std::string &, std::vector<const std::string> &, const std::string &);
+bool helperReplace(std::string &, const std::string &, std::vector<uint32_t> &&, const std::string &);
+bool helperReplace(std::string &, const std::string &, const uint32_t);
+bool helperReplace(std::string &, const std::string &, std::vector<const uint32_t> &);
+
+/**
  * FUNCTIONS
  */
 
@@ -196,8 +205,7 @@ class GEPAddrCalculation : public ModulePass,
     }
 };
 
-class InstCounter : public llvm::ModulePass{
-
+class InstCounter : public llvm::ModulePass {
    public:
     static char ID;
 

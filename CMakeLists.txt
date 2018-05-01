@@ -35,7 +35,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
-option(LLVM_ENABLE_CXX1Y  "Enable C++14" ON)
+option(LLVM_ENABLE_CXX1Y  "Enable C++17" ON)
 option(LLVM_INCLUDE_TOOLS "Generate build targets for the LLVM tools." ON)
 option(LLVM_BUILD_TOOLS
   "Build the LLVM tools. If OFF, just generate build targets." ON
@@ -51,7 +51,7 @@ message("LLVM STATUS:
 # Now set the LLVM header and library paths:
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
-#link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
+link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
 add_definitions(${LLVM_DEFINITIONS})
 
 ############## LLVM CONFIGURATION #################

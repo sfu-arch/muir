@@ -156,6 +156,8 @@ void GraphGeneratorPass::visitFunction(Function &F) {
         map_value_node[&f_arg] =
             this->dependency_graph.insertFunctionArgument(f_arg);
 
+    this->dependency_graph.setNumSplitCallInput(F.arg_size());
+
     // Filling function global nodes
     for (auto &g_var : F.getParent()->getGlobalList()) {
         map_value_node[&g_var] =
@@ -228,28 +230,22 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         }
 
         // Connecting LD and ST nodes to Memory system
-        if (auto _ld_node =
-                dyn_cast<LoadNode>(this->map_value_node.find(&*ins_it)->second)) {
-
-            //TODO right now we consider all the connections to the cache or regfile
-            //We need a pass to trace the pointers
-            switch(this->mem_mode){
-                case MemoryMode::Cache:
-                    break;
-                case MemoryMode::Reg:
-                    this->dependency_graph.register_file.addReadMemoryReqPort(_ld_node);
-                    this->dependency_graph.register_file.addReadMemoryRespPort(_ld_node);
-                    _ld_node->addReadMemoryReqPort(this->dependency_graph.getRegisterFile());
-                    _ld_node->addReadMemoryRespPort(this->dependency_graph.getRegisterFile());
-                    break;
-                default:
-                        assert("Wrong memory mode!");
-
-            }
+        if (auto _ld_node = dyn_cast<LoadNode>(
+                this->map_value_node.find(&*ins_it)->second)) {
+            // TODO right now we consider all the connections to the cache or
+            // regfile
+            // We need a pass to trace the pointers
+            this->dependency_graph.memory_unit.addReadMemoryReqPort(_ld_node);
+            this->dependency_graph.memory_unit.addReadMemoryRespPort(_ld_node);
+            _ld_node->addReadMemoryReqPort(
+                this->dependency_graph.getMemoryUnit());
+            _ld_node->addReadMemoryRespPort(
+                this->dependency_graph.getMemoryUnit());
         } else if (auto _ld_node = isa<StoreNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
-            //TODO right now we consider all the connections to the cache or regfile
-            //We need a pass to trace the pointers
+            // TODO right now we consider all the connections to the cache or
+            // regfile
+            // We need a pass to trace the pointers
         }
     }
 }

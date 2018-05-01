@@ -37,6 +37,8 @@ class Graph {
     GlobalValueList glob_list;
     ConstIntList const_list;
 
+    // Splitcall for the function
+    SplitCallNode split_call;
 
     // List of the edges between nodes inside the graph
     EdgeList edge_list;
@@ -46,30 +48,29 @@ class Graph {
     llvm::raw_ostream &outCode;
 
    public:
-    //TODO make these two modules private
+    // TODO make these two modules private
     // Memory units inside each graph
-    StackAllocatorNode stack_alloca;
-    RegisterFileNode register_file;
+    MemoryUnitNode memory_unit;
 
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
-          stack_alloca(NodeInfo(0, "StackPointer")),
-          register_file(NodeInfo(0, "RegisterFile")),
+          split_call(NodeInfo(0, "InputSplitter")),
+          memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
-          stack_alloca(NodeInfo(0, "StackPointer")),
-          register_file(NodeInfo(0, "RegisterFile")),
+          split_call(NodeInfo(0, "InputSplitter")),
+          memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(_output),
           function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output,
                    llvm::Function *_fn)
         : graph_info(_n_info),
-          stack_alloca(NodeInfo(0, "StackPointer")),
-          register_file(NodeInfo(0, "RegisterFile")),
+          split_call(NodeInfo(0, "InputSplitter")),
+          memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(_output),
           function_ptr(_fn) {}
@@ -80,7 +81,7 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    RegisterFileNode *const getRegisterFile(){return &register_file;}
+    MemoryUnitNode *const getMemoryUnit() { return &memory_unit; }
 
     const InstructionList getInstructionList();
     void insertInstruction(llvm::Instruction &);
@@ -101,16 +102,19 @@ class Graph {
     ConstIntNode *const insertConstIntNode(llvm::ConstantInt &);
 
     Edge *const insertEdge(Edge::EdgeType, Node *const, Node *const);
-    Edge *const insertMemoryEdge(dandelion::MemoryMode, Edge::EdgeType, Node *const, Node *const);
+    Edge *const insertMemoryEdge(Edge::EdgeType, Node *const, Node *const);
+
+    void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
 
    protected:
-    //General print functions with accepting print type
+    // General print functions with accepting print type
     void printBasicBlocks(PrintType);
     void printMemoryModules(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);
     void printScalaFunctionHeader();
+    void printInputSpliter();
 };
 }
 

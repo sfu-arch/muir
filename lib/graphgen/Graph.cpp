@@ -61,6 +61,7 @@ void Graph::printGraph(PrintType _pt) {
 
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
+            printInputSpliter();
             printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
@@ -96,14 +97,17 @@ void Graph::printMemoryModules(PrintType _pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
-            outCode << stack_alloca.PrintDefinition(PrintType::Scala);
-            outCode << register_file.PrintDefinition(PrintType::Scala);
+            outCode << memory_unit.PrintDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
             assert(!"Uknown print type!");
     }
+}
+
+void Graph::printInputSpliter() {
+    this->outCode << split_call.PrintDefinition();
 }
 
 /**
@@ -143,8 +147,7 @@ void Graph::printScalaFunctionHeader() {
             ins_template.set("call", _ins.getName());
             final_command.append(ins_template.render(command));
             // TODO: Make sure there is no inconsistancy here
-            for (auto &ag :
-                 _fc->getInstruction()->getFunction()->getArgumentList()) {
+            for (auto &ag : _fc->getInstruction()->getFunction()->args()) {
                 command = "32,";
                 ins_template.set("index", static_cast<int>(c++));
                 final_command.append(ins_template.render(command));
@@ -432,8 +435,7 @@ Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
 /**
  * Inserting memory edges
  */
-Edge *const Graph::insertMemoryEdge(dandelion::MemoryMode _m_mode,
-                                    Edge::EdgeType _edge_type,
+Edge *const Graph::insertMemoryEdge(Edge::EdgeType _edge_type,
                                     Node *const _node_src,
                                     Node *const _node_dst) {
     edge_list.push_back(Edge(_edge_type, _node_src, _node_dst));
@@ -442,6 +444,8 @@ Edge *const Graph::insertMemoryEdge(dandelion::MemoryMode _m_mode,
                                return (e.ReturnSrc() == _node_src) &&
                                       (e.ReturnTar() == _node_dst);
                            });
+
+    return &*ff;
 }
 
 /**

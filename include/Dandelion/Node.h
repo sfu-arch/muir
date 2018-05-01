@@ -25,7 +25,7 @@ class PhiSelectNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
-enum MemoryMode { Cache = 0, Reg };
+//enum MemoryMode { Cache = 0, Reg };
 
 struct DataPort {
     std::list<Node *const> data_input_port;
@@ -63,8 +63,8 @@ class Node {
         FunctionArgTy,
         GlobalValueTy,
         ConstIntTy,
-        StackAllocatorTy,
-        RegisterFileTy,
+        MemoryUnitTy,
+        SplitCallTy,
         UnkonwTy
 
     };
@@ -160,32 +160,15 @@ class SuperNode : public Node {
 };
 
 /**
- * StackAllocator allocats new memory addresses from stack space
- * to each request
+ * Memory unit works as a local memory for each graph
  */
-class StackAllocatorNode : public Node {
-   public:
-    explicit StackAllocatorNode(NodeInfo _nf)
-        : Node(Node::StackAllocatorTy, _nf) {}
-
-    // Define classof function so that we can use dyn_cast function
-    static bool classof(const Node *T) {
-        return T->getType() == Node::StackAllocatorTy;
-    }
-
-    std::string PrintDefinition(PrintType);
-};
-
-/**
- * Registerfile works as a local memory for each graph
- */
-class RegisterFileNode : public Node {
+class MemoryUnitNode: public Node {
    private:
     MemoryPort read_port_data;
     MemoryPort write_port_data;
 
    public:
-    explicit RegisterFileNode(NodeInfo _nf) : Node(Node::RegisterFileTy, _nf) {}
+    explicit MemoryUnitNode(NodeInfo _nf) : Node(Node::MemoryUnitTy, _nf) {}
 
     // Restrict access to data input ports
     void addDataInputPort(Node *) = delete;
@@ -195,7 +178,7 @@ class RegisterFileNode : public Node {
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
-        return T->getType() == Node::RegisterFileTy;
+        return T->getType() == Node::MemoryUnitTy;
     }
 
     std::string PrintDefinition(PrintType);
@@ -217,6 +200,30 @@ class RegisterFileNode : public Node {
         return write_port_data.memory_resp_port.size();
     }
 };
+
+/**
+ * SplitCall node
+ */
+class SplitCallNode: public Node {
+   private:
+       uint32_t num_input;
+
+   public:
+    explicit SplitCallNode(NodeInfo _nf)
+        : Node(Node::SplitCallTy, _nf),num_input(0){}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::SuperNodeTy;
+    }
+
+    void setNumInput(uint32_t _n){ num_input =_n; }
+
+    std::string PrintDefinition();
+};
+
+
+
 
 /**
  * LoopNode contains all the instructions and useful information about the loops
