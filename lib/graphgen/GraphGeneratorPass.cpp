@@ -58,20 +58,6 @@ static SetVector<Loop *> getLoops(LoopInfo &LI) {
     return Loops;
 }
 
-/**
- * This function is a helper function which only gets a new instruction
- * and insert a new entry to our map to instruction value map
- */
-void inline HelperInsertInstructionMap(
-    InstructionList &ins_list, std::map<llvm::Value *, Node *> &map_node,
-    llvm::Value &V) {
-    auto ff = std::find_if(ins_list.begin(), ins_list.end(),
-                           [&V](InstructionNode &arg) -> bool {
-                               return arg.getInstruction() == &V;
-                           });
-    map_node[&V] = &*ff;
-}
-
 bool GraphGeneratorPass::doInitialization(Module &M) {
     // TODO: Add code here if it's needed before pas
 
@@ -256,7 +242,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
  * 2) Make control dependnce edges
  */
 void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
+    // Find the entry basic block and connect it to the splitnode
     for (auto &BB : F) {
+        //Find the entry basic block and connect it to the split node
+        if(&BB == &F.getEntryBlock()){
+            auto _en_bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
+            this->dependency_graph.insertEdge(Edge::ControlTypeEdge,this->dependency_graph.getSplitCall(), _en_bb);
+        }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
                 // Iterate over the basicblock's instructions

@@ -81,41 +81,43 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    MemoryUnitNode *const getMemoryUnit() { return &memory_unit; }
+    MemoryUnitNode *getMemoryUnit() { return &memory_unit; }
 
     const InstructionList getInstructionList();
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
-    SuperNode *const insertSuperNode(llvm::BasicBlock &);
-    InstructionNode *const insertBinaryOperatorNode(llvm::BinaryOperator &);
-    InstructionNode *const insertIcmpOperatorNode(llvm::ICmpInst &);
-    InstructionNode *const insertBranchNode(llvm::BranchInst &);
-    InstructionNode *const insertPhiNode(llvm::PHINode &);
-    InstructionNode *const insertAllocaNode(llvm::AllocaInst &);
-    InstructionNode *const insertGepNode(llvm::GetElementPtrInst &);
-    InstructionNode *const insertLoadNode(llvm::LoadInst &);
-    InstructionNode *const insertStoreNode(llvm::StoreInst &);
-    InstructionNode *const insertReturnNode(llvm::ReturnInst &);
-    InstructionNode *const insertCallNode(llvm::CallInst &);
-    ArgumentNode *const insertFunctionArgument(llvm::Argument &);
-    GlobalValueNode *const insertFunctionGlobalValue(llvm::GlobalValue &);
-    ConstIntNode *const insertConstIntNode(llvm::ConstantInt &);
+    SuperNode *insertSuperNode(llvm::BasicBlock &);
+    InstructionNode * insertBinaryOperatorNode(llvm::BinaryOperator &);
+    InstructionNode * insertIcmpOperatorNode(llvm::ICmpInst &);
+    InstructionNode * insertBranchNode(llvm::BranchInst &);
+    InstructionNode * insertPhiNode(llvm::PHINode &);
+    InstructionNode * insertAllocaNode(llvm::AllocaInst &);
+    InstructionNode * insertGepNode(llvm::GetElementPtrInst &);
+    InstructionNode * insertLoadNode(llvm::LoadInst &);
+    InstructionNode * insertStoreNode(llvm::StoreInst &);
+    InstructionNode * insertReturnNode(llvm::ReturnInst &);
+    InstructionNode * insertCallNode(llvm::CallInst &);
+    ArgumentNode * insertFunctionArgument(llvm::Argument &);
+    GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
+    ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
 
-    Edge *const insertEdge(Edge::EdgeType, Node *const, Node *const);
-    Edge *const insertMemoryEdge(Edge::EdgeType, Node *const, Node *const);
+    Edge *insertEdge(Edge::EdgeType, Node *, Node *);
+    Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
     void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
+    SplitCallNode * getSplitCall(){return &this->split_call;}
 
    protected:
     // General print functions with accepting print type
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printMemoryModules(PrintType);
+    void printControlEdges(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);
     void printScalaFunctionHeader();
-    void printInputSpliter();
+    void printScalaInputSpliter();
 };
 }
 

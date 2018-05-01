@@ -40,8 +40,10 @@ class GraphGeneratorPass : public llvm::FunctionPass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
+   public:
     Graph dependency_graph;
 
+   private:
     std::map<llvm::Value *, Node *> map_value_node;
 
     // Loop Info

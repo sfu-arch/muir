@@ -9,10 +9,13 @@
 
 #include <iostream>
 #include <sstream>
+#include <string>
 
 using namespace std;
 using namespace llvm;
 using namespace dandelion;
+
+using InstructionList = std::list<InstructionNode>;
 
 /**
  * HELPER FUNCTIONS
@@ -61,13 +64,11 @@ void Graph::printGraph(PrintType _pt) {
 
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
-            printInputSpliter();
-            this->outCode << helperScalaPrintHeader(
-                "Printing basicblock nodes");
+            printScalaInputSpliter();
             printBasicBlocks(PrintType::Scala);
-            this->outCode << helperScalaPrintHeader(
-                "Printing instruction nodes");
             printInstructions(PrintType::Scala);
+            printControlEdges(PrintType::Scala);
+
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -83,6 +84,8 @@ void Graph::printBasicBlocks(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Print BasicBlocks information\n");
+            this->outCode << helperScalaPrintHeader(
+                "Printing basicblock nodes");
             for (auto &bb_node : this->super_node_list) {
                 outCode << bb_node.PrintDefinition(PrintType::Scala);
             }
@@ -100,6 +103,8 @@ void Graph::printBasicBlocks(PrintType _pt) {
 void Graph::printInstructions(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
+            this->outCode << helperScalaPrintHeader(
+                "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
                 if (auto _binary_ins = dyn_cast<BinaryOperatorNode>(&ins_node))
                     outCode << _binary_ins->PrintDefinition(PrintType::Scala);
@@ -139,7 +144,24 @@ void Graph::printMemoryModules(PrintType _pt) {
     }
 }
 
-void Graph::printInputSpliter() {
+/**
+ * Print control signals
+ */
+void Graph::printControlEdges(PrintType _pt){
+    switch(_pt){
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader("Basicblock -> predicate instruction");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+void Graph::printScalaInputSpliter() {
     this->outCode << split_call.PrintDefinition();
 }
 
@@ -268,12 +290,12 @@ const InstructionList Graph::getInstructionList() { return this->inst_list; }
 /**
  * Insert a new instruction
  */
-void Graph::insertInstruction(llvm::Instruction &ins) {}
+//void Graph::insertInstruction(llvm::Instruction &ins) {}
 
 /**
  * Insert a new basic block
  */
-SuperNode *const Graph::insertSuperNode(BasicBlock &BB) {
+SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     super_node_list.push_back(
         SuperNode(NodeInfo(super_node_list.size(), BB.getName().str()), &BB));
     auto ff = std::find_if(
@@ -286,7 +308,7 @@ SuperNode *const Graph::insertSuperNode(BasicBlock &BB) {
 /**
  * Insert a new computation instruction
  */
-InstructionNode *const Graph::insertBinaryOperatorNode(BinaryOperator &I) {
+InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     inst_list.push_back(
         BinaryOperatorNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -300,7 +322,7 @@ InstructionNode *const Graph::insertBinaryOperatorNode(BinaryOperator &I) {
 /**
  * Insert a new computation instruction
  */
-InstructionNode *const Graph::insertIcmpOperatorNode(ICmpInst &I) {
+InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
     inst_list.push_back(
         IcmpNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -314,7 +336,7 @@ InstructionNode *const Graph::insertIcmpOperatorNode(ICmpInst &I) {
 /**
  * Insert a new computation Branch
  */
-InstructionNode *const Graph::insertBranchNode(BranchInst &I) {
+InstructionNode *Graph::insertBranchNode(BranchInst &I) {
     if (I.getName().str() == "")
         inst_list.push_back(
             BranchNode(NodeInfo(inst_list.size(),
@@ -334,7 +356,7 @@ InstructionNode *const Graph::insertBranchNode(BranchInst &I) {
 /**
  * Insert a new computation PhiNode
  */
-InstructionNode *const Graph::insertPhiNode(PHINode &I) {
+InstructionNode *Graph::insertPhiNode(PHINode &I) {
     inst_list.push_back(
         PhiSelectNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -348,7 +370,7 @@ InstructionNode *const Graph::insertPhiNode(PHINode &I) {
 /**
  * Insert a new Alloca node
  */
-InstructionNode *const Graph::insertAllocaNode(AllocaInst &I) {
+InstructionNode *Graph::insertAllocaNode(AllocaInst &I) {
     inst_list.push_back(
         AllocaNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -362,7 +384,7 @@ InstructionNode *const Graph::insertAllocaNode(AllocaInst &I) {
 /**
  * Insert a new GEP node
  */
-InstructionNode *const Graph::insertGepNode(GetElementPtrInst &I) {
+InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
     inst_list.push_back(
         GEPNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -376,7 +398,7 @@ InstructionNode *const Graph::insertGepNode(GetElementPtrInst &I) {
 /**
  * Insert a new Load node
  */
-InstructionNode *const Graph::insertLoadNode(LoadInst &I) {
+InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     inst_list.push_back(
         LoadNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -390,7 +412,7 @@ InstructionNode *const Graph::insertLoadNode(LoadInst &I) {
 /**
  * Insert a new Store node
  */
-InstructionNode *const Graph::insertStoreNode(StoreInst &I) {
+InstructionNode *Graph::insertStoreNode(StoreInst &I) {
     inst_list.push_back(
         StoreNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -404,7 +426,7 @@ InstructionNode *const Graph::insertStoreNode(StoreInst &I) {
 /**
  * Insert a new Call node
  */
-InstructionNode *const Graph::insertCallNode(CallInst &I) {
+InstructionNode *Graph::insertCallNode(CallInst &I) {
     inst_list.push_back(
         CallNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
@@ -418,7 +440,7 @@ InstructionNode *const Graph::insertCallNode(CallInst &I) {
 /**
  * Insert a new Store node
  */
-InstructionNode *const Graph::insertReturnNode(ReturnInst &I) {
+InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
     if (I.getName().str() == "")
         inst_list.push_back(
             ReturnNode(NodeInfo(inst_list.size(), "ret_"+std::to_string(inst_list.size())), &I));
@@ -436,7 +458,7 @@ InstructionNode *const Graph::insertReturnNode(ReturnInst &I) {
 /**
  * Insert a new function argument
  */
-ArgumentNode *const Graph::insertFunctionArgument(Argument &AR) {
+ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
     arg_list.push_back(
         ArgumentNode(NodeInfo(arg_list.size(), AR.getName().str()), &AR));
 
@@ -450,7 +472,7 @@ ArgumentNode *const Graph::insertFunctionArgument(Argument &AR) {
 /**
  * Insert a new Store node
  */
-GlobalValueNode *const Graph::insertFunctionGlobalValue(GlobalValue &G) {
+GlobalValueNode *Graph::insertFunctionGlobalValue(GlobalValue &G) {
     glob_list.push_back(
         GlobalValueNode(NodeInfo(glob_list.size(), G.getName().str()), &G));
 
@@ -464,8 +486,8 @@ GlobalValueNode *const Graph::insertFunctionGlobalValue(GlobalValue &G) {
 /**
  * Insert a new Edge
  */
-Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
-                              Node *const _node_dst) {
+Edge *Graph::insertEdge(Edge::EdgeType _typ, Node * _node_src,
+                              Node * _node_dst) {
     edge_list.push_back(Edge(_typ, _node_src, _node_dst));
     auto ff = std::find_if(edge_list.begin(), edge_list.end(),
                            [_node_src, _node_dst](Edge &e) -> bool {
@@ -478,9 +500,9 @@ Edge *const Graph::insertEdge(Edge::EdgeType _typ, Node *const _node_src,
 /**
  * Inserting memory edges
  */
-Edge *const Graph::insertMemoryEdge(Edge::EdgeType _edge_type,
-                                    Node *const _node_src,
-                                    Node *const _node_dst) {
+Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type,
+                                    Node * _node_src,
+                                    Node * _node_dst) {
     edge_list.push_back(Edge(_edge_type, _node_src, _node_dst));
     auto ff = std::find_if(edge_list.begin(), edge_list.end(),
                            [_node_src, _node_dst](Edge &e) -> bool {
@@ -494,7 +516,7 @@ Edge *const Graph::insertMemoryEdge(Edge::EdgeType _edge_type,
 /**
  * Insert a new Store node
  */
-ConstIntNode *const Graph::insertConstIntNode(ConstantInt &C) {
+ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
     const_list.push_back(
         ConstIntNode(NodeInfo(const_list.size(),
                               "const" + std::to_string(const_list.size())),

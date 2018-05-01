@@ -28,23 +28,23 @@ enum PrintType { Scala = 0, Dot, Json };
 //enum MemoryMode { Cache = 0, Reg };
 
 struct DataPort {
-    std::list<Node *const> data_input_port;
-    std::list<Node *const> data_output_port;
+    std::list<Node *> data_input_port;
+    std::list<Node *> data_output_port;
 };
 
 struct ControlPort {
-    std::list<Node *const> control_input_port;
-    std::list<Node *const> control_output_port;
+    std::list<Node *> control_input_port;
+    std::list<Node *> control_output_port;
 };
 
 struct DependencyPort {
-    std::list<Node *const> depen_input_port;
-    std::list<Node *const> depen_output_port;
+    std::list<Node *> depen_input_port;
+    std::list<Node *> depen_output_port;
 };
 
 struct MemoryPort {
-    std::list<Node *const> memory_req_port;
-    std::list<Node *const> memory_resp_port;
+    std::list<Node *> memory_req_port;
+    std::list<Node *> memory_resp_port;
 };
 
 struct NodeInfo {
