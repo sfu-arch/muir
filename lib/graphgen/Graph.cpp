@@ -62,6 +62,7 @@ void Graph::printGraph(PrintType _pt) {
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printInputSpliter();
+            this->outCode << helperScalaPrintHeader("Printing basicblock nodes");
             printBasicBlocks(PrintType::Scala);
             break;
         case PrintType::Dot:
