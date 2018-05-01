@@ -117,7 +117,7 @@ class Node {
     // virtual void printInitilization() {}
 
     uint32_t getType() const { return node_type; }
-    virtual std::string printDefinition() { return std::string(); }
+    virtual std::string PrintDefinition() { return std::string(); }
 
    protected:  // Private methods
                // virtual void PrintDataflow();
@@ -255,7 +255,7 @@ class LoopNode : public Node {
     uint32_t getNumPhi() const { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
-    void PrintDefinition(PrintType);
+    std::string PrintDefinition(PrintType);
 };
 
 /**
@@ -308,6 +308,8 @@ class InstructionNode : public Node {
     static bool classof(const Node *T) {
         return T->getType() == Node::InstructionNodeTy;
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class BinaryOperatorNode : public InstructionNode {
@@ -323,6 +325,8 @@ class BinaryOperatorNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class IcmpNode : public InstructionNode {
@@ -337,6 +341,8 @@ class IcmpNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class BranchNode : public InstructionNode {
@@ -351,6 +357,8 @@ class BranchNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class PhiSelectNode : public InstructionNode {
@@ -365,6 +373,8 @@ class PhiSelectNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class AllocaNode : public InstructionNode {
@@ -447,6 +457,8 @@ class ReturnNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    std::string PrintDefinition(PrintType);
 };
 
 class CallNode : public InstructionNode {

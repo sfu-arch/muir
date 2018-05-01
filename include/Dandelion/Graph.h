@@ -109,6 +109,7 @@ class Graph {
    protected:
     // General print functions with accepting print type
     void printBasicBlocks(PrintType);
+    void printInstructions(PrintType);
     void printMemoryModules(PrintType);
 
     // Scala specific functions

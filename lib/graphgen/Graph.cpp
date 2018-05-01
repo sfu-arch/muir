@@ -62,8 +62,12 @@ void Graph::printGraph(PrintType _pt) {
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printInputSpliter();
-            this->outCode << helperScalaPrintHeader("Printing basicblock nodes");
+            this->outCode << helperScalaPrintHeader(
+                "Printing basicblock nodes");
             printBasicBlocks(PrintType::Scala);
+            this->outCode << helperScalaPrintHeader(
+                "Printing instruction nodes");
+            printInstructions(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -87,6 +91,34 @@ void Graph::printBasicBlocks(PrintType _pt) {
             assert(!"Dot file format is not supported!");
         default:
             assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print the insturctions definition
+ */
+void Graph::printInstructions(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            for (auto &ins_node : this->inst_list) {
+                if (auto _binary_ins = dyn_cast<BinaryOperatorNode>(&ins_node))
+                    outCode << _binary_ins->PrintDefinition(PrintType::Scala);
+                else if (auto _icmp_ins = dyn_cast<IcmpNode>(&ins_node))
+                    outCode << _icmp_ins->PrintDefinition(PrintType::Scala);
+                else if (auto _br_ins = dyn_cast<BranchNode>(&ins_node))
+                    outCode << _br_ins->PrintDefinition(PrintType::Scala);
+                else if (auto _phi_ins = dyn_cast<PhiSelectNode>(&ins_node))
+                    outCode << _phi_ins->PrintDefinition(PrintType::Scala);
+                else if (auto _ret_ins = dyn_cast<ReturnNode>(&ins_node))
+                    outCode << _ret_ins->PrintDefinition(PrintType::Scala);
+                else {
+                    ins_node.getInstruction()->dump();
+                    assert(!"Not supported instruction!");
+                }
+            }
+            break;
+        default:
+            assert(!"We don't support the other types right now");
     }
 }
 
@@ -283,8 +315,14 @@ InstructionNode *const Graph::insertIcmpOperatorNode(ICmpInst &I) {
  * Insert a new computation Branch
  */
 InstructionNode *const Graph::insertBranchNode(BranchInst &I) {
-    inst_list.push_back(
-        BranchNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName().str() == "")
+        inst_list.push_back(
+            BranchNode(NodeInfo(inst_list.size(),
+                                "br_" + std::to_string(inst_list.size())),
+                       &I));
+    else
+        inst_list.push_back(
+            BranchNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
@@ -381,8 +419,12 @@ InstructionNode *const Graph::insertCallNode(CallInst &I) {
  * Insert a new Store node
  */
 InstructionNode *const Graph::insertReturnNode(ReturnInst &I) {
-    inst_list.push_back(
-        ReturnNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName().str() == "")
+        inst_list.push_back(
+            ReturnNode(NodeInfo(inst_list.size(), "ret_"+std::to_string(inst_list.size())), &I));
+    else
+        inst_list.push_back(
+            ReturnNode(NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(inst_list.begin(), inst_list.end(),
                            [&I](InstructionNode &arg) -> bool {
