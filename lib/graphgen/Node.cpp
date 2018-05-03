@@ -112,6 +112,24 @@ std::string SuperNode::printOutputEnable(PrintType pt, uint32_t _id) {
 }
 
 
+std::string SuperNode::printMaskOutput(PrintType pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.MaskBB($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
 
 //===----------------------------------------------------------------------===//
 //                            MemoryUnitNode Class
@@ -323,8 +341,6 @@ std::string BinaryOperatorNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
-
 std::string IcmpNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -348,7 +364,6 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
     }
     return _text;
 }
-
 
 std::string IcmpNode::printInputEnable(PrintType _pt) {
     string _text;
@@ -394,7 +409,6 @@ std::string BranchNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string BranchNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -412,7 +426,6 @@ std::string BranchNode::printInputEnable(PrintType _pt) {
     }
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            PhiSelectNode Class
@@ -445,7 +458,6 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string PhiSelectNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -464,7 +476,6 @@ std::string PhiSelectNode::printInputEnable(PrintType _pt) {
     return _text;
 }
 
-
 std::string PhiSelectNode::printInputData(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -474,6 +485,24 @@ std::string PhiSelectNode::printInputData(PrintType _pt, uint32_t _id) {
             _text = "$name.io.InData($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string PhiSelectNode::printMaskInput(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Mask";
+            helperReplace(_text, "$name", _name.c_str());
 
             break;
         case PrintType::Dot:
@@ -509,7 +538,6 @@ std::string ReturnNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string ReturnNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -538,7 +566,6 @@ void LoadNode::addReadMemoryReqPort(Node *const _nd) {
 void LoadNode::addReadMemoryRespPort(Node *const _nd) {
     this->read_port_data.memory_resp_port.push_back(_nd);
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            ConstantNode Class

@@ -257,6 +257,7 @@ void Graph::printPhiNodesConnections(PrintType _pt) {
             DEBUG(dbgs() << "\t Printing phi nodes\n");
             this->outCode << helperScalaPrintHeader("Connecting phi nodes");
             for (auto &_s_node : super_node_list) {
+                // Adding Phi node inputs
                 for (auto _phi_it = _s_node.get()->phi_begin();
                      _phi_it != _s_node.get()->phi_end(); _phi_it++) {
                     auto _phi_ins = dyn_cast<PhiSelectNode>(*_phi_it);
@@ -270,10 +271,24 @@ void Graph::printPhiNodesConnections(PrintType _pt) {
                         auto _input_index = std::distance(
                             _phi_ins->inputDataport_begin(), _phi_input_it);
 
-                        this->outCode << "  " << _phi_ins->printInputData(
+                        this->outCode << "  "
+                                      << _phi_ins->printInputData(
                                              PrintType::Scala, _input_index)
-                                      << " <> " << _phi_input_node->printOutputData(PrintType::Scala, 0) << "\n\n";
+                                      << " <> "
+                                      << _phi_input_node->printOutputData(
+                                             PrintType::Scala, 0)
+                                      << "\n\n";
                     }
+
+                    // Adding phi node mask
+                    auto _input_index = std::distance(
+                        _s_node->phi_begin(), _phi_it);
+                    this->outCode << "  "
+                                  << _phi_ins->printMaskInput(PrintType::Scala)
+                                  << " <> "
+                                  << _phi_ins->getMaskNode()->printMaskOutput(
+                                         PrintType::Scala, _input_index)
+                                  << "\n\n";
                 }
             }
 

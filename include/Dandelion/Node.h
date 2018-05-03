@@ -170,16 +170,16 @@ class Node {
     virtual std::string printOutputEnable(PrintType, uint32_t) {
         return std::string("Not defined!");
     }
-    virtual std::string printInputData(PrintType){
+    virtual std::string printInputData(PrintType) {
         return std::string("Not defined!");
     }
-    virtual std::string printInputData(PrintType, uint32_t){
+    virtual std::string printInputData(PrintType, uint32_t) {
         return std::string("Not defined!");
     }
-    virtual std::string printOutputData(PrintType){
+    virtual std::string printOutputData(PrintType) {
         return std::string("Not defined!");
     }
-    virtual std::string printOutputData(PrintType, uint32_t){
+    virtual std::string printOutputData(PrintType, uint32_t) {
         return std::string("Not defined!");
     }
 };
@@ -222,6 +222,7 @@ class SuperNode : public Node {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printMaskOutput(PrintType, uint32_t);
 };
 
 /**
@@ -430,9 +431,14 @@ class BranchNode : public InstructionNode {
 };
 
 class PhiSelectNode : public InstructionNode {
+   private:
+    SuperNode *mask_node;
+
    public:
-    PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr)
+    PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr, SuperNode *_parent = nullptr)
         : InstructionNode(_ni, InstType::PhiInstructionTy, _ins) {}
+
+    SuperNode *getMaskNode() const { return mask_node; }
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::PhiInstructionTy;
@@ -441,9 +447,12 @@ class PhiSelectNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    void setParentNode(SuperNode * _parent) {this-> mask_node = _parent;}
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printMaskInput(PrintType);
 };
 
 class AllocaNode : public InstructionNode {
@@ -570,7 +579,7 @@ class ConstIntNode : public Node {
         : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {}
 
     llvm::ConstantInt *getConstantParent();
-    virtual std::string printOutputData(PrintType, uint32_t); 
+    virtual std::string printOutputData(PrintType, uint32_t);
 };
 }  // namespace dandelion
 

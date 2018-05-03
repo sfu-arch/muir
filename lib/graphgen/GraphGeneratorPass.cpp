@@ -259,8 +259,10 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     _bb->addInstruction(_ins);
 
                     // Detect Phi instrucctions
-                    if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins))
+                    if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)){
                         _bb->addPhiInstruction(_phi_ins);
+                        _phi_ins->setParentNode(_bb);
+                    }
 
                     // Make a control edge
                     _bb->addControlOutputPort(_ins);
