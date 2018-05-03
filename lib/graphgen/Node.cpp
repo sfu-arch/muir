@@ -45,7 +45,7 @@ void SuperNode::addPhiInstruction(PhiSelectNode *node) {
     this->phi_list.push_back(node);
 }
 
-std::string SuperNode::PrintDefinition(PrintType pt) {
+std::string SuperNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -73,7 +73,7 @@ std::string SuperNode::PrintDefinition(PrintType pt) {
     return _text;
 }
 
-std::string SuperNode::PrintInputEnable(PrintType pt, uint32_t _id) {
+std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -92,7 +92,7 @@ std::string SuperNode::PrintInputEnable(PrintType pt, uint32_t _id) {
     return _text;
 }
 
-std::string SuperNode::PrintOutputEnable(PrintType pt, uint32_t _id) {
+std::string SuperNode::printOutputEnable(PrintType pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -131,7 +131,7 @@ void MemoryUnitNode::addWriteMemoryRespPort(Node *const n) {
     write_port_data.memory_resp_port.emplace_back(n);
 }
 
-std::string MemoryUnitNode::PrintDefinition(PrintType pt) {
+std::string MemoryUnitNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -182,7 +182,7 @@ std::string MemoryUnitNode::PrintDefinition(PrintType pt) {
 //                            CallSpliter Class
 //===----------------------------------------------------------------------===//
 
-std::string SplitCallNode::PrintDefinition(PrintType _pt) {
+std::string SplitCallNode::printDefinition(PrintType _pt) {
     string _text("");
     string _name(this->getName());
 
@@ -208,7 +208,7 @@ std::string SplitCallNode::PrintDefinition(PrintType _pt) {
     return _text;
 }
 
-std::string SplitCallNode::PrintOutputEnable(PrintType _pt, uint32_t _id) {
+std::string SplitCallNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
@@ -224,7 +224,7 @@ std::string SplitCallNode::PrintOutputEnable(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-std::string BranchNode::PrintOutputEnable(PrintType _pt, uint32_t _id) {
+std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
@@ -262,7 +262,7 @@ GlobalValue *GlobalValueNode::getGlobalValue() { return this->parent_glob; }
 
 BasicBlock *SuperNode::getBasicBlock() { return this->basic_block; }
 
-std::string BinaryOperatorNode::PrintDefinition(PrintType _pt) {
+std::string BinaryOperatorNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -286,7 +286,7 @@ std::string BinaryOperatorNode::PrintDefinition(PrintType _pt) {
     return _text;
 }
 
-std::string BinaryOperatorNode::PrintInputEnable(PrintType _pt) {
+std::string BinaryOperatorNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -304,7 +304,28 @@ std::string BinaryOperatorNode::PrintInputEnable(PrintType _pt) {
     return _text;
 }
 
-std::string IcmpNode::PrintDefinition(PrintType _pt) {
+std::string BinaryOperatorNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+
+std::string IcmpNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -329,7 +350,7 @@ std::string IcmpNode::PrintDefinition(PrintType _pt) {
 }
 
 
-std::string IcmpNode::PrintInputEnable(PrintType _pt) {
+std::string IcmpNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -347,7 +368,7 @@ std::string IcmpNode::PrintInputEnable(PrintType _pt) {
     return _text;
 }
 
-std::string BranchNode::PrintDefinition(PrintType _pt) {
+std::string BranchNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -374,7 +395,7 @@ std::string BranchNode::PrintDefinition(PrintType _pt) {
 }
 
 
-std::string BranchNode::PrintInputEnable(PrintType _pt) {
+std::string BranchNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -392,7 +413,12 @@ std::string BranchNode::PrintInputEnable(PrintType _pt) {
     return _text;
 }
 
-std::string PhiSelectNode::PrintDefinition(PrintType _pt) {
+
+//===----------------------------------------------------------------------===//
+//                            PhiSelectNode Class
+//===----------------------------------------------------------------------===//
+
+std::string PhiSelectNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -420,7 +446,7 @@ std::string PhiSelectNode::PrintDefinition(PrintType _pt) {
 }
 
 
-std::string PhiSelectNode::PrintInputEnable(PrintType _pt) {
+std::string PhiSelectNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -438,7 +464,27 @@ std::string PhiSelectNode::PrintInputEnable(PrintType _pt) {
     return _text;
 }
 
-std::string ReturnNode::PrintDefinition(PrintType _pt) {
+
+std::string PhiSelectNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.InData($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ReturnNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -464,7 +510,7 @@ std::string ReturnNode::PrintDefinition(PrintType _pt) {
 }
 
 
-std::string ReturnNode::PrintInputEnable(PrintType _pt) {
+std::string ReturnNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -491,4 +537,28 @@ void LoadNode::addReadMemoryReqPort(Node *const _nd) {
 }
 void LoadNode::addReadMemoryRespPort(Node *const _nd) {
     this->read_port_data.memory_resp_port.push_back(_nd);
+}
+
+
+//===----------------------------------------------------------------------===//
+//                            ConstantNode Class
+//===----------------------------------------------------------------------===//
+
+std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
 }

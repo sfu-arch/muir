@@ -69,6 +69,7 @@ void Graph::printGraph(PrintType _pt) {
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
+            printPhiNodesConnections(PrintType::Scala);
 
             break;
         case PrintType::Dot:
@@ -88,7 +89,7 @@ void Graph::printBasicBlocks(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing basicblock nodes");
             for (auto &bb_node : this->super_node_list) {
-                outCode << bb_node->PrintDefinition(PrintType::Scala);
+                outCode << bb_node->printDefinition(PrintType::Scala);
             }
             break;
         case PrintType::Dot:
@@ -107,7 +108,7 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
-                outCode << ins_node->PrintDefinition(PrintType::Scala);
+                outCode << ins_node->printDefinition(PrintType::Scala);
 
                 // if (auto _binary_ins =
                 // dyn_cast<BinaryOperatorNode>(&ins_node))
@@ -141,7 +142,7 @@ void Graph::printMemoryModules(PrintType _pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
-            outCode << memory_unit.PrintDefinition(PrintType::Scala);
+            outCode << memory_unit.printDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -181,10 +182,10 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                         assert(!"Couldn't find the control edge\n");
 
                     this->outCode << "  "
-                                  << _s_node->PrintInputEnable(PrintType::Scala,
+                                  << _s_node->printInputEnable(PrintType::Scala,
                                                                _input_index)
                                   << " <> "
-                                  << _input_node->PrintOutputEnable(
+                                  << _input_node->printOutputEnable(
                                          PrintType::Scala, _output_index)
                                   << "\n\n";
                 }
@@ -230,11 +231,49 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 
                     this->outCode
                         << "  "
-                        << _output_node->PrintInputEnable(PrintType::Scala)
+                        << _output_node->printInputEnable(PrintType::Scala)
                         << " <> "
-                        << _s_node->PrintOutputEnable(PrintType::Scala,
-                                                     _output_index)
+                        << _s_node->printOutputEnable(PrintType::Scala,
+                                                      _output_index)
                         << "\n\n";
+                }
+                this->outCode << "\n";
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print control signals
+ */
+void Graph::printPhiNodesConnections(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing phi nodes\n");
+            this->outCode << helperScalaPrintHeader("Connecting phi nodes");
+            for (auto &_s_node : super_node_list) {
+                for (auto _phi_it = _s_node.get()->phi_begin();
+                     _phi_it != _s_node.get()->phi_end(); _phi_it++) {
+                    auto _phi_ins = dyn_cast<PhiSelectNode>(*_phi_it);
+
+                    // Iterating over datainput of PHI node
+                    for (auto _phi_input_it = _phi_ins->inputDataport_begin();
+                         _phi_input_it != _phi_ins->inputDataport_end();
+                         _phi_input_it++) {
+                        auto _phi_input_node = dyn_cast<Node>(*_phi_input_it);
+
+                        auto _input_index = std::distance(
+                            _phi_ins->inputDataport_begin(), _phi_input_it);
+
+                        this->outCode << "  " << _phi_ins->printInputData(
+                                             PrintType::Scala, _input_index)
+                                      << " <> " << _phi_input_node->printOutputData(PrintType::Scala, 0) << "\n\n";
+                    }
                 }
             }
 
@@ -247,7 +286,7 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 }
 
 void Graph::printScalaInputSpliter() {
-    this->outCode << split_call.PrintDefinition(PrintType::Scala);
+    this->outCode << split_call.printDefinition(PrintType::Scala);
 }
 
 /**
@@ -400,7 +439,7 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-    ff->get()->PrintDefinition(PrintType::Scala);
+    ff->get()->printDefinition(PrintType::Scala);
 
     return ff->get();
 }

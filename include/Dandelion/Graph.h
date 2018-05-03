@@ -120,6 +120,7 @@ class Graph {
     void printMemoryModules(PrintType);
     void printBasickBlockPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);
+    void printPhiNodesConnections(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);
