@@ -73,6 +73,25 @@ std::string SuperNode::PrintDefinition(PrintType pt) {
     return _text;
 }
 
+std::string SuperNode::PrintInputEnable(PrintType pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "  $name.io.predicateIn($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            MemoryUnitNode Class
 //===----------------------------------------------------------------------===//
@@ -142,21 +161,60 @@ std::string MemoryUnitNode::PrintDefinition(PrintType pt) {
 //                            CallSpliter Class
 //===----------------------------------------------------------------------===//
 
-std::string SplitCallNode::PrintDefinition() {
+std::string SplitCallNode::PrintDefinition(PrintType _pt) {
+    string _text("");
     string _name(this->getName());
 
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(List($<input_vector>)))\n"
+                "  $name.io.In <> io.in\n\n";
+
+            // std::vector<uint32_t> _t_input(2, 32);
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$type", "SplitCall");
+            helperReplace(_text, "$id", std::to_string(this->getID()));
+            helperReplace(_text, "$<input_vector>",
+                          std::vector<uint32_t>({32, 32}), ",");
+
+            break;
+        default:
+            assert(!"Don't support!");
+    }
+    return _text;
+}
+
+std::string SplitCallNode::PrintOutputEnable(PrintType _pt) {
+    string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
-    string _text =
-        "  val $name = Module(new $type(List($<input_vector>)))\n"
-        "  $name.io.In <> io.in\n\n";
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.Out.enable";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
 
-    // std::vector<uint32_t> _t_input(2, 32);
+    return _text;
+}
 
-    helperReplace(_text, "$name", _name.c_str());
-    helperReplace(_text, "$type", "SplitCall");
-    helperReplace(_text, "$id", std::to_string(this->getID()));
-    helperReplace(_text, "$<input_vector>", std::vector<uint32_t>({32, 32}),
-                  ",");
+std::string BranchNode::PrintOutputEnable(PrintType _pt) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.Out.enable";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
 
     return _text;
 }
@@ -181,10 +239,6 @@ Argument *ArgumentNode::getArgumentValue() { return this->parent_argument; }
 GlobalValue *GlobalValueNode::getGlobalValue() { return this->parent_glob; }
 
 BasicBlock *SuperNode::getBasicBlock() { return this->basic_block; }
-
-std::string InstructionNode::PrintDefinition(PrintType _pt) {
-    return std::string();
-}
 
 std::string BinaryOperatorNode::PrintDefinition(PrintType _pt) {
     string _text;
@@ -300,7 +354,8 @@ std::string ReturnNode::PrintDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$<input_list>",
-                          std::vector<uint32_t>(this->numDataInputPort(), 32), ",");
+                          std::vector<uint32_t>(this->numDataInputPort(), 32),
+                          ",");
 
             break;
         case PrintType::Dot:

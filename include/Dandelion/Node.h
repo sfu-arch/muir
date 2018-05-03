@@ -25,7 +25,7 @@ class PhiSelectNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
-//enum MemoryMode { Cache = 0, Reg };
+// enum MemoryMode { Cache = 0, Reg };
 
 struct DataPort {
     std::list<Node *> data_input_port;
@@ -69,6 +69,8 @@ class Node {
 
     };
 
+    using node_citerator = std::list<Node *>::const_iterator;
+
    private:
     // Type of the Node
     NodeType node_type;
@@ -98,7 +100,7 @@ class Node {
     void addDataInputPort(Node *);
     void addDataOutputPort(Node *);
 
-    void addControlInputPort(Node *const);
+    void addControlInputPort(Node *);
     void addControlOutputPort(Node *);
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
@@ -110,6 +112,41 @@ class Node {
         return port_control.control_output_port.size();
     }
 
+    node_citerator inputDataport_begin() {
+        return this->port_data.data_input_port.cbegin();
+    }
+    node_citerator inputDataport_end() {
+        return this->port_data.data_input_port.cend();
+    }
+    node_citerator outputDataport_begin() {
+        return this->port_data.data_input_port.cbegin();
+    }
+    node_citerator outputDataport_end() {
+        return this->port_data.data_output_port.cend();
+    }
+
+    node_citerator inputControl_begin() {
+        return this->port_control.control_input_port.cbegin();
+    }
+    node_citerator inputControl_end() {
+        return this->port_control.control_input_port.cend();
+    }
+    node_citerator outputControl_begin() {
+        return this->port_control.control_output_port.cbegin();
+    }
+    node_citerator outputControl_end() {
+        return this->port_control.control_output_port.cend();
+    }
+
+    // node_citerator inputControl_begin(){ return
+    // this->port_data.data_input_port.cbegin(); }
+    // node_citerator inputControl_end(){ return
+    // this->port_data.data_input_port.cend(); }
+    // node_citerator outputControl_begin(){ return
+    // this->port_data.data_input_port.cbegin(); }
+    // node_citerator outputControl_end(){ return
+    // this->port_data.data_output_port.cend(); }
+
     uint32_t getID() { return info.ID; }
     std::string getName() { return info.Name; }
 
@@ -117,12 +154,17 @@ class Node {
     // virtual void printInitilization() {}
 
     uint32_t getType() const { return node_type; }
-    virtual std::string PrintDefinition() { return std::string(); }
 
-   protected:  // Private methods
-               // virtual void PrintDataflow();
-               // virtual void PrintControlFlow();
-               // virtual void PrintMemory();
+    virtual std::string PrintDefinition(PrintType) {
+        return std::string("Not define!\n");
+    }
+    virtual std::string PrintInputEnable(PrintType, uint32_t) {
+        return std::string("Not defined!\n");
+    }
+    virtual std::string PrintOutputEnable(PrintType) {
+        return std::string("Not defined!\n");
+    }
+
 };
 
 /**
@@ -156,13 +198,14 @@ class SuperNode : public Node {
     uint32_t getNumPhi() const { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintInputEnable(PrintType, uint32_t) override;
 };
 
 /**
  * Memory unit works as a local memory for each graph
  */
-class MemoryUnitNode: public Node {
+class MemoryUnitNode : public Node {
    private:
     MemoryPort read_port_data;
     MemoryPort write_port_data;
@@ -181,7 +224,7 @@ class MemoryUnitNode: public Node {
         return T->getType() == Node::MemoryUnitTy;
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType);
 
     void addReadMemoryReqPort(Node *);
     void addReadMemoryRespPort(Node *);
@@ -204,26 +247,25 @@ class MemoryUnitNode: public Node {
 /**
  * SplitCall node
  */
-class SplitCallNode: public Node {
+class SplitCallNode : public Node {
    private:
-       uint32_t num_input;
+    uint32_t num_input;
 
    public:
     explicit SplitCallNode(NodeInfo _nf)
-        : Node(Node::SplitCallTy, _nf),num_input(0){}
+        : Node(Node::SplitCallTy, _nf), num_input(0) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
         return T->getType() == Node::SuperNodeTy;
     }
 
-    void setNumInput(uint32_t _n){ num_input =_n; }
+    void setNumInput(uint32_t _n) { num_input = _n; }
 
-    std::string PrintDefinition();
+    virtual std::string PrintDefinition(PrintType) override;
+    // std::string PrintInputEnable();
+    virtual std::string PrintOutputEnable(PrintType) override;
 };
-
-
-
 
 /**
  * LoopNode contains all the instructions and useful information about the loops
@@ -293,7 +335,7 @@ class InstructionNode : public Node {
     llvm::Instruction *parent_instruction;
 
    public:
-    InstructionNode(NodeType _nd, NodeInfo _ni, InstType _ins_t,
+    InstructionNode(NodeInfo _ni, InstType _ins_t,
                     llvm::Instruction *_ins = nullptr)
         : Node(Node::InstructionNodeTy, _ni),
           ins_type(_ins_t),
@@ -309,14 +351,15 @@ class InstructionNode : public Node {
         return T->getType() == Node::InstructionNodeTy;
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override {
+        return std::string("Not defined instructions\n");
+    }
 };
 
 class BinaryOperatorNode : public InstructionNode {
    public:
     BinaryOperatorNode(NodeInfo _ni, llvm::BinaryOperator *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::BinaryInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::BinaryInstructionTy, _ins) {}
 
     // Overloading isa<>, dyn_cast from llvm
     static bool classof(const InstructionNode *I) {
@@ -326,14 +369,13 @@ class BinaryOperatorNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
 };
 
 class IcmpNode : public InstructionNode {
    public:
     IcmpNode(NodeInfo _ni, llvm::ICmpInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::IcmpInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::IcmpInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *I) {
         return I->getOpCode() == InstType::IcmpInstructionTy;
@@ -348,8 +390,7 @@ class IcmpNode : public InstructionNode {
 class BranchNode : public InstructionNode {
    public:
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -358,14 +399,14 @@ class BranchNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintOutputEnable(PrintType) override;
 };
 
 class PhiSelectNode : public InstructionNode {
    public:
     PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstType::PhiInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::PhiInstructionTy;
@@ -374,14 +415,13 @@ class PhiSelectNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType);
 };
 
 class AllocaNode : public InstructionNode {
    public:
     AllocaNode(NodeInfo _ni, llvm::AllocaInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::AllocaInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
@@ -394,8 +434,7 @@ class AllocaNode : public InstructionNode {
 class GEPNode : public InstructionNode {
    public:
     GEPNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::GetElementPtrInstTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::GetElementPtrInstTy;
@@ -411,8 +450,7 @@ class LoadNode : public InstructionNode {
 
    public:
     LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::LoadInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::LoadInstructionTy;
@@ -423,7 +461,6 @@ class LoadNode : public InstructionNode {
 
     void addReadMemoryReqPort(Node *);
     void addReadMemoryRespPort(Node *);
-
 };
 
 class StoreNode : public InstructionNode {
@@ -433,8 +470,7 @@ class StoreNode : public InstructionNode {
    public:
     StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
               NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::StoreInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::StoreInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::StoreInstructionTy;
@@ -448,8 +484,7 @@ class ReturnNode : public InstructionNode {
    public:
     ReturnNode(NodeInfo _ni, llvm::ReturnInst *_ins = nullptr,
                NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::ReturnInstrunctionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::ReturnInstrunctionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::ReturnInstrunctionTy;
@@ -458,15 +493,14 @@ class ReturnNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType);
 };
 
 class CallNode : public InstructionNode {
    public:
     CallNode(NodeInfo _ni, llvm::CallInst *_ins = nullptr,
              NodeType _nd = UnkonwTy)
-        : InstructionNode(Node::InstructionNodeTy, _ni,
-                          InstructionNode::CallInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::CallInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::CallInstructionTy;

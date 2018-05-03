@@ -18,7 +18,7 @@
 
 namespace dandelion {
 
-using InstructionList = std::list<InstructionNode>;
+using InstructionList = std::list<std::unique_ptr<InstructionNode>>;
 using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
 using GlobalValueList = std::list<GlobalValueNode>;
@@ -26,6 +26,9 @@ using ConstIntList = std::list<ConstIntNode>;
 using EdgeList = std::list<Edge>;
 
 class Graph {
+   public:
+    using ins_citerator = std::list<std::unique_ptr<InstructionNode>>::const_iterator;
+
    private:
     // Node information
     NodeInfo graph_info;
@@ -83,21 +86,24 @@ class Graph {
     bool isEmpty() { return graph_empty; }
     MemoryUnitNode *getMemoryUnit() { return &memory_unit; }
 
-    const InstructionList getInstructionList();
+    // InstructionList *getInstructionList();
+    ins_citerator instList_begin() {return this->inst_list.cbegin();}
+    ins_citerator instList_end() {return this->inst_list.cend();}
+
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
     SuperNode *insertSuperNode(llvm::BasicBlock &);
-    InstructionNode * insertBinaryOperatorNode(llvm::BinaryOperator &);
-    InstructionNode * insertIcmpOperatorNode(llvm::ICmpInst &);
-    InstructionNode * insertBranchNode(llvm::BranchInst &);
-    InstructionNode * insertPhiNode(llvm::PHINode &);
-    InstructionNode * insertAllocaNode(llvm::AllocaInst &);
-    InstructionNode * insertGepNode(llvm::GetElementPtrInst &);
-    InstructionNode * insertLoadNode(llvm::LoadInst &);
-    InstructionNode * insertStoreNode(llvm::StoreInst &);
-    InstructionNode * insertReturnNode(llvm::ReturnInst &);
-    InstructionNode * insertCallNode(llvm::CallInst &);
-    ArgumentNode * insertFunctionArgument(llvm::Argument &);
+    InstructionNode *insertBinaryOperatorNode(llvm::BinaryOperator &);
+    InstructionNode *insertIcmpOperatorNode(llvm::ICmpInst &);
+    InstructionNode *insertBranchNode(llvm::BranchInst &);
+    InstructionNode *insertPhiNode(llvm::PHINode &);
+    InstructionNode *insertAllocaNode(llvm::AllocaInst &);
+    InstructionNode *insertGepNode(llvm::GetElementPtrInst &);
+    InstructionNode *insertLoadNode(llvm::LoadInst &);
+    InstructionNode *insertStoreNode(llvm::StoreInst &);
+    InstructionNode *insertReturnNode(llvm::ReturnInst &);
+    InstructionNode *insertCallNode(llvm::CallInst &);
+    ArgumentNode *insertFunctionArgument(llvm::Argument &);
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
 
@@ -105,7 +111,7 @@ class Graph {
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
     void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
-    SplitCallNode * getSplitCall(){return &this->split_call;}
+    SplitCallNode *getSplitCall() { return &this->split_call; }
 
    protected:
     // General print functions with accepting print type

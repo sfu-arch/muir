@@ -248,6 +248,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         if(&BB == &F.getEntryBlock()){
             auto _en_bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
             this->dependency_graph.insertEdge(Edge::ControlTypeEdge,this->dependency_graph.getSplitCall(), _en_bb);
+            _en_bb->addControlInputPort(this->dependency_graph.getSplitCall());
+            this->dependency_graph.getSplitCall()->addControlOutputPort(_en_bb);
         }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {

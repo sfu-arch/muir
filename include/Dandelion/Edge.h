@@ -32,19 +32,19 @@ class Edge {
 
    private:
     EdgeType edge_type;
-    const Node *src;
-    const Node *tar;
+    Node *src;
+    Node *tar;
 
    public:
     explicit Edge(EdgeType _ty) : edge_type(_ty) {}
-    explicit Edge(const Node *_src = nullptr, const Node *_tar = nullptr) : src(_src), tar(_tar) {}
-    explicit Edge(EdgeType _ty = UknownType, const Node *_src = nullptr, const Node *_tar = nullptr)
+    explicit Edge(Node *_src = nullptr, Node *_tar = nullptr) : src(_src), tar(_tar) {}
+    explicit Edge(EdgeType _ty = UknownType, Node *_src = nullptr, Node *_tar = nullptr)
         : edge_type(_ty), src(_src), tar(_tar) {}
 
     uint32_t getType() const { return edge_type; }
 
-    const Node *ReturnSrc() { return src; }
-    const Node *ReturnTar() { return tar; }
+    Node *ReturnSrc() { return src; }
+    Node *ReturnTar() { return tar; }
 };
 }
 
