@@ -262,6 +262,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)){
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
+                        this->dependency_graph.insertEdge(Edge::MaskTypeEdge, _bb, _phi_ins);
                     }
 
                     // Make a control edge

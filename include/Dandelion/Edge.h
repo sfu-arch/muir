@@ -24,6 +24,7 @@ class Edge {
         ControlTypeEdge,
         DataToControlTypeEdge,
         ControlToDataTypeEdge,
+        MaskTypeEdge,
         MemoryTypeEdge,
         MemoryToDataTypeEdge,
         MemoryToControlTypeEdge,
@@ -43,8 +44,8 @@ class Edge {
 
     uint32_t getType() const { return edge_type; }
 
-    Node *ReturnSrc() { return src; }
-    Node *ReturnTar() { return tar; }
+    Node *getSrc() { return src; }
+    Node *getTar() { return tar; }
 };
 }
 

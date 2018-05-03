@@ -121,6 +121,7 @@ class Graph {
     void printBasickBlockPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);
     void printPhiNodesConnections(PrintType);
+    void printDatadependencies(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);

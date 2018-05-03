@@ -33,6 +33,18 @@ void Node::addControlOutputPort(Node *n) {
     port_control.control_output_port.emplace_back(n);
 }
 
+uint32_t Node::returnDataOutputPortIndex(Node &_node) {
+    return std::distance(this->port_data.data_output_port.begin(),
+                         find(this->port_data.data_output_port.begin(),
+                              this->port_data.data_output_port.end(), &_node));
+}
+
+uint32_t Node::returnDataInputPortIndex(Node &_node) {
+    return std::distance(this->port_data.data_input_port.begin(),
+                         find(this->port_data.data_input_port.begin(),
+                              this->port_data.data_input_port.end(), &_node));
+}
+
 //===----------------------------------------------------------------------===//
 //                            SuperNode Class
 //===----------------------------------------------------------------------===//
@@ -110,7 +122,6 @@ std::string SuperNode::printOutputEnable(PrintType pt, uint32_t _id) {
     }
     return _text;
 }
-
 
 std::string SuperNode::printMaskOutput(PrintType pt, uint32_t _id) {
     string _text;

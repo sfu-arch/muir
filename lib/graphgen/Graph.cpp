@@ -70,6 +70,7 @@ void Graph::printGraph(PrintType _pt) {
             printBasickBlockPredicateEdges(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
+            printDatadependencies(PrintType::Scala);
 
             break;
         case PrintType::Dot:
@@ -109,24 +110,6 @@ void Graph::printInstructions(PrintType _pt) {
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
                 outCode << ins_node->printDefinition(PrintType::Scala);
-
-                // if (auto _binary_ins =
-                // dyn_cast<BinaryOperatorNode>(&ins_node))
-                // outCode << _binary_ins->PrintDefinition(PrintType::Scala);
-                // else if (auto _icmp_ins = dyn_cast<IcmpNode>(&ins_node))
-                // outCode << _icmp_ins->PrintDefinition(PrintType::Scala);
-                // else if (auto _br_ins = dyn_cast<BranchNode>(&ins_node))
-                // outCode << _br_ins->PrintDefinition(PrintType::Scala);
-                // else if (auto _phi_ins = dyn_cast<PhiSelectNode>(&ins_node))
-                // outCode << _phi_ins->PrintDefinition(PrintType::Scala);
-                // else if (auto _ret_ins = dyn_cast<ReturnNode>(&ins_node))
-                // outCode << _ret_ins->PrintDefinition(PrintType::Scala);
-                // else {
-                ////ins_node.getInstruction()->dump();
-                // auto _ins = dyn_cast<InstructionNode>(&ins_node);
-                //_ins->getInstruction()->dump();
-                // assert(!"Not supported instruction!");
-                //}
             }
             break;
         default:
@@ -281,14 +264,48 @@ void Graph::printPhiNodesConnections(PrintType _pt) {
                     }
 
                     // Adding phi node mask
-                    auto _input_index = std::distance(
-                        _s_node->phi_begin(), _phi_it);
+                    auto _input_index =
+                        std::distance(_s_node->phi_begin(), _phi_it);
                     this->outCode << "  "
                                   << _phi_ins->printMaskInput(PrintType::Scala)
                                   << " <> "
                                   << _phi_ins->getMaskNode()->printMaskOutput(
                                          PrintType::Scala, _input_index)
                                   << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print data dependencies
+ */
+void Graph::printDatadependencies(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Data dependencies\n");
+            this->outCode << helperScalaPrintHeader(
+                "Connecting data dependencies");
+            for (auto &_data_edge : edge_list) {
+                if (_data_edge.getType() == Edge::DataTypeEdge) {
+
+                    this->outCode
+                        << "  "
+                        << _data_edge.getTar()->printInputData(
+                               PrintType::Scala,
+                               _data_edge.getTar()->returnDataInputPortIndex(
+                                   *_data_edge.getSrc()))
+                        << " <> "
+                        << _data_edge.getSrc()->printOutputData(
+                               PrintType::Scala, 
+                               _data_edge.getSrc()->returnDataOutputPortIndex(*_data_edge.getTar()))
+                        << "\n\n";
                 }
             }
 
@@ -623,8 +640,8 @@ Edge *Graph::insertEdge(Edge::EdgeType _typ, Node *_node_src, Node *_node_dst) {
     edge_list.push_back(Edge(_typ, _node_src, _node_dst));
     auto ff = std::find_if(edge_list.begin(), edge_list.end(),
                            [_node_src, _node_dst](Edge &e) -> bool {
-                               return (e.ReturnSrc() == _node_src) &&
-                                      (e.ReturnTar() == _node_dst);
+                               return (e.getSrc() == _node_src) &&
+                                      (e.getTar() == _node_dst);
                            });
     return &*ff;
 }
@@ -637,8 +654,8 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Node *_node_src,
     edge_list.push_back(Edge(_edge_type, _node_src, _node_dst));
     auto ff = std::find_if(edge_list.begin(), edge_list.end(),
                            [_node_src, _node_dst](Edge &e) -> bool {
-                               return (e.ReturnSrc() == _node_src) &&
-                                      (e.ReturnTar() == _node_dst);
+                               return (e.getSrc() == _node_src) &&
+                                      (e.getTar() == _node_dst);
                            });
 
     return &*ff;
