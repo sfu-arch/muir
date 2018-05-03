@@ -20,7 +20,7 @@ namespace dandelion {
 
 using InstructionList = std::list<std::unique_ptr<InstructionNode>>;
 using ArgumentList = std::list<ArgumentNode>;
-using BasicBlockList = std::list<SuperNode>;
+using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<ConstIntNode>;
 using EdgeList = std::list<Edge>;
@@ -118,7 +118,8 @@ class Graph {
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printMemoryModules(PrintType);
-    void printControlEdges(PrintType);
+    void printBasickBlockPredicateEdges(PrintType);
+    void printBasickBLockInstructionEdges(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);

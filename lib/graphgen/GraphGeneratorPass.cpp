@@ -263,6 +263,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         _bb->addPhiInstruction(_phi_ins);
 
                     // Make a control edge
+                    _bb->addControlOutputPort(_ins);
+                    _ins->addControlInputPort(_bb);
                     this->dependency_graph.insertEdge(Edge::ControlTypeEdge,
                                                       _bb, _ins);
                 } else

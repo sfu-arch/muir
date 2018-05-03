@@ -156,13 +156,19 @@ class Node {
     uint32_t getType() const { return node_type; }
 
     virtual std::string PrintDefinition(PrintType) {
-        return std::string("Not define!\n");
+        return std::string("Not define!");
     }
     virtual std::string PrintInputEnable(PrintType, uint32_t) {
-        return std::string("Not defined!\n");
+        return std::string("Not defined!");
+    }
+    virtual std::string PrintInputEnable(PrintType) {
+        return std::string("Not defined!");
     }
     virtual std::string PrintOutputEnable(PrintType) {
-        return std::string("Not defined!\n");
+        return std::string("Not defined!");
+    }
+    virtual std::string PrintOutputEnable(PrintType, uint32_t) {
+        return std::string("Not defined!");
     }
 
 };
@@ -198,8 +204,12 @@ class SuperNode : public Node {
     uint32_t getNumPhi() const { return phi_list.size(); }
     const PhiNodeList &getPhiList() const { return phi_list; }
 
+    auto ins_begin() {return this->instruction_list.begin();}
+    auto ins_end() {return this->instruction_list.end();}
+
     virtual std::string PrintDefinition(PrintType) override;
     virtual std::string PrintInputEnable(PrintType, uint32_t) override;
+    virtual std::string PrintOutputEnable(PrintType, uint32_t) override;
 };
 
 /**
@@ -264,7 +274,7 @@ class SplitCallNode : public Node {
 
     virtual std::string PrintDefinition(PrintType) override;
     // std::string PrintInputEnable();
-    virtual std::string PrintOutputEnable(PrintType) override;
+    virtual std::string PrintOutputEnable(PrintType, uint32_t) override;
 };
 
 /**
@@ -352,8 +362,9 @@ class InstructionNode : public Node {
     }
 
     virtual std::string PrintDefinition(PrintType) override {
-        return std::string("Not defined instructions\n");
+        return std::string("Not defined instructions");
     }
+
 };
 
 class BinaryOperatorNode : public InstructionNode {
@@ -370,6 +381,7 @@ class BinaryOperatorNode : public InstructionNode {
     }
 
     virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintInputEnable(PrintType) override;
 };
 
 class IcmpNode : public InstructionNode {
@@ -384,7 +396,8 @@ class IcmpNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintInputEnable(PrintType) override;
 };
 
 class BranchNode : public InstructionNode {
@@ -400,7 +413,8 @@ class BranchNode : public InstructionNode {
     }
 
     virtual std::string PrintDefinition(PrintType) override;
-    virtual std::string PrintOutputEnable(PrintType) override;
+    virtual std::string PrintOutputEnable(PrintType, uint32_t) override;
+    virtual std::string PrintInputEnable(PrintType) override;
 };
 
 class PhiSelectNode : public InstructionNode {
@@ -415,7 +429,8 @@ class PhiSelectNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    virtual std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintInputEnable(PrintType) override;
 };
 
 class AllocaNode : public InstructionNode {
@@ -493,7 +508,8 @@ class ReturnNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    virtual std::string PrintDefinition(PrintType);
+    virtual std::string PrintDefinition(PrintType) override;
+    virtual std::string PrintInputEnable(PrintType) override;
 };
 
 class CallNode : public InstructionNode {

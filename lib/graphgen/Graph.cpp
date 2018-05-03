@@ -67,7 +67,8 @@ void Graph::printGraph(PrintType _pt) {
             printScalaInputSpliter();
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
-            printControlEdges(PrintType::Scala);
+            printBasickBlockPredicateEdges(PrintType::Scala);
+            printBasickBLockInstructionEdges(PrintType::Scala);
 
             break;
         case PrintType::Dot:
@@ -87,7 +88,7 @@ void Graph::printBasicBlocks(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing basicblock nodes");
             for (auto &bb_node : this->super_node_list) {
-                outCode << bb_node.PrintDefinition(PrintType::Scala);
+                outCode << bb_node->PrintDefinition(PrintType::Scala);
             }
             break;
         case PrintType::Dot:
@@ -152,22 +153,87 @@ void Graph::printMemoryModules(PrintType _pt) {
 /**
  * Print control signals
  */
-void Graph::printControlEdges(PrintType _pt) {
+void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Control signals:\n");
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> predicate instruction");
-            for (auto _s_node : super_node_list) {
-                uint32_t c = 0;
-                for (auto _enable_iterator = _s_node.inputControl_begin();
-                     _enable_iterator != _s_node.inputControl_end();
+            for (auto &_s_node : super_node_list) {
+                for (auto _enable_iterator = _s_node->inputControl_begin();
+                     _enable_iterator != _s_node->inputControl_end();
                      _enable_iterator++) {
                     auto _input_node = dyn_cast<Node>(*_enable_iterator);
+                    auto _input_index = std::distance(
+                        _s_node->inputControl_begin(), _enable_iterator);
+
+                    // Finding super node
+                    auto ff = std::find_if(_input_node->outputControl_begin(),
+                                           _input_node->outputControl_end(),
+                                           [&_s_node](auto &arg) -> bool {
+                                               return _s_node.get() == &*arg;
+                                           });
+
+                    auto _output_index =
+                        std::distance(_input_node->outputControl_begin(), ff);
+
+                    if (ff == _input_node->outputControl_end())
+                        assert(!"Couldn't find the control edge\n");
+
+                    this->outCode << "  "
+                                  << _s_node->PrintInputEnable(PrintType::Scala,
+                                                               _input_index)
+                                  << " <> "
+                                  << _input_node->PrintOutputEnable(
+                                         PrintType::Scala, _output_index)
+                                  << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print control signals
+ */
+void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader(
+                "Basicblock -> enable instruction");
+            for (auto &_s_node : super_node_list) {
+                for (auto _ins_iterator = _s_node->ins_begin();
+                     _ins_iterator != _s_node->ins_end(); _ins_iterator++) {
+                    auto _output_node = dyn_cast<Node>(*_ins_iterator);
+
+                    auto _output_index =
+                        std::distance(_s_node->ins_begin(), _ins_iterator);
+
+                    // Finding super node
+                    auto ff = std::find_if(_output_node->inputControl_begin(),
+                                           _output_node->inputControl_end(),
+                                           [&_s_node](auto &arg) -> bool {
+                                               return _s_node.get() == &*arg;
+                                           });
+
+                    auto _input_index =
+                        std::distance(_output_node->inputControl_begin(), ff);
+
+                    if (ff == _output_node->inputControl_end())
+                        assert(!"Couldn't find the control edge\n");
+
                     this->outCode
-                        << "  " << _s_node.PrintInputEnable(PrintType::Scala, c++)
+                        << "  "
+                        << _output_node->PrintInputEnable(PrintType::Scala)
                         << " <> "
-                        << _input_node->PrintOutputEnable(PrintType::Scala)
+                        << _s_node->PrintOutputEnable(PrintType::Scala,
+                                                     _output_index)
                         << "\n\n";
                 }
             }
@@ -315,43 +381,41 @@ void Graph::printScalaHeader(string config_path, string package_name) {
  * Insert a new basic block
  */
 SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
-    super_node_list.push_back(
-        SuperNode(NodeInfo(super_node_list.size(), BB.getName().str()), &BB));
+    super_node_list.push_back(std::make_unique<SuperNode>(
+        NodeInfo(super_node_list.size(), BB.getName().str()), &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
-        [&BB](SuperNode &arg) -> bool { return arg.getBasicBlock() == &BB; });
+        [&BB](auto &arg) -> bool { return arg.get()->getBasicBlock() == &BB; });
 
-    return &*ff;
+    return ff->get();
 }
 
 /**
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
-    inst_list.push_back(
-        std::make_unique<BinaryOperatorNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<BinaryOperatorNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
     ff->get()->PrintDefinition(PrintType::Scala);
 
-    return &*ff->get();
+    return ff->get();
 }
 
 /**
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
-    inst_list.push_back(
-        std::make_unique<IcmpNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<IcmpNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
@@ -359,103 +423,96 @@ InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
  */
 InstructionNode *Graph::insertBranchNode(BranchInst &I) {
     if (I.getName().str() == "")
-        inst_list.push_back(
-            std::make_unique<BranchNode>(NodeInfo(inst_list.size(),
-                                "br_" + std::to_string(inst_list.size())),
-                       &I));
+        inst_list.push_back(std::make_unique<BranchNode>(
+            NodeInfo(inst_list.size(),
+                     "br_" + std::to_string(inst_list.size())),
+            &I));
     else
-        inst_list.push_back(
-            std::make_unique<BranchNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+        inst_list.push_back(std::make_unique<BranchNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new computation PhiNode
  */
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
-    inst_list.push_back(
-        std::make_unique<PhiSelectNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<PhiSelectNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new Alloca node
  */
 InstructionNode *Graph::insertAllocaNode(AllocaInst &I) {
-    inst_list.push_back(
-        std::make_unique<AllocaNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<AllocaNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
-    inst_list.push_back(
-        std::make_unique<GEPNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<GEPNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new Load node
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
-    inst_list.push_back(
-        std::make_unique<LoadNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<LoadNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new Store node
  */
 InstructionNode *Graph::insertStoreNode(StoreInst &I) {
-    inst_list.push_back(
-        std::make_unique<StoreNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<StoreNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
  * Insert a new Call node
  */
 InstructionNode *Graph::insertCallNode(CallInst &I) {
-    inst_list.push_back(
-        std::make_unique<CallNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<CallNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
@@ -463,19 +520,18 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
  */
 InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
     if (I.getName().str() == "")
-        inst_list.push_back(
-            std::make_unique<ReturnNode>(NodeInfo(inst_list.size(),
-                                "ret_" + std::to_string(inst_list.size())),
-                       &I));
+        inst_list.push_back(std::make_unique<ReturnNode>(
+            NodeInfo(inst_list.size(),
+                     "ret_" + std::to_string(inst_list.size())),
+            &I));
     else
-        inst_list.push_back(
-            std::make_unique<ReturnNode>(NodeInfo(inst_list.size(), I.getName().str()), &I));
+        inst_list.push_back(std::make_unique<ReturnNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
-    auto ff = std::find_if(inst_list.begin(), inst_list.end(),
-                           [&I](auto &arg) -> bool {
-                               return arg.get()->getInstruction() == &I;
-                           });
-    return &*ff->get();
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
 }
 
 /**
