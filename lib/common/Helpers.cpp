@@ -690,6 +690,7 @@ void helpers::PDGPrinter(Function &F) {
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    const std::string &to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     while(true){
         size_t start_pos = str.find(from);
@@ -702,12 +703,14 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    std::vector<const std::string> &to, const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     return _ret;
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    std::vector<uint32_t> &&to, const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     std::stringstream test;
     std::copy(to.begin(), to.end(), std::experimental::make_ostream_joiner(test, split));
@@ -723,6 +726,7 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    std::list<std::pair<uint32_t, uint32_t>> &to, const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     std::stringstream test;
     for(auto &node : to){
@@ -744,6 +748,7 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    const uint32_t to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     while(true){
         size_t start_pos = str.find(from);

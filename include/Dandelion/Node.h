@@ -71,8 +71,6 @@ class Node {
 
     };
 
-    using node_citerator = std::list<Node *>::const_iterator;
-
    private:
     // Type of the Node
     NodeType node_type;
@@ -114,40 +112,31 @@ class Node {
         return port_control.control_output_port.size();
     }
 
-    node_citerator inputDataport_begin() {
+    auto inputDataport_begin() {
         return this->port_data.data_input_port.cbegin();
     }
-    node_citerator inputDataport_end() {
+    auto inputDataport_end() {
         return this->port_data.data_input_port.cend();
     }
-    node_citerator outputDataport_begin() {
+    auto outputDataport_begin() {
         return this->port_data.data_output_port.cbegin();
     }
-    node_citerator outputDataport_end() {
+    auto outputDataport_end() {
         return this->port_data.data_output_port.cend();
     }
 
-    node_citerator inputControl_begin() {
+    auto inputControl_begin() {
         return this->port_control.control_input_port.cbegin();
     }
-    node_citerator inputControl_end() {
+    auto inputControl_end() {
         return this->port_control.control_input_port.cend();
     }
-    node_citerator outputControl_begin() {
+    auto outputControl_begin() {
         return this->port_control.control_output_port.cbegin();
     }
-    node_citerator outputControl_end() {
+    auto outputControl_end() {
         return this->port_control.control_output_port.cend();
     }
-
-    // node_citerator inputControl_begin(){ return
-    // this->port_data.data_input_port.cbegin(); }
-    // node_citerator inputControl_end(){ return
-    // this->port_data.data_input_port.cend(); }
-    // node_citerator outputControl_begin(){ return
-    // this->port_data.data_input_port.cbegin(); }
-    // node_citerator outputControl_end(){ return
-    // this->port_data.data_output_port.cend(); }
 
     uint32_t getID() { return info.ID; }
     std::string getName() { return info.Name; }
@@ -466,6 +455,7 @@ class PhiSelectNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printMaskInput(PrintType);
 };
 

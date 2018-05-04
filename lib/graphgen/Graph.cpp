@@ -73,6 +73,8 @@ void Graph::printGraph(PrintType _pt) {
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
+            printClosingclass(PrintType::Scala);
+            printScalaMainClass();
 
             break;
         case PrintType::Dot:
@@ -101,8 +103,6 @@ void Graph::printFunctionArgument(PrintType _pt) {
             assert(!"Uknown print type!");
     }
 }
-
-
 
 /**
  * Print the basicblock definition
@@ -323,6 +323,49 @@ void Graph::printDatadependencies(PrintType _pt) {
     }
 }
 
+/**
+ * Print data closing class
+ */
+void Graph::printClosingclass(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Data dependencies\n");
+            this->outCode << "}\n\n";
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print the main class of chisel module
+ */
+void Graph::printScalaMainClass() {
+    // Printing Tests class
+    string _command =
+        "import java.io.{File, FileWriter}\n"
+        "object $class_nameMain extends App {\n"
+        "  val dir = new File(\"RTL/$class_name\") ; dir.mkdirs\n"
+        "  implicit val p = config.Parameters.root((new "
+        "MiniConfig).toInstance)\n"
+        "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new "
+        "$module_name()))\n\n"
+        "  val verilogFile = new File(dir, s\"${chirrtl.main}.v\")\n"
+        "  val verilogWriter = new FileWriter(verilogFile)\n"
+        "  val compileResult = (new "
+        "firrtl.VerilogCompiler).compileAndEmit(firrtl.CircuitState(chirrtl, "
+        "firrtl.ChirrtlForm))\n"
+        "  val compiledStuff = compileResult.getEmittedCircuit\n"
+        "  verilogWriter.write(compiledStuff.value)\n"
+        "  verilogWriter.close()\n}\n";
+    helperReplace(_command, "$class_name", this->graph_info.Name);
+    helperReplace(_command, "$module_name", this->graph_info.Name+ "DF");
+
+    this->outCode << _command;
+}
+
 void Graph::printScalaInputSpliter() {
     this->outCode << split_call->printDefinition(PrintType::Scala);
 }
@@ -374,7 +417,7 @@ void Graph::printScalaFunctionHeader() {
             // Return values from sub-routine.
             // Only supports a single 32 bit data bundle for now
             _command =
-                "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
+                "    val $call_in = Flipped(new CallDecoupled(List(32)))\n";
             helperReplace(_command, "$call", _fc->getName());
             _final_command.append(_command);
         }
