@@ -222,13 +222,13 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(List($<input_vector>)))\n"
                 "  $name.io.In <> io.in\n\n";
 
-            // std::vector<uint32_t> _t_input(2, 32);
-
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$type", "SplitCall");
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$<input_vector>",
-                          std::vector<uint32_t>({32, 32}), ",");
+                          std::vector<uint32_t>(this->numDataOutputPort(), XLEN), ",");
+            //TODO: uncomment if you update the list shape.
+                          //this->num_ports, ",");
 
             break;
         default:
@@ -291,6 +291,11 @@ GlobalValue *GlobalValueNode::getGlobalValue() { return this->parent_glob; }
 
 BasicBlock *SuperNode::getBasicBlock() { return this->basic_block; }
 
+
+//===----------------------------------------------------------------------===//
+//                            BinaryOperatorNode Class
+//===----------------------------------------------------------------------===//
+
 std::string BinaryOperatorNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -352,6 +357,31 @@ std::string BinaryOperatorNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+std::string BinaryOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if(_idx == 0)
+                _text = "$name.io.Left";
+            else
+                _text = "$name.io.Right";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            ICMPNode Class
+//===----------------------------------------------------------------------===//
+
 std::string IcmpNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -393,6 +423,53 @@ std::string IcmpNode::printInputEnable(PrintType _pt) {
     }
     return _text;
 }
+
+
+std::string IcmpNode::printInputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if(_idx == 0)
+                _text = "$name.io.Left";
+            else
+                _text = "$name.io.Right";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+std::string IcmpNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+//===----------------------------------------------------------------------===//
+//                            BranchNode Class
+//===----------------------------------------------------------------------===//
 
 std::string BranchNode::printDefinition(PrintType _pt) {
     string _text;
@@ -524,6 +601,10 @@ std::string PhiSelectNode::printMaskInput(PrintType _pt) {
     return _text;
 }
 
+//===----------------------------------------------------------------------===//
+//                            ReturnNode Class
+//===----------------------------------------------------------------------===//
+//
 std::string ReturnNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -557,6 +638,45 @@ std::string ReturnNode::printInputEnable(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.enable";
             helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ReturnNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.in.data(\"field$id\")";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+std::string ReturnNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:

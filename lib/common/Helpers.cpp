@@ -703,12 +703,6 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 bool helpers::helperReplace(std::string &str, const std::string &from,
                    std::vector<const std::string> &to, const std::string &split) {
     bool _ret = false;
-    //while(true){
-        //size_t start_pos = str.find(from);
-        //if (start_pos == std::string::npos) break;
-        //str.replace(start_pos, from.length(), to);
-        //_ret = true;
-    //}
     return _ret;
 }
 
@@ -727,7 +721,25 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     return _ret;
 }
 
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                   std::list<std::pair<uint32_t, uint32_t>> &to, const std::string &split) {
+    bool _ret = false;
+    std::stringstream test;
+    for(auto &node : to){
+        test << "(" << std::to_string(node.first) << ", " << std::to_string(node.second) << ") , ";
+    }
+    //Remove last three additional characters
+    string _replace_string = test.str().substr(0, test.str().size()-3);
 
+    //replace all the existing substring
+    while(true){
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), _replace_string);
+        _ret = true;
+    }
+    return _ret;
+}
 
 
 bool helpers::helperReplace(std::string &str, const std::string &from,

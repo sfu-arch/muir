@@ -5,7 +5,6 @@
 
 #include "Dandelion/Graph.h"
 #include "Dandelion/Node.h"
-#include "luacpptemplater/LuaTemplater.h"
 
 #include <iostream>
 #include <sstream>
@@ -245,24 +244,6 @@ void Graph::printPhiNodesConnections(PrintType _pt) {
                      _phi_it != _s_node.get()->phi_end(); _phi_it++) {
                     auto _phi_ins = dyn_cast<PhiSelectNode>(*_phi_it);
 
-                    // Iterating over datainput of PHI node
-                    for (auto _phi_input_it = _phi_ins->inputDataport_begin();
-                         _phi_input_it != _phi_ins->inputDataport_end();
-                         _phi_input_it++) {
-                        auto _phi_input_node = dyn_cast<Node>(*_phi_input_it);
-
-                        auto _input_index = std::distance(
-                            _phi_ins->inputDataport_begin(), _phi_input_it);
-
-                        this->outCode << "  "
-                                      << _phi_ins->printInputData(
-                                             PrintType::Scala, _input_index)
-                                      << " <> "
-                                      << _phi_input_node->printOutputData(
-                                             PrintType::Scala, 0)
-                                      << "\n\n";
-                    }
-
                     // Adding phi node mask
                     auto _input_index =
                         std::distance(_s_node->phi_begin(), _phi_it);
@@ -294,7 +275,6 @@ void Graph::printDatadependencies(PrintType _pt) {
                 "Connecting data dependencies");
             for (auto &_data_edge : edge_list) {
                 if (_data_edge.getType() == Edge::DataTypeEdge) {
-
                     this->outCode
                         << "  "
                         << _data_edge.getTar()->printInputData(
@@ -303,8 +283,9 @@ void Graph::printDatadependencies(PrintType _pt) {
                                    *_data_edge.getSrc()))
                         << " <> "
                         << _data_edge.getSrc()->printOutputData(
-                               PrintType::Scala, 
-                               _data_edge.getSrc()->returnDataOutputPortIndex(*_data_edge.getTar()))
+                               PrintType::Scala,
+                               _data_edge.getSrc()->returnDataOutputPortIndex(
+                                   *_data_edge.getTar()))
                         << "\n\n";
                 }
             }
@@ -318,7 +299,7 @@ void Graph::printDatadependencies(PrintType _pt) {
 }
 
 void Graph::printScalaInputSpliter() {
-    this->outCode << split_call.printDefinition(PrintType::Scala);
+    this->outCode << split_call->printDefinition(PrintType::Scala);
 }
 
 /**
@@ -609,14 +590,14 @@ InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
  * Insert a new function argument
  */
 ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
-    arg_list.push_back(
-        ArgumentNode(NodeInfo(arg_list.size(), AR.getName().str()), &AR));
+    arg_list.push_back(std::make_unique<ArgumentNode>(
+        NodeInfo(arg_list.size(), AR.getName().str()), &AR));
 
     auto ff = std::find_if(arg_list.begin(), arg_list.end(),
-                           [&AR](ArgumentNode &arg) -> bool {
-                               return arg.getArgumentValue() == &AR;
+                           [&AR](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == &AR;
                            });
-    return &*ff;
+    return ff->get();
 }
 
 /**

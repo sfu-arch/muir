@@ -51,10 +51,16 @@ namespace helpers {
  * Print helper function
  */
 bool helperReplace(std::string &, const std::string &, const std::string &);
-bool helperReplace(std::string &, const std::string &, std::vector<const std::string> &, const std::string &);
-bool helperReplace(std::string &, const std::string &, std::vector<uint32_t> &&, const std::string &);
+bool helperReplace(std::string &, const std::string &,
+                   std::vector<const std::string> &, const std::string &);
+bool helperReplace(std::string &, const std::string &, std::vector<uint32_t> &&,
+                   const std::string &);
 bool helperReplace(std::string &, const std::string &, const uint32_t);
-bool helperReplace(std::string &, const std::string &, std::vector<const uint32_t> &);
+bool helperReplace(std::string &, const std::string &,
+                   std::vector<const uint32_t> &);
+bool helperReplace(std::string &, const std::string &,
+                   std::list<std::pair<uint32_t, uint32_t>> &,
+                   const std::string &);
 
 /**
  * FUNCTIONS

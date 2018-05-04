@@ -138,11 +138,13 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Here we make a graph
     // Graph gg()
     // Filling function argument nodes
-    for (auto &f_arg : F.args())
+    for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
             this->dependency_graph.insertFunctionArgument(f_arg);
+        // this->dependency_graph.getSplitCall()->insertNewDataPort(f_arg.getNumUses());
+    }
 
-    this->dependency_graph.setNumSplitCallInput(F.arg_size());
+    // this->dependency_graph.setNumSplitCallInput(F.arg_size());
 
     // Filling function global nodes
     for (auto &g_var : F.getParent()->getGlobalList()) {
@@ -161,6 +163,20 @@ void GraphGeneratorPass::visitFunction(Function &F) {
 void GraphGeneratorPass::findDataPort(Function &F) {
     // Check wether we already have iterated over the instructions
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
+
+    // Connecting function arguments to the spliter
+    for (auto _fun_arg_it = this->dependency_graph.funarg_begin();
+         _fun_arg_it != this->dependency_graph.funarg_end(); _fun_arg_it++) {
+
+        auto _fun_arg_node = dyn_cast<ArgumentNode>(_fun_arg_it->get());
+        auto _spliter = this->dependency_graph.getSplitCall();
+
+        _fun_arg_node->addDataInputPort(_spliter);
+        _spliter->addDataOutputPort(_fun_arg_node);
+
+        this->dependency_graph.insertEdge(Edge::DataTypeEdge, _spliter, _fun_arg_node);
+
+    }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
         // Connecting DFG and CFG edges
@@ -244,10 +260,12 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
     // Find the entry basic block and connect it to the splitnode
     for (auto &BB : F) {
-        //Find the entry basic block and connect it to the split node
-        if(&BB == &F.getEntryBlock()){
+        // Find the entry basic block and connect it to the split node
+        if (&BB == &F.getEntryBlock()) {
             auto _en_bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
-            this->dependency_graph.insertEdge(Edge::ControlTypeEdge,this->dependency_graph.getSplitCall(), _en_bb);
+            this->dependency_graph.insertEdge(
+                Edge::ControlTypeEdge, this->dependency_graph.getSplitCall(),
+                _en_bb);
             _en_bb->addControlInputPort(this->dependency_graph.getSplitCall());
             this->dependency_graph.getSplitCall()->addControlOutputPort(_en_bb);
         }
@@ -259,10 +277,11 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     _bb->addInstruction(_ins);
 
                     // Detect Phi instrucctions
-                    if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)){
+                    if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
-                        this->dependency_graph.insertEdge(Edge::MaskTypeEdge, _bb, _phi_ins);
+                        this->dependency_graph.insertEdge(Edge::MaskTypeEdge,
+                                                          _bb, _phi_ins);
                     }
 
                     // Make a control edge

@@ -12,6 +12,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
+#define XLEN 32
+
 using namespace llvm;
 
 namespace dandelion {
@@ -119,7 +121,7 @@ class Node {
         return this->port_data.data_input_port.cend();
     }
     node_citerator outputDataport_begin() {
-        return this->port_data.data_input_port.cbegin();
+        return this->port_data.data_output_port.cbegin();
     }
     node_citerator outputDataport_end() {
         return this->port_data.data_output_port.cend();
@@ -272,21 +274,28 @@ class MemoryUnitNode : public Node {
  */
 class SplitCallNode : public Node {
    private:
-    uint32_t num_input;
+    //std::list<std::unique_ptr<DataPort>> port_data;
+    
+    // List of ports -> pair< ID, NumUses>
+    //std::list<std::pair<uint32_t, uint32_t>> num_ports;
 
    public:
     explicit SplitCallNode(NodeInfo _nf)
-        : Node(Node::SplitCallTy, _nf), num_input(0) {}
+        : Node(Node::SplitCallTy, _nf){}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
         return T->getType() == Node::SuperNodeTy;
     }
 
-    void setNumInput(uint32_t _n) { num_input = _n; }
+    //void setNumInput(uint32_t _n) { num_input = _n; }
+
+    //void insertNewDataPort(uint32_t n) {
+        //num_ports.push_back(std::make_pair(port_data.size(), n));
+        //port_data.push_back(std::make_unique<DataPort>());
+    //}
 
     virtual std::string printDefinition(PrintType) override;
-    // std::string PrintInputEnable();
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
 };
 
@@ -395,6 +404,7 @@ class BinaryOperatorNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class IcmpNode : public InstructionNode {
@@ -411,6 +421,8 @@ class IcmpNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class BranchNode : public InstructionNode {
@@ -435,7 +447,8 @@ class PhiSelectNode : public InstructionNode {
     SuperNode *mask_node;
 
    public:
-    PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr, SuperNode *_parent = nullptr)
+    PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr,
+                  SuperNode *_parent = nullptr)
         : InstructionNode(_ni, InstType::PhiInstructionTy, _ins) {}
 
     SuperNode *getMaskNode() const { return mask_node; }
@@ -447,7 +460,7 @@ class PhiSelectNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    void setParentNode(SuperNode * _parent) {this-> mask_node = _parent;}
+    void setParentNode(SuperNode *_parent) { this->mask_node = _parent; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -532,6 +545,8 @@ class ReturnNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class CallNode : public InstructionNode {

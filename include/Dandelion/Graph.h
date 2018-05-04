@@ -19,7 +19,7 @@
 namespace dandelion {
 
 using InstructionList = std::list<std::unique_ptr<InstructionNode>>;
-using ArgumentList = std::list<ArgumentNode>;
+using ArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
 using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<ConstIntNode>;
@@ -41,7 +41,7 @@ class Graph {
     ConstIntList const_list;
 
     // Splitcall for the function
-    SplitCallNode split_call;
+    std::unique_ptr<SplitCallNode> split_call;
 
     // List of the edges between nodes inside the graph
     EdgeList edge_list;
@@ -57,14 +57,14 @@ class Graph {
 
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
-          split_call(NodeInfo(0, "InputSplitter")),
+          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
-          split_call(NodeInfo(0, "InputSplitter")),
+          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(_output),
@@ -72,7 +72,7 @@ class Graph {
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output,
                    llvm::Function *_fn)
         : graph_info(_n_info),
-          split_call(NodeInfo(0, "InputSplitter")),
+          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(NodeInfo(0, "MemCtrl")),
           graph_empty(false),
           outCode(_output),
@@ -87,8 +87,11 @@ class Graph {
     MemoryUnitNode *getMemoryUnit() { return &memory_unit; }
 
     // InstructionList *getInstructionList();
-    ins_citerator instList_begin() {return this->inst_list.cbegin();}
-    ins_citerator instList_end() {return this->inst_list.cend();}
+    auto instList_begin() {return this->inst_list.cbegin();}
+    auto instList_end() {return this->inst_list.cend();}
+
+    auto funarg_begin() { return this->arg_list.cbegin(); }
+    auto funarg_end() { return this->arg_list.cend(); }
 
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
@@ -110,8 +113,8 @@ class Graph {
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
-    void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
-    SplitCallNode *getSplitCall() { return &this->split_call; }
+    //void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
+    SplitCallNode *getSplitCall() const { return split_call.get(); }
 
    protected:
     // General print functions with accepting print type
