@@ -297,6 +297,7 @@ class SplitCallNode : public Node {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 /**
@@ -572,6 +573,9 @@ class ArgumentNode : public Node {
         : Node(Node::FunctionArgTy, _ni), parent_argument(_arg) {}
 
     llvm::Argument *getArgumentValue();
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class GlobalValueNode : public Node {

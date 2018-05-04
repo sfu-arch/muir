@@ -91,8 +91,8 @@ void Graph::printFunctionArgument(PrintType _pt) {
             DEBUG(dbgs() << "\t Print BasicBlocks information\n");
             this->outCode << helperScalaPrintHeader(
                 "Printing Function Argument");
-            for (auto &bb_node : this->arg_list) {
-                outCode << bb_node->printDefinition(PrintType::Scala);
+            for (auto &_arg : this->args()) {
+                outCode << _arg->printDefinition(PrintType::Scala);
             }
             break;
         case PrintType::Dot:
@@ -339,7 +339,7 @@ void Graph::printScalaFunctionHeader() {
         "abstract class $module_nameDFIO"
         "(implicit val p: Parameters) extends Module with CoreParams {\n"
         "  val io = IO(new Bundle {\n";
-    helperReplace(_command, "module_name", this->graph_info.Name.c_str());
+    helperReplace(_command, "$module_name", this->graph_info.Name.c_str());
     _final_command.append(_command);
 
     // Print input call parameters
@@ -347,7 +347,7 @@ void Graph::printScalaFunctionHeader() {
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->arg_list.size(); c++) {
         _command = "32,";
-        helperReplace(_command, "index", c);
+        helperReplace(_command, "$index", c);
         _final_command.append(_command);
     }
     _final_command.pop_back();
@@ -360,12 +360,12 @@ void Graph::printScalaFunctionHeader() {
         if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
             // Call arguments to subroutine
             _command = "    val $call_out = new CallDecoupled(List(";
-            helperReplace(_command, "call", _ins->getName());
+            helperReplace(_command, "$call", _ins->getName());
             _final_command.append(_command);
             // TODO: Make sure there is no inconsistancy here
             for (auto &ag : _fc->getInstruction()->getFunction()->args()) {
                 _command = "32,";
-                helperReplace(_command, "index", c++);
+                helperReplace(_command, "$index", c++);
                 _final_command.append(_command);
             }
             _final_command.pop_back();
@@ -375,7 +375,7 @@ void Graph::printScalaFunctionHeader() {
             // Only supports a single 32 bit data bundle for now
             _command =
                 "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
-            helperReplace(_command, "call", _fc->getName());
+            helperReplace(_command, "$call", _fc->getName());
             _final_command.append(_command);
         }
     }
@@ -384,9 +384,9 @@ void Graph::printScalaFunctionHeader() {
     c = 0;
     for (uint32_t c = 0; c < this->glob_list.size(); c++) {
         _command =
-            "    val glob_{{index}} = Flipped(Decoupled(new "
+            "    val glob_$index = Flipped(Decoupled(new "
             "DataBundle))\n";
-        helperReplace(_command, "index", static_cast<int>(c++));
+        helperReplace(_command, "$index", static_cast<int>(c++));
         _final_command.append(_command);
         break;
     }
@@ -409,9 +409,9 @@ void Graph::printScalaFunctionHeader() {
     outCode << _final_command;
 
     _final_command =
-        "class {{module_name}}DF(implicit p: Parameters)"
-        " extends {{module_name}}DFIO()(p) {\n";
-    helperReplace(_final_command, "module_name", graph_info.Name);
+        "class $module_nameDF(implicit p: Parameters)"
+        " extends $module_nameDFIO()(p) {\n";
+    helperReplace(_final_command, "$module_name", graph_info.Name);
 
     helperScalaPrintHeader("Printing Module Definition");
     outCode << _final_command;
@@ -615,7 +615,7 @@ InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
  */
 ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
     arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(arg_list.size(), AR.getName().str()), &AR));
+        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"), &AR));
 
     auto ff = std::find_if(arg_list.begin(), arg_list.end(),
                            [&AR](auto &arg) -> bool {
