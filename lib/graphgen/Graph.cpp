@@ -3,6 +3,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "Common.h"
 #include "Dandelion/Graph.h"
 #include "Dandelion/Node.h"
 
@@ -13,6 +14,7 @@
 using namespace std;
 using namespace llvm;
 using namespace dandelion;
+using namespace helpers;
 
 using InstructionList = std::list<InstructionNode>;
 
@@ -64,6 +66,7 @@ void Graph::printGraph(PrintType _pt) {
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printScalaInputSpliter();
+            printFunctionArgument(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
@@ -78,6 +81,28 @@ void Graph::printGraph(PrintType _pt) {
             assert(!"Uknown print type!");
     }
 }
+
+/**
+ * Print the function argument
+ */
+void Graph::printFunctionArgument(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Print BasicBlocks information\n");
+            this->outCode << helperScalaPrintHeader(
+                "Printing Function Argument");
+            for (auto &bb_node : this->arg_list) {
+                outCode << bb_node->printDefinition(PrintType::Scala);
+            }
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+
 
 /**
  * Print the basicblock definition
@@ -309,88 +334,87 @@ void Graph::printScalaFunctionHeader() {
     // print the header
     this->outCode << helperScalaPrintHeader("Printing ports definition");
 
-    LuaTemplater ins_template;
-    string final_command;
-    string command =
-        "abstract class {{module_name}}DFIO"
+    string _final_command;
+    string _command =
+        "abstract class $module_nameDFIO"
         "(implicit val p: Parameters) extends Module with CoreParams {\n"
         "  val io = IO(new Bundle {\n";
-    ins_template.set("module_name", this->graph_info.Name);
-    final_command.append(ins_template.render(command));
+    helperReplace(_command, "module_name", this->graph_info.Name.c_str());
+    _final_command.append(_command);
 
     // Print input call parameters
-    command = "    val in = Flipped(new CallDecoupled(List(";
-    final_command.append(ins_template.render(command));
+    _command = "    val in = Flipped(new CallDecoupled(List(";
+    _final_command.append((_command));
     for (uint32_t c = 0; c < this->arg_list.size(); c++) {
-        command = "32,";
-        ins_template.set("index", static_cast<int>(c));
-        final_command.append(ins_template.render(command));
+        _command = "32,";
+        helperReplace(_command, "index", c);
+        _final_command.append(_command);
     }
-    final_command.pop_back();
-    command = ")))\n";
-    final_command.append(ins_template.render(command));
+    _final_command.pop_back();
+    _command = ")))\n";
+    _final_command.append(_command);
 
     // Print sub-function call interface
     uint32_t c = 0;
     for (auto &_ins : this->inst_list) {
         if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
             // Call arguments to subroutine
-            command = "    val {{call}}_out = new CallDecoupled(List(";
-            ins_template.set("call", _ins->getName());
-            final_command.append(ins_template.render(command));
+            _command = "    val $call_out = new CallDecoupled(List(";
+            helperReplace(_command, "call", _ins->getName());
+            _final_command.append(_command);
             // TODO: Make sure there is no inconsistancy here
             for (auto &ag : _fc->getInstruction()->getFunction()->args()) {
-                command = "32,";
-                ins_template.set("index", static_cast<int>(c++));
-                final_command.append(ins_template.render(command));
+                _command = "32,";
+                helperReplace(_command, "index", c++);
+                _final_command.append(_command);
             }
-            final_command.pop_back();
-            command = "))\n";
-            final_command.append(ins_template.render(command));
+            _final_command.pop_back();
+            _command = "))\n";
+            _final_command.append(_command);
             // Return values from sub-routine.
             // Only supports a single 32 bit data bundle for now
-            command =
+            _command =
                 "    val {{call}}_in = Flipped(new CallDecoupled(List(32)))\n";
-            ins_template.set("call", _fc->getName());
-            final_command.append(ins_template.render(command));
+            helperReplace(_command, "call", _fc->getName());
+            _final_command.append(_command);
         }
     }
 
     // Print global memory interface
     c = 0;
     for (uint32_t c = 0; c < this->glob_list.size(); c++) {
-        command =
+        _command =
             "    val glob_{{index}} = Flipped(Decoupled(new "
             "DataBundle))\n";
-        ins_template.set("index", static_cast<int>(c++));
-        final_command.append(ins_template.render(command));
+        helperReplace(_command, "index", static_cast<int>(c++));
+        _final_command.append(_command);
         break;
     }
 
     // Print cache memory interface
-    final_command.append(
+    _final_command.append(
         "    val CacheResp = Flipped(Valid(new CacheRespT))\n"
         "    val CacheReq = Decoupled(new CacheReq)\n");
 
     // Print output (return) parameters
     if (!function_ptr->getReturnType()->isVoidTy()) {
-        final_command.append("    val out = new CallDecoupled(List(32))\n");
+        _final_command.append("    val out = new CallDecoupled(List(32))\n");
     }
 
-    final_command.append(
+    _final_command.append(
         "  })\n"
         "}\n\n");
 
     // Printing Abstract
-    outCode << ins_template.render(final_command);
+    outCode << _final_command;
 
-    final_command =
+    _final_command =
         "class {{module_name}}DF(implicit p: Parameters)"
         " extends {{module_name}}DFIO()(p) {\n";
-    ins_template.set("module_name", graph_info.Name);
+    helperReplace(_final_command, "module_name", graph_info.Name);
 
     helperScalaPrintHeader("Printing Module Definition");
-    outCode << ins_template.render(final_command);
+    outCode << _final_command;
 }
 
 /**

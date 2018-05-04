@@ -11,8 +11,8 @@
 #include <ostream>
 
 #include "json/json.h"
-#include "luacpptemplater/LuaTemplater.h"
 
+#include "iterator_range.h"
 #include "Dandelion/Edge.h"
 #include "Dandelion/Node.h"
 
@@ -89,9 +89,11 @@ class Graph {
     // InstructionList *getInstructionList();
     auto instList_begin() {return this->inst_list.cbegin();}
     auto instList_end() {return this->inst_list.cend();}
+    auto instructions() {return helpers::make_range(instList_begin(), instList_end());}
 
     auto funarg_begin() { return this->arg_list.cbegin(); }
     auto funarg_end() { return this->arg_list.cend(); }
+    auto args() {return helpers::make_range(funarg_begin(), funarg_end());}
 
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
@@ -118,6 +120,7 @@ class Graph {
 
    protected:
     // General print functions with accepting print type
+    void printFunctionArgument(PrintType);
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printMemoryModules(PrintType);
