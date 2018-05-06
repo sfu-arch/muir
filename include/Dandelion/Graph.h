@@ -23,12 +23,10 @@ using ArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
 using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<ConstIntNode>;
+using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
 using EdgeList = std::list<Edge>;
 
 class Graph {
-   public:
-    using ins_citerator = std::list<std::unique_ptr<InstructionNode>>::const_iterator;
-
    private:
     // Node information
     NodeInfo graph_info;
@@ -39,6 +37,7 @@ class Graph {
     BasicBlockList super_node_list;
     GlobalValueList glob_list;
     ConstIntList const_list;
+    LoopNodeList loop_nodes;
 
     // Splitcall for the function
     std::unique_ptr<SplitCallNode> split_call;
@@ -50,22 +49,24 @@ class Graph {
     llvm::Function *function_ptr;
     llvm::raw_ostream &outCode;
 
-   public:
-    // TODO make these two modules private
     // Memory units inside each graph
-    MemoryUnitNode memory_unit;
+    std::unique_ptr<MemoryUnitNode> memory_unit;
+
+    // Loop nodes
+
+   public:
 
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(NodeInfo(0, "MemCtrl")),
+          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(NodeInfo(0, "MemCtrl")),
+          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(nullptr) {}
@@ -73,7 +74,7 @@ class Graph {
                    llvm::Function *_fn)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(NodeInfo(0, "MemCtrl")),
+          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(_fn) {}
@@ -84,7 +85,7 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    MemoryUnitNode *getMemoryUnit() { return &memory_unit; }
+    MemoryUnitNode *getMemoryUnit() const{ return memory_unit.get(); }
 
     // InstructionList *getInstructionList();
     auto instList_begin() {return this->inst_list.cbegin();}
@@ -115,7 +116,6 @@ class Graph {
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
-    //void setNumSplitCallInput(uint32_t _n) { this->split_call.setNumInput(_n); }
     SplitCallNode *getSplitCall() const { return split_call.get(); }
 
    protected:

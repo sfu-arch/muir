@@ -47,7 +47,7 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     std::map<llvm::Value *, Node *> map_value_node;
 
     // Loop Info
-    // llvm::LoopInfo *LI;
+    llvm::LoopInfo *LI;
 
     // Default value is standard out
     llvm::raw_ostream &code_out;
@@ -75,7 +75,7 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     void visitCallInst(llvm::CallInst &);
 
     void fillBasicBlockDependencies(llvm::Function &);
-    void fillLoopDependencies(llvm::Function &);
+    void fillLoopDependencies(llvm::LoopInfo &);
     void findDataPort(llvm::Function &);
 
     void buildingGraph();

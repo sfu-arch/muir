@@ -167,15 +167,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
     // Connecting function arguments to the spliter
     for (auto _fun_arg_it = this->dependency_graph.funarg_begin();
          _fun_arg_it != this->dependency_graph.funarg_end(); _fun_arg_it++) {
-
         auto _fun_arg_node = dyn_cast<ArgumentNode>(_fun_arg_it->get());
         auto _spliter = this->dependency_graph.getSplitCall();
 
         _fun_arg_node->addDataInputPort(_spliter);
         _spliter->addDataOutputPort(_fun_arg_node);
 
-        this->dependency_graph.insertEdge(Edge::DataTypeEdge, _spliter, _fun_arg_node);
-
+        this->dependency_graph.insertEdge(Edge::DataTypeEdge, _spliter,
+                                          _fun_arg_node);
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
@@ -237,8 +236,10 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             // TODO right now we consider all the connections to the cache or
             // regfile
             // We need a pass to trace the pointers
-            this->dependency_graph.memory_unit.addReadMemoryReqPort(_ld_node);
-            this->dependency_graph.memory_unit.addReadMemoryRespPort(_ld_node);
+            this->dependency_graph.getMemoryUnit()->addReadMemoryReqPort(
+                _ld_node);
+            this->dependency_graph.getMemoryUnit()->addReadMemoryRespPort(
+                _ld_node);
             _ld_node->addReadMemoryReqPort(
                 this->dependency_graph.getMemoryUnit());
             _ld_node->addReadMemoryRespPort(
@@ -299,12 +300,27 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 }
 
 /**
+ * This funciton iterates over function loops and generate loop nodes
+ */
+void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info){
+
+    uint32_t c = 0;
+    for(auto &L : getLoops(loop_info)){
+        auto _new_loop = std::make_unique<LoopNode>(NodeInfo(c, "Loop_" + std::to_string(c)));
+        _new_loop->setHeadNode(dyn_cast<SuperNode>(map_value_node[L->getHeader()]));
+        _new_loop->setLatchNode(dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
+        c++;
+    }
+}
+
+/**
  * All the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
+    fillLoopDependencies(*LI);
 
     // Printing the graph
     dependency_graph.printGraph(PrintType::Scala);

@@ -12,6 +12,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "iterator_range.h"
+
 #define XLEN 32
 
 using namespace llvm;
@@ -20,9 +22,9 @@ namespace dandelion {
 
 class Node;
 class SuperNode;
+class InstructionNode;
 class LoopNode;
 class MemoryNode;
-class InstructionNode;
 class PhiSelectNode;
 
 enum PrintType { Scala = 0, Dot, Json };
@@ -115,9 +117,7 @@ class Node {
     auto inputDataport_begin() {
         return this->port_data.data_input_port.cbegin();
     }
-    auto inputDataport_end() {
-        return this->port_data.data_input_port.cend();
-    }
+    auto inputDataport_end() { return this->port_data.data_input_port.cend(); }
     auto outputDataport_begin() {
         return this->port_data.data_output_port.cbegin();
     }
@@ -206,9 +206,11 @@ class SuperNode : public Node {
     uint32_t getNumPhi() const { return phi_list.size(); }
     auto phi_begin() { return this->phi_list.cbegin(); }
     auto phi_end() { return this->phi_list.cend(); }
+    auto phis() { return helpers::make_range(phi_begin(), phi_end()); }
 
     auto ins_begin() const { return this->instruction_list.begin(); }
     auto ins_end() const { return this->instruction_list.end(); }
+    auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -263,26 +265,13 @@ class MemoryUnitNode : public Node {
  */
 class SplitCallNode : public Node {
    private:
-    //std::list<std::unique_ptr<DataPort>> port_data;
-    
-    // List of ports -> pair< ID, NumUses>
-    //std::list<std::pair<uint32_t, uint32_t>> num_ports;
-
    public:
-    explicit SplitCallNode(NodeInfo _nf)
-        : Node(Node::SplitCallTy, _nf){}
+    explicit SplitCallNode(NodeInfo _nf) : Node(Node::SplitCallTy, _nf) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
         return T->getType() == Node::SuperNodeTy;
     }
-
-    //void setNumInput(uint32_t _n) { num_input = _n; }
-
-    //void insertNewDataPort(uint32_t n) {
-        //num_ports.push_back(std::make_pair(port_data.size(), n));
-        //port_data.push_back(std::make_unique<DataPort>());
-    //}
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
@@ -293,33 +282,34 @@ class SplitCallNode : public Node {
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public Node {
-   public:
-    using PhiNodeList = std::list<PhiSelectNode *>;
-
    private:
-    llvm::Loop *loop;
-
-    llvm::SmallVector<InstructionNode *, 16> instruction_list;
-    PhiNodeList phi_list;
+    std::list<InstructionNode *> instruction_list;
+    std::list<SuperNode *> basic_block_list;
+    SuperNode *head_node;
+    SuperNode *latch_node;
 
    public:
-    explicit LoopNode(NodeInfo _nf, llvm::Loop *_ll = nullptr)
-        : Node(Node::LoopNodeTy, _nf), loop(_ll) {}
+    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
+                      SuperNode *_lnode = nullptr)
+        : Node(Node::LoopNodeTy, _nf), head_node(_hnode), latch_node(_lnode) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
         return T->getType() == Node::LoopNodeTy;
     }
 
-    llvm::BasicBlock *getBasicBlock();
-    void addInstruction(InstructionNode *);
-    void addPhiInstruction(PhiSelectNode *);
+    // Iterator over instucrion list
+    auto ins_begin() { return instruction_list.cbegin(); }
+    auto ins_end() { return instruction_list.cend(); }
+    auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
 
-    bool hasPhi() { return !phi_list.empty(); }
-    uint32_t getNumPhi() const { return phi_list.size(); }
-    const PhiNodeList &getPhiList() const { return phi_list; }
+    // Iterator over basic block list
+    auto bb_begin() { return basic_block_list.cbegin(); }
+    auto bb_end() { return basic_block_list.cend(); }
+    auto bblocks() { return helpers::make_range(bb_begin(), bb_end()); }
 
-    std::string PrintDefinition(PrintType);
+    void setHeadNode(SuperNode *_n) { head_node = _n; }
+    void setLatchNode(SuperNode *_n) { latch_node = _n; }
 };
 
 /**
@@ -430,6 +420,7 @@ class BranchNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class PhiSelectNode : public InstructionNode {

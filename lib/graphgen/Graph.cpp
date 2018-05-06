@@ -149,7 +149,7 @@ void Graph::printMemoryModules(PrintType _pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
-            outCode << memory_unit.printDefinition(PrintType::Scala);
+            outCode << memory_unit->printDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
