@@ -36,7 +36,7 @@ using EdgeList = std::list<Edge>;
 
 namespace graphgen {
 
-class GraphGeneratorPass : public llvm::FunctionPass,
+class GraphGeneratorPass : public llvm::ModulePass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
@@ -84,15 +84,20 @@ class GraphGeneratorPass : public llvm::FunctionPass,
     static char ID;
 
     GraphGeneratorPass()
-        : llvm::FunctionPass(ID),
+        : llvm::ModulePass(ID),
           dependency_graph(NodeInfo(0, "dummy")),
           code_out(llvm::outs()) {}
     GraphGeneratorPass(NodeInfo _n_info)
-        : llvm::FunctionPass(ID),
+        : llvm::ModulePass(ID),
           dependency_graph(_n_info),
           code_out(llvm::outs()) {}
 
-    virtual bool runOnFunction(llvm::Function &) override;
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
+        AU.addRequired<LoopInfoWrapperPass>();
+    }
+
+    //virtual bool runOnFunction(llvm::Function &) override;
+    virtual bool runOnModule(llvm::Module &m) override;
 };
 }  // namespace graphgen
 

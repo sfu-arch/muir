@@ -59,15 +59,14 @@ static SetVector<Loop *> getLoops(LoopInfo &LI) {
 }
 
 bool GraphGeneratorPass::doInitialization(Module &M) {
-    // TODO: Add code here if it's needed before pas
+    for (auto &F : M) {
+        if (F.isDeclaration()) continue;
 
-    // TODO: Uncomment to grab all the loop information
-    // for (auto &F : M) {
-    // if (F.isDeclaration()) continue;
-    // if (F.getName() == XKETCHName) {
-    // this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-    //}
-    //}
+        if (F.getName() == XKETCHName) {
+            this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+        }
+    }
+    // TODO: Add code here if it's needed before pas
 
     return false;
 }
@@ -302,13 +301,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
-void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info){
-
+void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
-    for(auto &L : getLoops(loop_info)){
-        auto _new_loop = std::make_unique<LoopNode>(NodeInfo(c, "Loop_" + std::to_string(c)));
-        _new_loop->setHeadNode(dyn_cast<SuperNode>(map_value_node[L->getHeader()]));
-        _new_loop->setLatchNode(dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
+    for (auto &L : getLoops(loop_info)) {
+        auto _new_loop = std::make_unique<LoopNode>(
+            NodeInfo(c, "Loop_" + std::to_string(c)));
+        _new_loop->setHeadNode(
+            dyn_cast<SuperNode>(map_value_node[L->getHeader()]));
+        _new_loop->setLatchNode(
+            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
         c++;
     }
 }
@@ -320,16 +321,22 @@ void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
-    fillLoopDependencies(*LI);
+     fillLoopDependencies(*LI);
 
     // Printing the graph
     dependency_graph.printGraph(PrintType::Scala);
 }
 
-bool GraphGeneratorPass::runOnFunction(Function &F) {
-    stripDebugInfo(F);
-    visit(F);
-    init(F);
+// bool GraphGeneratorPass::runOnFunction(Function &F) {
+bool GraphGeneratorPass::runOnModule(Module &M) {
+    for (auto &F : M) {
+        if (F.isDeclaration()) continue;
+        if (F.getName() == XKETCHName) {
+            stripDebugInfo(F);
+            visit(F);
+            init(F);
+        }
+    }
 
     return false;
 }

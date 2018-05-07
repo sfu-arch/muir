@@ -319,12 +319,15 @@ static void graphGen(Module &m) {
 /**
  * Function lists
  */
-static void runGraphGen(Function &F) {
-    legacy::FunctionPassManager FPM(F.getParent());
-    FPM.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));
-    FPM.doInitialization();
-    FPM.run(F);
-    FPM.doFinalization();
+static void runGraphGen(Module &M) {
+    legacy::PassManager pm;
+    //FPM.add(createLoopSimplifyPass());
+    //FPM.add(new DominatorTreeWrapperPass());
+    pm.add(new LoopInfoWrapperPass());
+    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));
+    //pm.doInitialization();
+    pm.run(M);
+    //pm.doFinalization();
 }
 
 /**
@@ -359,11 +362,12 @@ int main(int argc, char **argv) {
 
     // Calling graphgen pass on selected functions
     // TODO here we should iterate over list of choosen functions
-    for (auto &F : *module) {
-        if (F.isDeclaration() || F.getName() != XKETCHName) continue;
-        else
-            runGraphGen(F);
-    }
+    //for (auto &F : *module) {
+        //if (F.isDeclaration() || F.getName() != XKETCHName) continue;
+        //else
+            //runGraphGen(F);
+    //}
+    runGraphGen(*module);
 
     // Generating graph
     //graphGen(*module);
