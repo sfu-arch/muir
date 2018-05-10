@@ -356,6 +356,7 @@ class InstructionNode : public Node {
     llvm::Instruction *getInstruction();
 
     uint32_t getOpCode() const { return ins_type; }
+    const std::string getOpCodeName() { return parent_instruction->getOpcodeName(); }
 
     bool isBinaryOp() const { return ins_type == BinaryInstructionTy; }
 
@@ -364,7 +365,7 @@ class InstructionNode : public Node {
     }
 
     virtual std::string printDefinition(PrintType) override {
-        return std::string("Not defined instructions");
+        return std::string("Not defined instructions\n");
     }
 };
 
@@ -474,6 +475,9 @@ class GEPNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
 };
 
 class LoadNode : public InstructionNode {
@@ -493,6 +497,9 @@ class LoadNode : public InstructionNode {
 
     void addReadMemoryReqPort(Node *);
     void addReadMemoryRespPort(Node *);
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
 };
 
 class StoreNode : public InstructionNode {
@@ -510,6 +517,9 @@ class StoreNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
 };
 
 class ReturnNode : public InstructionNode {

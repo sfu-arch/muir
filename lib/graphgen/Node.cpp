@@ -254,7 +254,6 @@ std::string SplitCallNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
@@ -273,7 +272,6 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            BranchNode Class
@@ -295,7 +293,6 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -377,7 +374,6 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     return _text;
 }
 
-
 std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
@@ -422,6 +418,7 @@ std::string BinaryOperatorNode::printDefinition(PrintType _pt) {
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "ComputeNode");
+            helperReplace(_text, "$opcode", this->getOpCodeName());
 
             break;
         case PrintType::Dot:
@@ -586,8 +583,8 @@ std::string BranchNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "  val $name = Module(new $type(ID = $id))\n\n";
             if (this->numDataInputPort() > 0) {
-                _text = "  val $name = Module(new $type(ID = $id))\n\n";
                 helperReplace(_text, "$type", "CBranchNode");
                 helperReplace(_text, "$num_out",
                               std::to_string(this->numControlOutputPort()));
@@ -691,7 +688,6 @@ std::string PhiSelectNode::printInputData(PrintType _pt, uint32_t _id) {
     }
     return _text;
 }
-
 
 std::string PhiSelectNode::printOutputData(PrintType _pt, uint32_t _id) {
     string _text;
@@ -826,6 +822,99 @@ void LoadNode::addReadMemoryRespPort(Node *const _nd) {
     this->read_port_data.memory_resp_port.push_back(_nd);
 }
 
+std::string LoadNode::printDefinition(PrintType _pt) {
+    string _text("");
+    string _name(this->getName());
+
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumPredOps=$npo, NumSuccOps=$nso, "
+                "NumOuts=$num_out,ID=$id,RouteID=$rid))\n\n";
+            helperReplace(_text, "$type", "UnTypLoad");
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$rid", 0);
+            helperReplace(_text, "$num_out",
+                          this->numDataOutputPort());
+
+            break;
+        default:
+            assert(!"Don't support!");
+    }
+    return _text;
+}
+
+std::string LoadNode::printInputEnable(PrintType pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.predicateIn($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            StoreNode Class
+//===----------------------------------------------------------------------===//
+
+std::string StoreNode::printDefinition(PrintType _pt) {
+    string _text("");
+    string _name(this->getName());
+
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumPredOps=$npo, NumSuccOps=$nso, "
+                "NumOuts=$num_out,ID=$id,RouteID=$rid))\n\n";
+            helperReplace(_text, "$type", "UnTypStore");
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$rid", 0);
+            helperReplace(_text, "$num_out",
+                          this->numDataOutputPort());
+
+            break;
+        default:
+            assert(!"Don't support!");
+    }
+    return _text;
+}
+
+
+std::string StoreNode::printInputEnable(PrintType pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.predicateIn($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            ConstantNode Class
 //===----------------------------------------------------------------------===//
@@ -837,6 +926,59 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            GetElementPtr Class
+//===----------------------------------------------------------------------===//
+std::string GEPNode::printDefinition(PrintType _pt) {
+    string _text("");
+    string _name(this->getName());
+
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if (this->getInstruction()->getNumOperands() == 2) {
+                _text =
+                    "  val $name = Module(new $type(NumOuts=$num_out, "
+                    "ID=$id)(numByte1=$nb1))\n\n";
+                helperReplace(_text, "$type", "GepOneNode");
+            } else {
+                _text =
+                    "  val $name = Module(new $type(NumOuts=$num_out, "
+                    "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n";
+                helperReplace(_text, "$type", "GepTwoNode");
+            }
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", std::to_string(this->getID()));
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+
+            break;
+        default:
+            assert(!"Don't support!");
+    }
+    return _text;
+}
+
+std::string GEPNode::printInputEnable(PrintType pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.predicateIn($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 

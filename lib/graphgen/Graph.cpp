@@ -133,7 +133,11 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
-                outCode << ins_node->printDefinition(PrintType::Scala);
+                //ins_node->getInstruction()->dump();
+                this->outCode << "  //";
+                ins_node->getInstruction()->print(this->outCode);
+                this->outCode << "\n";
+                this->outCode << ins_node->printDefinition(PrintType::Scala);
             }
             break;
         default:
@@ -723,6 +727,10 @@ ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
                                return cs.getConstantParent() == &C;
                            });
     return &*ff;
+}
+
+void Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln){
+    loop_nodes.push_back(std::move(_ln));
 }
 
 /**

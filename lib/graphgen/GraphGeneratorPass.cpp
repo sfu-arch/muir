@@ -305,11 +305,10 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
     for (auto &L : getLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)));
-        _new_loop->setHeadNode(
-            dyn_cast<SuperNode>(map_value_node[L->getHeader()]));
-        _new_loop->setLatchNode(
+            NodeInfo(c, "Loop_" + std::to_string(c)),
+            dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
+        this->dependency_graph.insertLoopNode(std::move(_new_loop));
         c++;
     }
 }
@@ -321,7 +320,7 @@ void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
-     fillLoopDependencies(*LI);
+    fillLoopDependencies(*LI);
 
     // Printing the graph
     dependency_graph.printGraph(PrintType::Scala);

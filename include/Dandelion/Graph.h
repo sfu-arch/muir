@@ -37,7 +37,6 @@ class Graph {
     BasicBlockList super_node_list;
     GlobalValueList glob_list;
     ConstIntList const_list;
-    LoopNodeList loop_nodes;
 
     // Splitcall for the function
     std::unique_ptr<SplitCallNode> split_call;
@@ -53,7 +52,11 @@ class Graph {
     std::unique_ptr<MemoryUnitNode> memory_unit;
 
     // Loop nodes
+    LoopNodeList loop_nodes;
 
+
+    // Keep track of nodes and values
+    std::map<llvm::Value *, Node *> map_value_node;
    public:
 
     explicit Graph(NodeInfo _n_info)
@@ -112,6 +115,9 @@ class Graph {
     ArgumentNode *insertFunctionArgument(llvm::Argument &);
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
+
+    void insertLoopNode(std::unique_ptr<LoopNode>);
+
 
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
