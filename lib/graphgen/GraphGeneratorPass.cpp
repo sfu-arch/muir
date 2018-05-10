@@ -81,7 +81,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
  * then make supernode for each of them and add them to the node list
  */
 void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
-    map_value_node[&BB] = this->dependency_graph.insertSuperNode(BB);
+    map_value_node[&BB] = this->dependency_graph->insertSuperNode(BB);
 }
 
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
@@ -91,56 +91,55 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
-    map_value_node[&I] = this->dependency_graph.insertBinaryOperatorNode(I);
+    map_value_node[&I] = this->dependency_graph->insertBinaryOperatorNode(I);
 }
 
 void GraphGeneratorPass::visitICmpInst(llvm::ICmpInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertIcmpOperatorNode(I);
+    map_value_node[&I] = this->dependency_graph->insertIcmpOperatorNode(I);
 }
 
 void GraphGeneratorPass::visitBranchInst(llvm::BranchInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertBranchNode(I);
+    map_value_node[&I] = this->dependency_graph->insertBranchNode(I);
 }
 
 void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
-    map_value_node[&I] = this->dependency_graph.insertPhiNode(I);
+    map_value_node[&I] = this->dependency_graph->insertPhiNode(I);
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertAllocaNode(I);
+    map_value_node[&I] = this->dependency_graph->insertAllocaNode(I);
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertGepNode(I);
+    map_value_node[&I] = this->dependency_graph->insertGepNode(I);
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertLoadNode(I);
+    map_value_node[&I] = this->dependency_graph->insertLoadNode(I);
 }
 
 void GraphGeneratorPass::visitStoreInst(llvm::StoreInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertStoreNode(I);
+    map_value_node[&I] = this->dependency_graph->insertStoreNode(I);
 }
 
 void GraphGeneratorPass::visitReturnInst(llvm::ReturnInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertReturnNode(I);
+    map_value_node[&I] = this->dependency_graph->insertReturnNode(I);
 }
 
 void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
-    map_value_node[&I] = this->dependency_graph.insertCallNode(I);
+    map_value_node[&I] = this->dependency_graph->insertCallNode(I);
 }
 
 void GraphGeneratorPass::visitFunction(Function &F) {
-    dependency_graph.setFunction(&F);
+    dependency_graph->setFunction(&F);
 
     // TODO
     // Here we make a graph
-    // Graph gg()
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
-            this->dependency_graph.insertFunctionArgument(f_arg);
-        // this->dependency_graph.getSplitCall()->insertNewDataPort(f_arg.getNumUses());
+            this->dependency_graph->getSplitCall()->insertArgument(f_arg);
+        // this->dependency_graph->insertFunctionArgument(f_arg);
     }
 
     // this->dependency_graph.setNumSplitCallInput(F.arg_size());
@@ -148,7 +147,7 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Filling function global nodes
     for (auto &g_var : F.getParent()->getGlobalList()) {
         map_value_node[&g_var] =
-            this->dependency_graph.insertFunctionGlobalValue(g_var);
+            this->dependency_graph->insertFunctionGlobalValue(g_var);
     }
 }
 
@@ -164,16 +163,16 @@ void GraphGeneratorPass::findDataPort(Function &F) {
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
 
     // Connecting function arguments to the spliter
-    for (auto _fun_arg_it = this->dependency_graph.funarg_begin();
-         _fun_arg_it != this->dependency_graph.funarg_end(); _fun_arg_it++) {
+    for (auto _fun_arg_it = this->dependency_graph->funarg_begin();
+         _fun_arg_it != this->dependency_graph->funarg_end(); _fun_arg_it++) {
         auto _fun_arg_node = dyn_cast<ArgumentNode>(_fun_arg_it->get());
-        auto _spliter = this->dependency_graph.getSplitCall();
+        auto _spliter = this->dependency_graph->getSplitCall();
 
         _fun_arg_node->addDataInputPort(_spliter);
         _spliter->addDataOutputPort(_fun_arg_node);
 
-        this->dependency_graph.insertEdge(Edge::DataTypeEdge, _spliter,
-                                          _fun_arg_node);
+        this->dependency_graph->insertEdge(Edge::DataTypeEdge, _spliter,
+                                           _fun_arg_node);
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
@@ -198,15 +197,16 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 _node_dest->second->addControlInputPort(_node_src->second);
                 _node_src->second->addControlOutputPort(_node_dest->second);
 
-                this->dependency_graph.insertEdge(Edge::ControlTypeEdge,
-                                                  _node_src->second,
-                                                  _node_dest->second);
+                this->dependency_graph->insertEdge(Edge::ControlTypeEdge,
+                                                   _node_src->second,
+                                                   _node_dest->second);
 
             } else {
                 // If the operand is constant we have to create a new node
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand))
                     map_value_node[operand] =
-                        this->dependency_graph.insertConstIntNode(*const_value);
+                        this->dependency_graph->insertConstIntNode(
+                            *const_value);
 
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
@@ -224,7 +224,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 _node_src->second->addDataOutputPort(_node_dest->second);
                 _node_dest->second->addDataInputPort(_node_src->second);
 
-                this->dependency_graph.insertEdge(
+                this->dependency_graph->insertEdge(
                     Edge::DataTypeEdge, _node_src->second, _node_dest->second);
             }
         }
@@ -235,19 +235,40 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             // TODO right now we consider all the connections to the cache or
             // regfile
             // We need a pass to trace the pointers
-            this->dependency_graph.getMemoryUnit()->addReadMemoryReqPort(
+            this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
                 _ld_node);
-            this->dependency_graph.getMemoryUnit()->addReadMemoryRespPort(
+            this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
                 _ld_node);
             _ld_node->addReadMemoryReqPort(
-                this->dependency_graph.getMemoryUnit());
+                this->dependency_graph->getMemoryUnit());
             _ld_node->addReadMemoryRespPort(
-                this->dependency_graph.getMemoryUnit());
-        } else if (auto _ld_node = isa<StoreNode>(
+                this->dependency_graph->getMemoryUnit());
+
+            // Adding edges
+            this->dependency_graph->insertEdge(
+                Edge::MemoryTypeEdge, this->dependency_graph->getMemoryUnit(),
+                _ld_node);
+            this->dependency_graph->insertEdge(
+                Edge::MemoryTypeEdge, _ld_node,
+                this->dependency_graph->getMemoryUnit());
+        } else if (auto _st_node = dyn_cast<StoreNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
-            // TODO right now we consider all the connections to the cache or
-            // regfile
-            // We need a pass to trace the pointers
+            this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
+                _st_node);
+            this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
+                _st_node);
+            _st_node->addWriteMemoryReqPort(
+                this->dependency_graph->getMemoryUnit());
+            _st_node->addWriteMemoryRespPort(
+                this->dependency_graph->getMemoryUnit());
+
+            // Adding edges
+            this->dependency_graph->insertEdge(
+                Edge::MemoryTypeEdge, this->dependency_graph->getMemoryUnit(),
+                _st_node);
+            this->dependency_graph->insertEdge(
+                Edge::MemoryTypeEdge, _st_node,
+                this->dependency_graph->getMemoryUnit());
         }
     }
 }
@@ -263,11 +284,12 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         // Find the entry basic block and connect it to the split node
         if (&BB == &F.getEntryBlock()) {
             auto _en_bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
-            this->dependency_graph.insertEdge(
-                Edge::ControlTypeEdge, this->dependency_graph.getSplitCall(),
+            this->dependency_graph->insertEdge(
+                Edge::ControlTypeEdge, this->dependency_graph->getSplitCall(),
                 _en_bb);
-            _en_bb->addControlInputPort(this->dependency_graph.getSplitCall());
-            this->dependency_graph.getSplitCall()->addControlOutputPort(_en_bb);
+            _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
+            this->dependency_graph->getSplitCall()->addControlOutputPort(
+                _en_bb);
         }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
@@ -280,15 +302,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
-                        this->dependency_graph.insertEdge(Edge::MaskTypeEdge,
-                                                          _bb, _phi_ins);
+                        this->dependency_graph->insertEdge(Edge::MaskTypeEdge,
+                                                           _bb, _phi_ins);
                     }
 
                     // Make a control edge
                     _bb->addControlOutputPort(_ins);
                     _ins->addControlInputPort(_bb);
-                    this->dependency_graph.insertEdge(Edge::ControlTypeEdge,
-                                                      _bb, _ins);
+                    this->dependency_graph->insertEdge(Edge::ControlTypeEdge,
+                                                       _bb, _ins);
                 } else
                     assert(!"The instruction is not visited!");
             }
@@ -308,7 +330,41 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
             NodeInfo(c, "Loop_" + std::to_string(c)),
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
-        this->dependency_graph.insertLoopNode(std::move(_new_loop));
+
+        // Insert the loop node
+        auto _loop_node = this->dependency_graph->insertLoopNode(std::move(_new_loop));
+
+        auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
+
+        // Change the type of loop head basic block
+        _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
+
+        // Update the control dependencies
+        /**
+         * The function does three important tasks:
+         * 1) Remove destination node form the source data port list
+         * 2) Remove source node from the destination data port list
+         * 3) Remove the edge between source and destination node
+         */
+        auto _src = *(std::find_if(
+            _l_head->inputControl_begin(), _l_head->inputControl_end(),
+            [&L](auto _node_it) {
+                return !L->contains(
+                    dyn_cast<BranchNode>(_node_it)->getInstruction());
+            }));
+
+        _l_head->removeNodeControlInputNode(_src);
+        _src->removeNodeControlOutputNode(_l_head);
+
+        // Add loop control signals
+        this->dependency_graph->insertEdge(Edge::ControlTypeEdge, _src, _loop_node);
+        _src->addControlOutputPort(_loop_node);
+        _loop_node->addControlInputPort(_src);
+        _loop_node->addControlOutputPort(_l_head);
+        _l_head->setActivateInput(_loop_node);
+
+
+        // Increament the counter
         c++;
     }
 }
@@ -323,7 +379,7 @@ void GraphGeneratorPass::init(Function &F) {
     fillLoopDependencies(*LI);
 
     // Printing the graph
-    dependency_graph.printGraph(PrintType::Scala);
+    dependency_graph->printGraph(PrintType::Scala);
 }
 
 // bool GraphGeneratorPass::runOnFunction(Function &F) {

@@ -91,13 +91,13 @@ class Node {
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
 
-    uint32_t returnDataInputPortIndex(Node &);
-    uint32_t returnControlInputPortIndex(Node &);
-    uint32_t returnMemoryInputPortIndex(Node &);
+    uint32_t returnDataInputPortIndex(Node *);
+    uint32_t returnControlInputPortIndex(Node *);
+    uint32_t returnMemoryInputPortIndex(Node *);
 
-    uint32_t returnDataOutputPortIndex(Node &);
-    uint32_t returnControlOutputPortIndex(Node &);
-    uint32_t returnMemoryOutputPortIndex(Node &);
+    uint32_t returnDataOutputPortIndex(Node *);
+    uint32_t returnControlOutputPortIndex(Node *);
+    uint32_t returnMemoryOutputPortIndex(Node *);
 
     void addDataInputPort(Node *);
     void addDataOutputPort(Node *);
@@ -114,28 +114,58 @@ class Node {
         return port_control.control_output_port.size();
     }
 
+    std::list<Node *>::const_iterator findDataInputNode(Node *);
+    std::list<Node *>::const_iterator findDataOutputNode(Node *);
+    std::list<Node *>::const_iterator findControlInputNode(Node *);
+    std::list<Node *>::const_iterator findControlOutputNode(Node *);
+
+    void removeNodeDataInputNode(Node *);
+    void removeNodeDataOutputNode(Node *);
+    void removeNodeControlInputNode(Node *);
+    void removeNodeControlOutputNode(Node *);
+
+    // Iterator over input data edges
     auto inputDataport_begin() {
         return this->port_data.data_input_port.cbegin();
     }
     auto inputDataport_end() { return this->port_data.data_input_port.cend(); }
+
+    auto input_data_range() {
+        return helpers::make_range(inputDataport_begin(), inputDataport_end());
+    }
+
+    // Iterator over output data edges
     auto outputDataport_begin() {
         return this->port_data.data_output_port.cbegin();
     }
     auto outputDataport_end() {
         return this->port_data.data_output_port.cend();
     }
+    auto output_data_range() {
+        return helpers::make_range(outputDataport_begin(),
+                                   outputDataport_end());
+    }
 
+    // Iterator over input control edges
     auto inputControl_begin() {
         return this->port_control.control_input_port.cbegin();
     }
     auto inputControl_end() {
         return this->port_control.control_input_port.cend();
     }
+    auto input_control_range() {
+        return helpers::make_range(inputControl_begin(), inputControl_end());
+    }
+
+    // Iterator over output control edges
     auto outputControl_begin() {
         return this->port_control.control_output_port.cbegin();
     }
     auto outputControl_end() {
         return this->port_control.control_output_port.cend();
+    }
+    auto output_control_range() {
+        return helpers::make_range(outputControl_begin(), outputControl_end());
     }
 
     uint32_t getID() { return info.ID; }
@@ -182,16 +212,24 @@ class SuperNode : public Node {
    public:
     // List of the instructions
     using PhiNodeList = std::list<PhiSelectNode *>;
+    enum SuperNodeType { Mask, NoMask, LoopHead };
 
    private:
+    Node *activate_input;
+
     llvm::BasicBlock *basic_block;
 
-    llvm::SmallVector<InstructionNode *, 16> instruction_list;
+    std::list<InstructionNode *> instruction_list;
     PhiNodeList phi_list;
+
+    SuperNodeType type;
 
    public:
     explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
-        : Node(Node::SuperNodeTy, _nf), basic_block(_bb) {}
+        : Node(Node::SuperNodeTy, _nf),
+          activate_input(nullptr),
+          basic_block(_bb),
+          type(SuperNodeType::NoMask) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -204,6 +242,7 @@ class SuperNode : public Node {
 
     bool hasPhi() { return !phi_list.empty(); }
     uint32_t getNumPhi() const { return phi_list.size(); }
+
     auto phi_begin() { return this->phi_list.cbegin(); }
     auto phi_end() { return this->phi_list.cend(); }
     auto phis() { return helpers::make_range(phi_begin(), phi_end()); }
@@ -212,10 +251,16 @@ class SuperNode : public Node {
     auto ins_end() const { return this->instruction_list.end(); }
     auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
 
+    const SuperNodeType getNodeType() { return type; }
+    void setNodeType(SuperNodeType _t) { this->type = _t; }
+    void setActivateInput(Node *_n) { this->activate_input = _n; }
+    auto getActivateNode(){ return this->activate_input; }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printMaskOutput(PrintType, uint32_t);
+    std::string printActivateEnable(PrintType);
 };
 
 /**
@@ -261,24 +306,6 @@ class MemoryUnitNode : public Node {
 };
 
 /**
- * SplitCall node
- */
-class SplitCallNode : public Node {
-   private:
-   public:
-    explicit SplitCallNode(NodeInfo _nf) : Node(Node::SplitCallTy, _nf) {}
-
-    // Define classof function so that we can use dyn_cast function
-    static bool classof(const Node *T) {
-        return T->getType() == Node::SuperNodeTy;
-    }
-
-    virtual std::string printDefinition(PrintType) override;
-    virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    virtual std::string printOutputData(PrintType, uint32_t) override;
-};
-
-/**
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public Node {
@@ -310,6 +337,9 @@ class LoopNode : public Node {
 
     void setHeadNode(SuperNode *_n) { head_node = _n; }
     void setLatchNode(SuperNode *_n) { latch_node = _n; }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printOutputEnable(PrintType) override;
 };
 
 /**
@@ -356,7 +386,9 @@ class InstructionNode : public Node {
     llvm::Instruction *getInstruction();
 
     uint32_t getOpCode() const { return ins_type; }
-    const std::string getOpCodeName() { return parent_instruction->getOpcodeName(); }
+    const std::string getOpCodeName() {
+        return parent_instruction->getOpcodeName();
+    }
 
     bool isBinaryOp() const { return ins_type == BinaryInstructionTy; }
 
@@ -518,6 +550,9 @@ class StoreNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    void addWriteMemoryReqPort(Node *);
+    void addWriteMemoryRespPort(Node *);
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
 };
@@ -563,7 +598,8 @@ class ArgumentNode : public Node {
     ArgumentNode(NodeInfo _ni, llvm::Argument *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni), parent_argument(_arg) {}
 
-    llvm::Argument *getArgumentValue();
+    const llvm::Argument *getArgumentValue() { return parent_argument; }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
@@ -591,6 +627,32 @@ class ConstIntNode : public Node {
     llvm::ConstantInt *getConstantParent();
     virtual std::string printOutputData(PrintType, uint32_t);
 };
+
+/**
+ * SplitCall node
+ */
+class SplitCallNode : public Node {
+   public:
+    using FunctionArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
+
+   private:
+    FunctionArgumentList fun_arg_list;
+
+   public:
+    explicit SplitCallNode(NodeInfo _nf) : Node(Node::SplitCallTy, _nf) {}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::SuperNodeTy;
+    }
+
+    ArgumentNode *insertArgument(llvm::Argument &);
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
 }  // namespace dandelion
 
 #endif  // end of DANDDELION_NODE_H

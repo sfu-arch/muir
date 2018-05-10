@@ -24,7 +24,7 @@ using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<ConstIntNode>;
 using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
-using EdgeList = std::list<Edge>;
+using EdgeList = std::list<std::unique_ptr<Edge>>;
 
 class Graph {
    private:
@@ -99,6 +99,10 @@ class Graph {
     auto funarg_end() { return this->arg_list.cend(); }
     auto args() {return helpers::make_range(funarg_begin(), funarg_end());}
 
+    auto edge_begin() { return this->edge_list.cbegin(); }
+    auto edge_end() { return this->edge_list.cend(); }
+    auto edges() { return helpers::make_range(edge_begin(), edge_end()); }
+
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
     SuperNode *insertSuperNode(llvm::BasicBlock &);
@@ -116,10 +120,13 @@ class Graph {
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
 
-    void insertLoopNode(std::unique_ptr<LoopNode>);
+    LoopNode *insertLoopNode(std::unique_ptr<LoopNode>);
 
 
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
+    void removeDataEdge(Node*, Node *);
+    void removeControlEdge(Node*, Node *);
+
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
     SplitCallNode *getSplitCall() const { return split_call.get(); }
@@ -135,6 +142,8 @@ class Graph {
     void printPhiNodesConnections(PrintType);
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
+
+    void PrintLoopHeader(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);

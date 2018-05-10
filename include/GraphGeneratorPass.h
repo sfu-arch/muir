@@ -41,7 +41,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     friend class InstVisitor<GraphGeneratorPass>;
 
    public:
-    Graph dependency_graph;
+    std::unique_ptr<Graph> dependency_graph;
 
    private:
     std::map<llvm::Value *, Node *> map_value_node;
@@ -85,11 +85,11 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     GraphGeneratorPass()
         : llvm::ModulePass(ID),
-          dependency_graph(NodeInfo(0, "dummy")),
+          dependency_graph(std::make_unique<Graph>(NodeInfo(0, "dummy"))),
           code_out(llvm::outs()) {}
     GraphGeneratorPass(NodeInfo _n_info)
         : llvm::ModulePass(ID),
-          dependency_graph(_n_info),
+          dependency_graph(std::make_unique<Graph>(_n_info)),
           code_out(llvm::outs()) {}
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const override{

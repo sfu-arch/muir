@@ -66,7 +66,7 @@ void Graph::printGraph(PrintType _pt) {
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printScalaInputSpliter();
-            printFunctionArgument(PrintType::Scala);
+            PrintLoopHeader(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
@@ -105,6 +105,25 @@ void Graph::printFunctionArgument(PrintType _pt) {
 }
 
 /**
+ * Print loop headers
+ */
+void Graph::PrintLoopHeader(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Print Loop header\n");
+            this->outCode << helperScalaPrintHeader("Printing loop headers");
+            for (auto &ll : this->loop_nodes) {
+                outCode << ll->printDefinition(PrintType::Scala);
+            }
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
  * Print the basicblock definition
  */
 void Graph::printBasicBlocks(PrintType _pt) {
@@ -133,7 +152,7 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
-                //ins_node->getInstruction()->dump();
+                // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
                 this->outCode << "\n";
@@ -199,6 +218,22 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                                   << _input_node->printOutputEnable(
                                          PrintType::Scala, _output_index)
                                   << "\n\n";
+                }
+
+                // Print activate signal if the super node is loopNode
+                if (_s_node->getNodeType() ==
+                    SuperNode::SuperNodeType::LoopHead) {
+                    auto _input_node = _s_node->getActivateNode();
+                    auto _input_index =
+                        _input_node->returnControlOutputPortIndex(
+                            _s_node.get());
+
+                    this->outCode
+                        << "  "
+                        << _s_node->printActivateEnable(PrintType::Scala)
+                        << " <> "
+                        << _input_node->printOutputEnable(PrintType::Scala)
+                        << "\n\n";
                 }
             }
 
@@ -303,18 +338,18 @@ void Graph::printDatadependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Connecting data dependencies");
             for (auto &_data_edge : edge_list) {
-                if (_data_edge.getType() == Edge::DataTypeEdge) {
+                if (_data_edge->getType() == Edge::DataTypeEdge) {
                     this->outCode
                         << "  "
-                        << _data_edge.getTar()->printInputData(
+                        << _data_edge->getTar()->printInputData(
                                PrintType::Scala,
-                               _data_edge.getTar()->returnDataInputPortIndex(
-                                   *_data_edge.getSrc()))
+                               _data_edge->getTar()->returnDataInputPortIndex(
+                                   _data_edge->getSrc()))
                         << " <> "
-                        << _data_edge.getSrc()->printOutputData(
+                        << _data_edge->getSrc()->printOutputData(
                                PrintType::Scala,
-                               _data_edge.getSrc()->returnDataOutputPortIndex(
-                                   *_data_edge.getTar()))
+                               _data_edge->getSrc()->returnDataOutputPortIndex(
+                                   _data_edge->getTar()))
                         << "\n\n";
                 }
             }
@@ -365,7 +400,7 @@ void Graph::printScalaMainClass() {
         "  verilogWriter.write(compiledStuff.value)\n"
         "  verilogWriter.close()\n}\n";
     helperReplace(_command, "$class_name", this->graph_info.Name);
-    helperReplace(_command, "$module_name", this->graph_info.Name+ "DF");
+    helperReplace(_command, "$module_name", this->graph_info.Name + "DF");
 
     this->outCode << _command;
 }
@@ -440,8 +475,8 @@ void Graph::printScalaFunctionHeader() {
 
     // Print cache memory interface
     _final_command.append(
-        "    val CacheResp = Flipped(Valid(new CacheRespT))\n"
-        "    val CacheReq = Decoupled(new CacheReq)\n");
+        "    val MemResp = Flipped(Valid(new MemRespT))\n"
+        "    val MemReq = Decoupled(new MemReq)\n");
 
     // Print output (return) parameters
     if (!function_ptr->getReturnType()->isVoidTy()) {
@@ -689,13 +724,13 @@ GlobalValueNode *Graph::insertFunctionGlobalValue(GlobalValue &G) {
  * Insert a new Edge
  */
 Edge *Graph::insertEdge(Edge::EdgeType _typ, Node *_node_src, Node *_node_dst) {
-    edge_list.push_back(Edge(_typ, _node_src, _node_dst));
-    auto ff = std::find_if(edge_list.begin(), edge_list.end(),
-                           [_node_src, _node_dst](Edge &e) -> bool {
-                               return (e.getSrc() == _node_src) &&
-                                      (e.getTar() == _node_dst);
-                           });
-    return &*ff;
+    edge_list.push_back(std::make_unique<Edge>(_typ, _node_src, _node_dst));
+    auto ff = std::find_if(
+        edge_list.begin(), edge_list.end(),
+        [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
+        });
+    return ff->get();
 }
 
 /**
@@ -703,18 +738,19 @@ Edge *Graph::insertEdge(Edge::EdgeType _typ, Node *_node_src, Node *_node_dst) {
  */
 Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Node *_node_src,
                               Node *_node_dst) {
-    edge_list.push_back(Edge(_edge_type, _node_src, _node_dst));
-    auto ff = std::find_if(edge_list.begin(), edge_list.end(),
-                           [_node_src, _node_dst](Edge &e) -> bool {
-                               return (e.getSrc() == _node_src) &&
-                                      (e.getTar() == _node_dst);
-                           });
+    edge_list.push_back(
+        std::make_unique<Edge>(_edge_type, _node_src, _node_dst));
+    auto ff = std::find_if(
+        edge_list.begin(), edge_list.end(),
+        [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
+        });
 
-    return &*ff;
+    return ff->get();
 }
 
 /**
- * Insert a new Store node
+ * Insert a new const node
  */
 ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
     const_list.push_back(
@@ -729,11 +765,27 @@ ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
     return &*ff;
 }
 
-void Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln){
+LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
+    auto _node_p = _ln.get();
     loop_nodes.push_back(std::move(_ln));
+
+    auto ff = std::find_if(loop_nodes.begin(), loop_nodes.end(),
+                           [_node_p](std::unique_ptr<LoopNode> &l) -> bool {
+                               return l.get() == _node_p;
+                           });
+
+    return ff->get();
 }
 
 /**
  * Set function pointer
  */
 void Graph::setFunction(Function *_fn) { this->function_ptr = _fn; }
+
+void Graph::removeControlEdge(Node *_src, Node *_dest) {
+    // this->outCode << "TEST!\n";
+    std::remove_if(this->edge_list.begin(), this->edge_list.end(),
+                   [_src, _dest](std::unique_ptr<Edge> &_e) -> bool {
+                       return (_e->getSrc() == _src) && (_e->getTar() == _dest);
+                   });
+}
