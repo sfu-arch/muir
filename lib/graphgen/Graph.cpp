@@ -70,6 +70,7 @@ void Graph::printGraph(PrintType _pt) {
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
+            printLoopBranchEdges(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
@@ -639,7 +640,7 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(), "ld_"+std::to_string(inst_list.size())), &I, this->getMemoryUnit()));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -652,7 +653,8 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
  */
 InstructionNode *Graph::insertStoreNode(StoreInst &I) {
     inst_list.push_back(std::make_unique<StoreNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())), &I, this->getMemoryUnit()));
+        //NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -788,4 +790,67 @@ void Graph::removeControlEdge(Node *_src, Node *_dest) {
                    [_src, _dest](std::unique_ptr<Edge> &_e) -> bool {
                        return (_e->getSrc() == _src) && (_e->getTar() == _dest);
                    });
+}
+
+void Graph::breakEdge(Node *_src, Node *_tar, Node *_new_node) {
+    // Update the control dependencies
+    /**
+     * The function does three important tasks:
+     * 1) Remove destination node form the source data port list
+     * 2) Remove source node from the destination data port list
+     * 3) Remove the edge between source and destination node
+     */
+    _tar->removeNodeControlInputNode(_src);
+    _src->removeNodeControlOutputNode(_tar);
+
+    // Add loop control signals
+    this->insertEdge(Edge::ControlTypeEdge, _src, _new_node);
+    this->insertEdge(Edge::ControlTypeEdge, _new_node, _tar);
+    _src->addControlOutputPort(_new_node);
+    _new_node->addControlInputPort(_src);
+
+    _new_node->addControlOutputPort(_tar);
+
+    if (isa<LoopNode>(_new_node))
+        dyn_cast<SuperNode>(_tar)->setActivateInput(_new_node);
+    else
+        _tar->addControlOutputPort(_new_node);
+}
+
+/**
+ * Print loop control signals
+ */
+void Graph::printLoopBranchEdges(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader(
+                "Loop -> predicate instruction");
+            for (auto &_l_node : loop_nodes) {
+                for (auto _enable_iterator = _l_node->inputControl_begin();
+                     _enable_iterator != _l_node->inputControl_end();
+                     _enable_iterator++) {
+                    auto _input_node = dyn_cast<Node>(*_enable_iterator);
+                    auto _input_index =
+                        _l_node->returnControlInputPortIndex(_input_node);
+                    auto _output_index =
+                        _input_node->returnControlOutputPortIndex(
+                            _l_node.get());
+
+                    this->outCode << "  "
+                                  << _l_node->printInputEnable(PrintType::Scala,
+                                                               _input_index)
+                                  << " <> "
+                                  << _input_node->printOutputEnable(
+                                         PrintType::Scala, _output_index)
+                                  << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
 }

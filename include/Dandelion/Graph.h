@@ -49,7 +49,7 @@ class Graph {
     llvm::raw_ostream &outCode;
 
     // Memory units inside each graph
-    std::unique_ptr<MemoryUnitNode> memory_unit;
+    std::unique_ptr<MemoryNode> memory_unit;
 
     // Loop nodes
     LoopNodeList loop_nodes;
@@ -62,14 +62,14 @@ class Graph {
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
+          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
+          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(nullptr) {}
@@ -77,7 +77,7 @@ class Graph {
                    llvm::Function *_fn)
         : graph_info(_n_info),
           split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
-          memory_unit(std::make_unique<MemoryUnitNode>(NodeInfo(0, "MemCtrl"))),
+          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(_fn) {}
@@ -88,7 +88,7 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    MemoryUnitNode *getMemoryUnit() const{ return memory_unit.get(); }
+    MemoryNode *getMemoryUnit() const{ return memory_unit.get(); }
 
     // InstructionList *getInstructionList();
     auto instList_begin() {return this->inst_list.cbegin();}
@@ -122,6 +122,8 @@ class Graph {
 
     LoopNode *insertLoopNode(std::unique_ptr<LoopNode>);
 
+    void breakEdge(Node*, Node*, Node *);
+
 
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
     void removeDataEdge(Node*, Node *);
@@ -142,6 +144,7 @@ class Graph {
     void printPhiNodesConnections(PrintType);
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
+    void printLoopBranchEdges(PrintType);
 
     void PrintLoopHeader(PrintType);
 

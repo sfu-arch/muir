@@ -333,7 +333,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Insert the loop node
         auto _loop_node = this->dependency_graph->insertLoopNode(std::move(_new_loop));
-
         auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
 
         // Change the type of loop head basic block
@@ -353,16 +352,7 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             }));
 
-        _l_head->removeNodeControlInputNode(_src);
-        _src->removeNodeControlOutputNode(_l_head);
-
-        // Add loop control signals
-        this->dependency_graph->insertEdge(Edge::ControlTypeEdge, _src, _loop_node);
-        _src->addControlOutputPort(_loop_node);
-        _loop_node->addControlInputPort(_src);
-        _loop_node->addControlOutputPort(_l_head);
-        _l_head->setActivateInput(_loop_node);
-
+        this->dependency_graph->breakEdge(_src, _l_head, _loop_node);
 
         // Increament the counter
         c++;

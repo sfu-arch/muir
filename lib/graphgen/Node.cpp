@@ -48,48 +48,43 @@ uint32_t Node::returnDataInputPortIndex(Node *_node) {
                               this->port_data.data_input_port.end(), _node));
 }
 
-
 uint32_t Node::returnControlOutputPortIndex(Node *_node) {
-    return std::distance(this->port_control.control_output_port.begin(),
-                         find(this->port_control.control_output_port.begin(),
-                              this->port_control.control_output_port.end(), _node));
+    return std::distance(
+        this->port_control.control_output_port.begin(),
+        find(this->port_control.control_output_port.begin(),
+             this->port_control.control_output_port.end(), _node));
 }
 
 uint32_t Node::returnControlInputPortIndex(Node *_node) {
-    return std::distance(this->port_control.control_input_port.begin(),
-                         find(this->port_control.control_input_port.begin(),
-                              this->port_control.control_input_port.end(), _node));
+    return std::distance(
+        this->port_control.control_input_port.begin(),
+        find(this->port_control.control_input_port.begin(),
+             this->port_control.control_input_port.end(), _node));
 }
 
-
-std::list<Node*>::const_iterator Node::findDataInputNode(Node *_node) {
+std::list<Node *>::const_iterator Node::findDataInputNode(Node *_node) {
     return find(this->port_data.data_input_port.begin(),
                 this->port_data.data_input_port.end(), _node);
 }
 
-
-std::list<Node*>::const_iterator Node::findDataOutputNode(Node *_node) {
+std::list<Node *>::const_iterator Node::findDataOutputNode(Node *_node) {
     return find(this->port_data.data_output_port.begin(),
                 this->port_data.data_output_port.end(), _node);
 }
 
-
-std::list<Node*>::const_iterator Node::findControlInputNode(Node *_node) {
+std::list<Node *>::const_iterator Node::findControlInputNode(Node *_node) {
     return find(this->port_control.control_input_port.begin(),
                 this->port_control.control_input_port.end(), _node);
 }
 
-
-std::list<Node*>::const_iterator Node::findControlOutputNode(Node *_node) {
+std::list<Node *>::const_iterator Node::findControlOutputNode(Node *_node) {
     return find(this->port_control.control_output_port.begin(),
                 this->port_control.control_output_port.end(), _node);
 }
 
-
 void Node::removeNodeDataInputNode(Node *_node) {
     this->port_data.data_input_port.remove(_node);
 }
-
 
 void Node::removeNodeDataOutputNode(Node *_node) {
     this->port_data.data_output_port.remove(_node);
@@ -215,7 +210,7 @@ std::string SuperNode::printActivateEnable(PrintType pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.activate";
             helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", _id);
+            // helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:
@@ -230,21 +225,21 @@ std::string SuperNode::printActivateEnable(PrintType pt) {
 //                            MemoryUnitNode Class
 //===----------------------------------------------------------------------===//
 
-void MemoryUnitNode::addReadMemoryReqPort(Node *const n) {
+void MemoryNode::addReadMemoryReqPort(Node *const n) {
     read_port_data.memory_req_port.emplace_back(n);
 }
-void MemoryUnitNode::addReadMemoryRespPort(Node *const n) {
+void MemoryNode::addReadMemoryRespPort(Node *const n) {
     read_port_data.memory_resp_port.emplace_back(n);
 }
 
-void MemoryUnitNode::addWriteMemoryReqPort(Node *const n) {
+void MemoryNode::addWriteMemoryReqPort(Node *const n) {
     write_port_data.memory_req_port.emplace_back(n);
 }
-void MemoryUnitNode::addWriteMemoryRespPort(Node *const n) {
+void MemoryNode::addWriteMemoryRespPort(Node *const n) {
     write_port_data.memory_resp_port.emplace_back(n);
 }
 
-std::string MemoryUnitNode::printDefinition(PrintType pt) {
+std::string MemoryNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -949,6 +944,24 @@ std::string LoadNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+std::string LoadNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 std::string LoadNode::printInputEnable(PrintType pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -965,6 +978,46 @@ std::string LoadNode::printInputEnable(PrintType pt, uint32_t _id) {
         default:
             assert(!"Uknown print type!");
     }
+    return _text;
+}
+
+std::string LoadNode::printOutputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.data($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string LoadNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$mem.io.ReadIn($mid) <> $name.io.memReq\n"
+                "  $name.io.memResp <> $mem.io.ReadOut($mid)\n"
+                "  $name.io.GepAddr";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mem", mem_unit->getName());
+            break;
+        default:
+            break;
+    }
+
     return _text;
 }
 
@@ -1020,6 +1073,65 @@ std::string StoreNode::printInputEnable(PrintType pt, uint32_t _id) {
         default:
             assert(!"Uknown print type!");
     }
+    return _text;
+}
+
+std::string StoreNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string StoreNode::printInputData(PrintType _pt) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$mem.io.inData";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            if (_id == 0)
+                _text = "$name.io.inData($id)";
+            else
+                _text =
+                    "$mem.io.WriteIn($mid) <> $name.io.memReq\n"
+                    "  $name.io.memResp <> $mem.io.ReadOut($mid)\n"
+                    "  $name.io.Out(0).read := true.B\n"
+                    "  $name.io.GepAddr";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mem", this->mem_node->getName());
+            helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
     return _text;
 }
 
@@ -1086,7 +1198,7 @@ std::string GEPNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.predicateIn($id)";
+            _text = "$name.io.enable($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -1096,6 +1208,65 @@ std::string GEPNode::printInputEnable(PrintType pt, uint32_t _id) {
         default:
             assert(!"Uknown print type!");
     }
+    return _text;
+}
+
+std::string GEPNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string GEPNode::printOutputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.data($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string GEPNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            if (_id == 0)
+                _text = "$name.io.baseAddress";
+            else if (_id == 1)
+                _text = "$name.io.idx1";
+            else
+                _text = "$name.io.idx2";
+
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
     return _text;
 }
 
@@ -1125,7 +1296,6 @@ std::string LoopNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string LoopNode::printOutputEnable(PrintType _pt) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -1139,5 +1309,24 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
             break;
     }
 
+    return _text;
+}
+
+std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
     return _text;
 }
