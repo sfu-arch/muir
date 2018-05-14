@@ -751,7 +751,7 @@ InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
  */
 ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
     arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"), &AR));
+        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"),this->getSplitCall(),  &AR));
 
     auto ff = std::find_if(arg_list.begin(), arg_list.end(),
                            [&AR](auto &arg) -> bool {

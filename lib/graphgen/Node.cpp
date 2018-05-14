@@ -407,7 +407,7 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 
 ArgumentNode *SplitCallNode::insertArgument(llvm::Argument &_f_arg) {
     fun_arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(fun_arg_list.size(), _f_arg.getName().str()), &_f_arg));
+        NodeInfo(fun_arg_list.size(), _f_arg.getName().str()), this, &_f_arg));
 
     auto ff = std::find_if(fun_arg_list.begin(), fun_arg_list.end(),
                            [&_f_arg](auto &arg) -> bool {
@@ -486,6 +486,17 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
             assert(!"Uknown print type!");
     }
     return _text;
+}
+
+
+uint32_t SplitCallNode::findArgumentIndex(ArgumentNode *_arg_node){
+    uint32_t c = 0;
+    for(auto &_a : fun_arg_list){
+        if(_a->getName() == _arg_node->getName())
+            return c;
+        c++;
+    }
+    return c;
 }
 
 //===----------------------------------------------------------------------===//
@@ -593,8 +604,10 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out($id)";
-            helperReplace(_text, "$name", _name.c_str());
+            //_text = "$name.io.Out($id)";
+            _text = "$call.io.Out(\"field$num\")($id)";
+            helperReplace(_text, "$call", this->parent_call_node->getName());
+            helperReplace(_text, "$num", this->parent_call_node->findArgumentIndex(this));
             helperReplace(_text, "$id", _idx);
 
             break;
@@ -605,6 +618,7 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
+
 
 //===----------------------------------------------------------------------===//
 //                            GlobalNode Class

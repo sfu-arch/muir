@@ -26,6 +26,7 @@ class InstructionNode;
 class LoopNode;
 class MemoryNode;
 class PhiSelectNode;
+class SplitCallNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
@@ -641,11 +642,12 @@ class CallNode : public InstructionNode {
 
 class ArgumentNode : public Node {
    private:
+    SplitCallNode *parent_call_node;
     llvm::Argument *parent_argument;
 
    public:
-    ArgumentNode(NodeInfo _ni, llvm::Argument *_arg = nullptr)
-        : Node(Node::FunctionArgTy, _ni), parent_argument(_arg) {}
+    ArgumentNode(NodeInfo _ni, SplitCallNode *_call_node = nullptr, llvm::Argument *_arg = nullptr)
+        : Node(Node::FunctionArgTy, _ni), parent_call_node(_call_node), parent_argument(_arg) {}
 
     const llvm::Argument *getArgumentValue() { return parent_argument; }
 
@@ -696,6 +698,7 @@ class SplitCallNode : public Node {
     }
 
     ArgumentNode *insertArgument(llvm::Argument &);
+    uint32_t findArgumentIndex(ArgumentNode *);
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
