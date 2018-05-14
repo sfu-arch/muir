@@ -88,16 +88,22 @@ class Node {
     // List of Dependency port
     DependencyPort port_depen;
 
+    // Memory ports
+    MemoryPort read_port_data;
+    MemoryPort write_port_data;
+
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
 
     uint32_t returnDataInputPortIndex(Node *);
     uint32_t returnControlInputPortIndex(Node *);
-    uint32_t returnMemoryInputPortIndex(Node *);
+    uint32_t returnMemoryReadInputPortIndex(Node *);
+    uint32_t returnMemoryWriteInputPortIndex(Node *);
 
     uint32_t returnDataOutputPortIndex(Node *);
     uint32_t returnControlOutputPortIndex(Node *);
-    uint32_t returnMemoryOutputPortIndex(Node *);
+    uint32_t returnMemoryReadOutputPortIndex(Node *);
+    uint32_t returnMemoryWriteOutputPortIndex(Node *);
 
     void addDataInputPort(Node *);
     void addDataOutputPort(Node *);
@@ -105,13 +111,33 @@ class Node {
     void addControlInputPort(Node *);
     void addControlOutputPort(Node *);
 
+    void addReadMemoryReqPort(Node *);
+    void addReadMemoryRespPort(Node *);
+
+    void addWriteMemoryReqPort(Node *);
+    void addWriteMemoryRespPort(Node *);
+
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
+
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
     }
     uint32_t numControlOutputPort() {
         return port_control.control_output_port.size();
+    }
+
+    uint32_t numReadDataInputPort() {
+        return read_port_data.memory_req_port.size();
+    }
+    uint32_t numReadDataOutputPort() {
+        return read_port_data.memory_resp_port.size();
+    }
+    uint32_t numWriteDataInputPort() {
+        return write_port_data.memory_req_port.size();
+    }
+    uint32_t numWriteDataOutputPort() {
+        return write_port_data.memory_resp_port.size();
     }
 
     std::list<Node *>::const_iterator findDataInputNode(Node *);
@@ -177,31 +203,55 @@ class Node {
     uint32_t getType() const { return node_type; }
 
     virtual std::string printDefinition(PrintType) {
-        return this->info.Name + std::string("Not defined!");
+        return this->info.Name + std::string(" Definition is Not defined!");
     }
     virtual std::string printInputEnable(PrintType, uint32_t) {
-        return std::string("Not defined!");
+        return this->info.Name +
+               std::string(" EnableInput with ID Not defined!");
     }
     virtual std::string printInputEnable(PrintType) {
-        return std::string("Not defined!");
+        return this->info.Name + std::string(" EnableInput Not defined!");
     }
     virtual std::string printOutputEnable(PrintType) {
-        return this->info.Name + std::string(" Not defined!");
+        return this->info.Name + std::string(" EnableOutput Not defined!");
     }
     virtual std::string printOutputEnable(PrintType, uint32_t) {
-        return std::string("Not defined!");
+        return this->info.Name +
+               std::string(" -> EnableOutput with ID Not defined!");
     }
     virtual std::string printInputData(PrintType) {
-        return std::string("Not defined!");
+        return this->info.Name + std::string(" -> DataInput Not defined!");
     }
     virtual std::string printInputData(PrintType, uint32_t) {
-        return std::string("Not defined!");
+        return this->info.Name +
+               std::string(" -> DataInput with ID Not defined!");
     }
     virtual std::string printOutputData(PrintType) {
-        return std::string("Not defined!");
+        return this->info.Name + std::string(" -> DataOutput Not defined!");
     }
     virtual std::string printOutputData(PrintType, uint32_t) {
-        return std::string("Not defined!");
+        return this->info.Name +
+               std::string(" -> DataOutput with ID Not defined!");
+    }
+
+    virtual std::string printMemReadInput(PrintType, uint32_t) {
+        return this->info.Name +
+               std::string(" -> MemInput with ID Not defined!");
+    }
+
+    virtual std::string printMemReadOutput(PrintType, uint32_t) {
+        return this->info.Name +
+               std::string(" -> MemOutput with ID Not defined!");
+    }
+
+    virtual std::string printMemWriteInput(PrintType, uint32_t) {
+        return this->info.Name +
+               std::string(" -> MemInput with ID Not defined!");
+    }
+
+    virtual std::string printMemWriteOutput(PrintType, uint32_t) {
+        return this->info.Name +
+               std::string(" -> MemOutput with ID Not defined!");
     }
 };
 
@@ -254,7 +304,7 @@ class SuperNode : public Node {
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
     void setActivateInput(Node *_n) { this->activate_input = _n; }
-    auto getActivateNode(){ return this->activate_input; }
+    auto getActivateNode() { return this->activate_input; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -267,10 +317,6 @@ class SuperNode : public Node {
  * Memory unit works as a local memory for each graph
  */
 class MemoryNode : public Node {
-   private:
-    MemoryPort read_port_data;
-    MemoryPort write_port_data;
-
    public:
     explicit MemoryNode(NodeInfo _nf) : Node(Node::MemoryUnitTy, _nf) {}
 
@@ -285,24 +331,11 @@ class MemoryNode : public Node {
         return T->getType() == Node::MemoryUnitTy;
     }
 
-    virtual std::string printDefinition(PrintType);
-
-    void addReadMemoryReqPort(Node *);
-    void addReadMemoryRespPort(Node *);
-    void addWriteMemoryReqPort(Node *);
-    void addWriteMemoryRespPort(Node *);
-    uint32_t numReadDataInputPort() {
-        return read_port_data.memory_req_port.size();
-    }
-    uint32_t numReadDataOutputPort() {
-        return read_port_data.memory_resp_port.size();
-    }
-    uint32_t numWriteDataInputPort() {
-        return write_port_data.memory_req_port.size();
-    }
-    uint32_t numWriteDataOutputPort() {
-        return write_port_data.memory_resp_port.size();
-    }
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteInput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
 /**
@@ -520,12 +553,13 @@ class GEPNode : public InstructionNode {
 
 class LoadNode : public InstructionNode {
    private:
-    MemoryPort read_port_data;
     MemoryNode *mem_unit;
 
    public:
-    LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr, MemoryNode *_node = nullptr)
-        : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins), mem_unit(_node) {}
+    LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr,
+             MemoryNode *_node = nullptr)
+        : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins),
+          mem_unit(_node) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::LoadInstructionTy;
@@ -534,27 +568,27 @@ class LoadNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    void setMemoryUnit(MemoryNode *_node) {mem_unit = _node;}
-
-    void addReadMemoryReqPort(Node *);
-    void addReadMemoryRespPort(Node *);
+    void setMemoryUnit(MemoryNode *_node) { mem_unit = _node; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
 };
 
 class StoreNode : public InstructionNode {
    private:
-    MemoryPort write_port_data;
     MemoryNode *mem_node;
 
    public:
-    StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr, MemoryNode *_mem = nullptr)
-              //NodeType _nd = UnkonwTy)
-        : InstructionNode(_ni, InstructionNode::StoreInstructionTy, _ins), mem_node(_mem) {}
+    StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
+              MemoryNode *_mem = nullptr)
+        // NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::StoreInstructionTy, _ins),
+          mem_node(_mem) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::StoreInstructionTy;
@@ -563,14 +597,13 @@ class StoreNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    void addWriteMemoryReqPort(Node *);
-    void addWriteMemoryRespPort(Node *);
-
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printMemWriteInput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
 class ReturnNode : public InstructionNode {

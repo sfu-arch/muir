@@ -142,6 +142,7 @@ class Graph {
     void printBasickBlockPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);
     void printPhiNodesConnections(PrintType);
+    void printMemInsConnections(PrintType _pt);
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
     void printLoopBranchEdges(PrintType);

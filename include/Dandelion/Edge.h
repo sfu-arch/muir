@@ -25,7 +25,8 @@ class Edge {
         DataToControlTypeEdge,
         ControlToDataTypeEdge,
         MaskTypeEdge,
-        MemoryTypeEdge,
+        MemoryReadTypeEdge,
+        MemoryWriteTypeEdge,
         MemoryToDataTypeEdge,
         MemoryToControlTypeEdge,
         UknownType

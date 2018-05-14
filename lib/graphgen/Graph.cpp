@@ -73,6 +73,7 @@ void Graph::printGraph(PrintType _pt) {
             printLoopBranchEdges(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
+            printMemInsConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
             printClosingclass(PrintType::Scala);
             printScalaMainClass();
@@ -362,6 +363,57 @@ void Graph::printDatadependencies(PrintType _pt) {
             assert(!"Uknown print type!");
     }
 }
+
+/**
+ * Print memory connections
+ */
+void Graph::printMemInsConnections(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Memory to instructions dependencies\n");
+            this->outCode << helperScalaPrintHeader(
+                "Connecting memory connections");
+            for (auto &_mem_edge : edge_list) {
+                if (_mem_edge->getType() == Edge::MemoryReadTypeEdge) {
+                    this->outCode
+                        << "  "
+                        << _mem_edge->getTar()->printMemReadInput(
+                               PrintType::Scala,
+                               _mem_edge->getTar()->returnMemoryReadInputPortIndex(
+                                   _mem_edge->getSrc()))
+                        << " <> "
+                        << _mem_edge->getSrc()->printMemReadOutput(
+                               PrintType::Scala,
+                               _mem_edge->getSrc()->returnMemoryReadOutputPortIndex(
+                                   _mem_edge->getTar()))
+                        << "\n\n";
+                }
+                else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
+                    this->outCode
+                        << "  "
+                        << _mem_edge->getTar()->printMemWriteInput(
+                               PrintType::Scala,
+                               _mem_edge->getTar()->returnMemoryWriteInputPortIndex(
+                                   _mem_edge->getSrc()))
+                        << " <> "
+                        << _mem_edge->getSrc()->printMemWriteOutput(
+                               PrintType::Scala,
+                               _mem_edge->getSrc()->returnMemoryWriteOutputPortIndex(
+                                   _mem_edge->getTar()))
+                        << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+
+
 
 /**
  * Print data closing class

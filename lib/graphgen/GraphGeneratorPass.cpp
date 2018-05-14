@@ -246,11 +246,11 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
             // Adding edges
             this->dependency_graph->insertEdge(
-                Edge::MemoryTypeEdge, this->dependency_graph->getMemoryUnit(),
-                _ld_node);
-            this->dependency_graph->insertEdge(
-                Edge::MemoryTypeEdge, _ld_node,
+                Edge::MemoryReadTypeEdge, _ld_node,
                 this->dependency_graph->getMemoryUnit());
+            this->dependency_graph->insertEdge(
+                Edge::MemoryReadTypeEdge, this->dependency_graph->getMemoryUnit(),
+                _ld_node);
         } else if (auto _st_node = dyn_cast<StoreNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
             this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
@@ -264,11 +264,11 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
             // Adding edges
             this->dependency_graph->insertEdge(
-                Edge::MemoryTypeEdge, this->dependency_graph->getMemoryUnit(),
-                _st_node);
-            this->dependency_graph->insertEdge(
-                Edge::MemoryTypeEdge, _st_node,
+                Edge::MemoryWriteTypeEdge, _st_node,
                 this->dependency_graph->getMemoryUnit());
+            this->dependency_graph->insertEdge(
+                Edge::MemoryWriteTypeEdge, this->dependency_graph->getMemoryUnit(),
+                _st_node);
         }
     }
 }

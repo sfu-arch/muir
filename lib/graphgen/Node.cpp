@@ -36,6 +36,20 @@ void Node::addControlOutputPort(Node *n) {
     port_control.control_output_port.emplace_back(n);
 }
 
+void Node::addReadMemoryReqPort(Node *const n) {
+    read_port_data.memory_req_port.emplace_back(n);
+}
+void Node::addReadMemoryRespPort(Node *const n) {
+    read_port_data.memory_resp_port.emplace_back(n);
+}
+
+void Node::addWriteMemoryReqPort(Node *const n) {
+    write_port_data.memory_req_port.emplace_back(n);
+}
+void Node::addWriteMemoryRespPort(Node *const n) {
+    write_port_data.memory_resp_port.emplace_back(n);
+}
+
 uint32_t Node::returnDataOutputPortIndex(Node *_node) {
     return std::distance(this->port_data.data_output_port.begin(),
                          find(this->port_data.data_output_port.begin(),
@@ -60,6 +74,36 @@ uint32_t Node::returnControlInputPortIndex(Node *_node) {
         this->port_control.control_input_port.begin(),
         find(this->port_control.control_input_port.begin(),
              this->port_control.control_input_port.end(), _node));
+}
+
+//Return memory indexes
+uint32_t Node::returnMemoryReadInputPortIndex(Node *_node) {
+    return std::distance(
+        this->read_port_data.memory_req_port.begin(),
+        find(this->read_port_data.memory_req_port.begin(),
+             this->read_port_data.memory_req_port.end(), _node));
+}
+
+uint32_t Node::returnMemoryReadOutputPortIndex(Node *_node) {
+    return std::distance(
+        this->read_port_data.memory_resp_port.begin(),
+        find(this->read_port_data.memory_resp_port.begin(),
+             this->read_port_data.memory_resp_port.end(), _node));
+}
+
+
+uint32_t Node::returnMemoryWriteInputPortIndex(Node *_node) {
+    return std::distance(
+        this->write_port_data.memory_req_port.begin(),
+        find(this->write_port_data.memory_req_port.begin(),
+             this->write_port_data.memory_req_port.end(), _node));
+}
+
+uint32_t Node::returnMemoryWriteOutputPortIndex(Node *_node) {
+    return std::distance(
+        this->write_port_data.memory_resp_port.begin(),
+        find(this->write_port_data.memory_resp_port.begin(),
+             this->write_port_data.memory_resp_port.end(), _node));
 }
 
 std::list<Node *>::const_iterator Node::findDataInputNode(Node *_node) {
@@ -225,19 +269,6 @@ std::string SuperNode::printActivateEnable(PrintType pt) {
 //                            MemoryUnitNode Class
 //===----------------------------------------------------------------------===//
 
-void MemoryNode::addReadMemoryReqPort(Node *const n) {
-    read_port_data.memory_req_port.emplace_back(n);
-}
-void MemoryNode::addReadMemoryRespPort(Node *const n) {
-    read_port_data.memory_resp_port.emplace_back(n);
-}
-
-void MemoryNode::addWriteMemoryReqPort(Node *const n) {
-    write_port_data.memory_req_port.emplace_back(n);
-}
-void MemoryNode::addWriteMemoryRespPort(Node *const n) {
-    write_port_data.memory_resp_port.emplace_back(n);
-}
 
 std::string MemoryNode::printDefinition(PrintType pt) {
     string _text;
@@ -284,6 +315,91 @@ std::string MemoryNode::printDefinition(PrintType pt) {
     }
     return _text;
 }
+
+std::string MemoryNode::printMemReadInput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.ReadIn($mid)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mid", _id);
+            //TODO add mid
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string MemoryNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.ReadOut($mid)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mid", _id);
+            //TODO add mid
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string MemoryNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.WriteIn($mid)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mid", _id);
+            //TODO add mid
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.WriteOut($mid)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$mid", _id);
+            //TODO add mid
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 //                            CallSpliter Class
@@ -912,13 +1028,6 @@ std::string ReturnNode::printOutputData(PrintType _pt, uint32_t _id) {
 //                            LoadNode Class
 //===----------------------------------------------------------------------===//
 
-void LoadNode::addReadMemoryReqPort(Node *const _nd) {
-    this->read_port_data.memory_req_port.push_back(_nd);
-}
-void LoadNode::addReadMemoryRespPort(Node *const _nd) {
-    this->read_port_data.memory_resp_port.push_back(_nd);
-}
-
 std::string LoadNode::printDefinition(PrintType _pt) {
     string _text("");
     string _name(this->getName());
@@ -1007,9 +1116,7 @@ std::string LoadNode::printInputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             _text =
-                "$mem.io.ReadIn($mid) <> $name.io.memReq\n"
-                "  $name.io.memResp <> $mem.io.ReadOut($mid)\n"
-                "  $name.io.GepAddr";
+                "$name.io.GepAddr";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mem", mem_unit->getName());
@@ -1021,16 +1128,45 @@ std::string LoadNode::printInputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+std::string LoadNode::printMemReadInput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.memResp";
+
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string LoadNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.memReq";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            StoreNode Class
 //===----------------------------------------------------------------------===//
-
-void StoreNode::addWriteMemoryReqPort(Node *const _nd) {
-    this->write_port_data.memory_req_port.push_back(_nd);
-}
-void StoreNode::addWriteMemoryRespPort(Node *const _nd) {
-    this->write_port_data.memory_resp_port.push_back(_nd);
-}
 
 std::string StoreNode::printDefinition(PrintType _pt) {
     string _text("");
@@ -1120,13 +1256,46 @@ std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
                 _text = "$name.io.inData($id)";
             else
                 _text =
-                    "$mem.io.WriteIn($mid) <> $name.io.memReq\n"
-                    "  $name.io.memResp <> $mem.io.ReadOut($mid)\n"
-                    "  $name.io.Out(0).read := true.B\n"
-                    "  $name.io.GepAddr";
+                    "$name.io.GepAddr";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$mem", this->mem_node->getName());
             helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string StoreNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.memResp";
+
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
+std::string StoreNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text =
+                "$name.io.memReq";
+            helperReplace(_text, "$name", _name.c_str());
             break;
         default:
             break;
