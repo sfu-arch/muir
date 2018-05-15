@@ -391,31 +391,41 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 }
 
 //===----------------------------------------------------------------------===//
-//                            CallSpliter Class
+//                            ContainerNode Class
 //===----------------------------------------------------------------------===//
 
-ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value &_val) {
-    live_in.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(live_in.size(), _val.getName().str()), this, &_val));
-
+ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
     auto ff = std::find_if(live_in.begin(), live_in.end(),
                            [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == &_val;
+                               return arg.get()->getArgumentValue() == _val;
                            });
-    ff->get()->printDefinition(PrintType::Scala);
+    if (ff == live_in.end()) {
+        live_in.push_back(std::make_unique<ArgumentNode>(
+            NodeInfo(live_in.size(), _val->getName().str()), this, _val));
+
+        ff = std::find_if(live_in.begin(), live_in.end(),
+                          [&_val](auto &arg) -> bool {
+                              return arg.get()->getArgumentValue() == _val;
+                          });
+    }
 
     return ff->get();
 }
 
-ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value &_val) {
-    live_out.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(live_out.size(), _val.getName().str()), this, &_val));
-
+ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
     auto ff = std::find_if(live_out.begin(), live_out.end(),
                            [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == &_val;
+                               return arg.get()->getArgumentValue() == _val;
                            });
-    ff->get()->printDefinition(PrintType::Scala);
+    if (ff == live_out.end()) {
+        live_out.push_back(std::make_unique<ArgumentNode>(
+            NodeInfo(live_out.size(), _val->getName().str()), this, _val));
+
+        ff = std::find_if(live_out.begin(), live_out.end(),
+                          [&_val](auto &arg) -> bool {
+                              return arg.get()->getArgumentValue() == _val;
+                          });
+    }
 
     return ff->get();
 }
@@ -449,7 +459,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
         for (auto &l : _list)
-            _arg_count.push_back(l->getArgumentValue()->getNumUses());
+            _arg_count.push_back(l->numDataOutputPort());
         return _arg_count;
     };
 
@@ -465,8 +475,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$type", "SplitCall");
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->live_ins()),
-                          ",");
+                          make_argument_port(this->live_ins()), ",");
             // TODO: uncomment if you update the list shape.
 
             break;
@@ -510,7 +519,6 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            BranchNode Class
@@ -598,8 +606,8 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.InData($id)";
-            helperReplace(_text, "$name", _name.c_str());
+            _text = "$call.io.In($id)";
+            helperReplace(_text, "$call", this->parent_call_node->getName());
             helperReplace(_text, "$id", _idx);
 
             break;
@@ -1463,15 +1471,26 @@ std::string GEPNode::printInputData(PrintType _pt, uint32_t _id) {
 std::string LoopNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
+
+    auto make_argument_port = [](const auto &_list) {
+        std::vector<uint32_t> _arg_count;
+        for (auto &l : _list)
+            _arg_count.push_back(l->numDataOutputPort());
+        if(_arg_count.size() == 0) _arg_count.push_back(0);
+        return _arg_count;
+    };
+
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumIns=$<vec_in>, NumOuts = "
+                "  val $name = Module(new $type(NumIns=List($<input_vector>), NumOuts = "
                 "$num_out, NumExits=$num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "LoopBlock");
+            helperReplace(_text, "$<input_vector>",
+                          make_argument_port(this->live_ins()), ",");
 
             break;
         case PrintType::Dot:

@@ -785,6 +785,20 @@ Edge *Graph::insertEdge(Edge::EdgeType _typ, Node *_node_src, Node *_node_dst) {
     return ff->get();
 }
 
+bool Graph::edgeExist(Node *_node_src, Node *_node_dst) {
+    auto ff = std::find_if(
+        edge_list.begin(), edge_list.end(),
+        [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
+        });
+    return ff != edge_list.end();
+}
+
+/**
+ * Find an edge
+ */
+
+
 /**
  * Inserting memory edges
  */
@@ -834,10 +848,8 @@ LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
  */
 void Graph::setFunction(Function *_fn) { this->function_ptr = _fn; }
 
-void Graph::removeControlEdge(Node *_src, Node *_dest) {
-    // this->outCode << "TEST!\n";
-    std::remove_if(this->edge_list.begin(), this->edge_list.end(),
-                   [_src, _dest](std::unique_ptr<Edge> &_e) -> bool {
+void Graph::removeEdge(Node *_src, Node *_dest) {
+    this->edge_list.remove_if([_src, _dest](std::unique_ptr<Edge> &_e) -> bool {
                        return (_e->getSrc() == _src) && (_e->getTar() == _dest);
                    });
 }

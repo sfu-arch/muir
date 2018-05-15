@@ -320,7 +320,7 @@ class SuperNode : public Node {
 class ArgumentNode : public Node {
    private:
     ContainerNode *parent_call_node;
-    llvm::Argument *parent_argument;
+    llvm::Value *parent_argument;
 
    public:
     ArgumentNode(NodeInfo _ni, ContainerNode *_call_node = nullptr,
@@ -329,7 +329,7 @@ class ArgumentNode : public Node {
           parent_call_node(_call_node),
           parent_argument(_arg) {}
 
-    const llvm::Argument *getArgumentValue() { return parent_argument; }
+    const llvm::Value *getArgumentValue() { return parent_argument; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -364,8 +364,8 @@ class ContainerNode : public Node {
 
     uint32_t getContainerType() const { return con_type; }
 
-    ArgumentNode *insertLiveInArgument(llvm::Value &);
-    ArgumentNode *insertLiveOutArgument(llvm::Value &);
+    ArgumentNode *insertLiveInArgument(llvm::Value *);
+    ArgumentNode *insertLiveOutArgument(llvm::Value *);
 
     uint32_t findLiveInIndex(ArgumentNode *);
     uint32_t findLiveOutIndex(ArgumentNode *);

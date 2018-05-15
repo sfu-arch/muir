@@ -126,8 +126,8 @@ class Graph {
 
 
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
-    void removeDataEdge(Node*, Node *);
-    void removeControlEdge(Node*, Node *);
+    bool edgeExist(Node *_node_src, Node *_node_dst);
+    void removeEdge(Node*, Node *);
 
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
