@@ -226,9 +226,6 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                 if (_s_node->getNodeType() ==
                     SuperNode::SuperNodeType::LoopHead) {
                     auto _input_node = _s_node->getActivateNode();
-                    auto _input_index =
-                        _input_node->returnControlOutputPortIndex(
-                            _s_node.get());
 
                     this->outCode
                         << "  "
@@ -375,32 +372,33 @@ void Graph::printMemInsConnections(PrintType _pt) {
                 "Connecting memory connections");
             for (auto &_mem_edge : edge_list) {
                 if (_mem_edge->getType() == Edge::MemoryReadTypeEdge) {
-                    this->outCode
-                        << "  "
-                        << _mem_edge->getTar()->printMemReadInput(
-                               PrintType::Scala,
-                               _mem_edge->getTar()->returnMemoryReadInputPortIndex(
-                                   _mem_edge->getSrc()))
-                        << " <> "
-                        << _mem_edge->getSrc()->printMemReadOutput(
-                               PrintType::Scala,
-                               _mem_edge->getSrc()->returnMemoryReadOutputPortIndex(
-                                   _mem_edge->getTar()))
-                        << "\n\n";
-                }
-                else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
-                    this->outCode
-                        << "  "
-                        << _mem_edge->getTar()->printMemWriteInput(
-                               PrintType::Scala,
-                               _mem_edge->getTar()->returnMemoryWriteInputPortIndex(
-                                   _mem_edge->getSrc()))
-                        << " <> "
-                        << _mem_edge->getSrc()->printMemWriteOutput(
-                               PrintType::Scala,
-                               _mem_edge->getSrc()->returnMemoryWriteOutputPortIndex(
-                                   _mem_edge->getTar()))
-                        << "\n\n";
+                    this->outCode << "  "
+                                  << _mem_edge->getTar()->printMemReadInput(
+                                         PrintType::Scala,
+                                         _mem_edge->getTar()
+                                             ->returnMemoryReadInputPortIndex(
+                                                 _mem_edge->getSrc()))
+                                  << " <> "
+                                  << _mem_edge->getSrc()->printMemReadOutput(
+                                         PrintType::Scala,
+                                         _mem_edge->getSrc()
+                                             ->returnMemoryReadOutputPortIndex(
+                                                 _mem_edge->getTar()))
+                                  << "\n\n";
+                } else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
+                    this->outCode << "  "
+                                  << _mem_edge->getTar()->printMemWriteInput(
+                                         PrintType::Scala,
+                                         _mem_edge->getTar()
+                                             ->returnMemoryWriteInputPortIndex(
+                                                 _mem_edge->getSrc()))
+                                  << " <> "
+                                  << _mem_edge->getSrc()->printMemWriteOutput(
+                                         PrintType::Scala,
+                                         _mem_edge->getSrc()
+                                             ->returnMemoryWriteOutputPortIndex(
+                                                 _mem_edge->getTar()))
+                                  << "\n\n";
                 }
             }
 
@@ -411,9 +409,6 @@ void Graph::printMemInsConnections(PrintType _pt) {
             assert(!"Uknown print type!");
     }
 }
-
-
-
 
 /**
  * Print data closing class
@@ -692,7 +687,8 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_"+std::to_string(inst_list.size())), &I, this->getMemoryUnit()));
+        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
+        &I, this->getMemoryUnit()));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -705,8 +701,9 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
  */
 InstructionNode *Graph::insertStoreNode(StoreInst &I) {
     inst_list.push_back(std::make_unique<StoreNode>(
-        NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())), &I, this->getMemoryUnit()));
-        //NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())),
+        &I, this->getMemoryUnit()));
+    // NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -751,7 +748,8 @@ InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
  */
 ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
     arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"),this->getSplitCall(),  &AR));
+        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"),
+        this->getSplitCall(), &AR));
 
     auto ff = std::find_if(arg_list.begin(), arg_list.end(),
                            [&AR](auto &arg) -> bool {

@@ -248,8 +248,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 Edge::MemoryReadTypeEdge, _ld_node,
                 this->dependency_graph->getMemoryUnit());
             this->dependency_graph->insertEdge(
-                Edge::MemoryReadTypeEdge, this->dependency_graph->getMemoryUnit(),
-                _ld_node);
+                Edge::MemoryReadTypeEdge,
+                this->dependency_graph->getMemoryUnit(), _ld_node);
         } else if (auto _st_node = dyn_cast<StoreNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
             this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
@@ -266,8 +266,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 Edge::MemoryWriteTypeEdge, _st_node,
                 this->dependency_graph->getMemoryUnit());
             this->dependency_graph->insertEdge(
-                Edge::MemoryWriteTypeEdge, this->dependency_graph->getMemoryUnit(),
-                _st_node);
+                Edge::MemoryWriteTypeEdge,
+                this->dependency_graph->getMemoryUnit(), _st_node);
         }
     }
 }
@@ -331,7 +331,8 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
 
         // Insert the loop node
-        auto _loop_node = this->dependency_graph->insertLoopNode(std::move(_new_loop));
+        auto _loop_node =
+            this->dependency_graph->insertLoopNode(std::move(_new_loop));
         auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
 
         // Change the type of loop head basic block
@@ -351,7 +352,18 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             }));
 
-        this->dependency_graph->breakEdge(_src, _l_head, _loop_node);
+        _l_head->removeNodeControlInputNode(_src);
+        _src->removeNodeControlOutputNode(_l_head);
+
+        // Add loop control signals
+        this->dependency_graph->insertEdge(Edge::ControlTypeEdge, _src, _loop_node);
+        this->dependency_graph->insertEdge(Edge::ControlTypeEdge, _loop_node, _l_head);
+        _src->addControlOutputPort(_loop_node);
+        _loop_node->addControlInputPort(_src);
+
+        _loop_node->addControlOutputPort(_l_head);
+
+        dyn_cast<SuperNode>(_l_head)->setActivateInput(_loop_node);
 
         // Increament the counter
         c++;

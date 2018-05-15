@@ -382,9 +382,6 @@ class ContainerNode : public Node {
         return helpers::make_range(live_out_begin(), live_out_end());
     }
 
-    virtual std::string printDefinition(PrintType) = 0 ;
-    virtual std::string printOutputEnable(PrintType, uint32_t) = 0;
-    virtual std::string printOutputData(PrintType, uint32_t) = 0;
 };
 
 
@@ -417,16 +414,10 @@ class MemoryNode : public Node {
 /**
  * LoopNode contains all the instructions and useful information about the loops
  */
-class LoopNode : public Node {
-   public:
-    using LoopRegister = std::list<std::unique_ptr<ArgumentNode>>;
-
+class LoopNode : public ContainerNode{
    private:
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
-
-    LoopRegister loop_live_in;
-    LoopRegister loop_live_out;
 
     SuperNode *head_node;
     SuperNode *latch_node;
@@ -434,7 +425,7 @@ class LoopNode : public Node {
    public:
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
                       SuperNode *_lnode = nullptr)
-        : Node(Node::LoopNodeTy, _nf), head_node(_hnode), latch_node(_lnode) {}
+        : ContainerNode(_nf, ContainerNode::LoopNodeTy), head_node(_hnode), latch_node(_lnode) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
