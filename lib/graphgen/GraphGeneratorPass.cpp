@@ -138,7 +138,7 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
-            this->dependency_graph->getSplitCall()->insertArgument(f_arg);
+            this->dependency_graph->getSplitCall()->insertLiveInArgument(f_arg);
     }
 
     // this->dependency_graph.setNumSplitCallInput(F.arg_size());

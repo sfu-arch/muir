@@ -22,6 +22,7 @@ namespace dandelion {
 
 class Node;
 class SuperNode;
+class ContainerNode;
 class InstructionNode;
 class LoopNode;
 class MemoryNode;
@@ -70,7 +71,7 @@ class Node {
         GlobalValueTy,
         ConstIntTy,
         MemoryUnitTy,
-        SplitCallTy,
+        ContainerTy,
         UnkonwTy
 
     };
@@ -315,6 +316,79 @@ class SuperNode : public Node {
     std::string printActivateEnable(PrintType);
 };
 
+
+class ArgumentNode : public Node {
+   private:
+    ContainerNode *parent_call_node;
+    llvm::Argument *parent_argument;
+
+   public:
+    ArgumentNode(NodeInfo _ni, ContainerNode *_call_node = nullptr,
+                 llvm::Argument *_arg = nullptr)
+        : Node(Node::FunctionArgTy, _ni),
+          parent_call_node(_call_node),
+          parent_argument(_arg) {}
+
+    const llvm::Argument *getArgumentValue() { return parent_argument; }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
+
+/**
+ * Container node
+ */
+class ContainerNode : public Node {
+   public:
+    enum ContainType { LoopNodeTy = 0, SplitCallTy };
+    using RegisterList = std::list<std::unique_ptr<ArgumentNode>>;
+
+   private:
+    ContainType con_type;
+    RegisterList live_in;
+    RegisterList live_out;
+
+   public:
+    explicit ContainerNode(NodeInfo _nf)
+        : Node(Node::ContainerTy, _nf), con_type(ContainType::LoopNodeTy) {}
+
+    explicit ContainerNode(NodeInfo _nf, ContainType _cn_type)
+        : Node(Node::ContainerTy, _nf), con_type(_cn_type) {}
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::ContainerTy;
+    }
+
+    uint32_t getContainerType() const { return con_type; }
+
+    ArgumentNode *insertLiveInArgument(llvm::Value &);
+    ArgumentNode *insertLiveOutArgument(llvm::Value &);
+
+    uint32_t findLiveInIndex(ArgumentNode *);
+    uint32_t findLiveOutIndex(ArgumentNode *);
+
+    auto live_in_begin() { return this->live_in.cbegin(); }
+    auto live_in_end() { return this->live_in.cend(); }
+    auto live_ins() {
+        return helpers::make_range(live_in_begin(), live_in_end());
+    }
+
+    auto live_out_begin() { return this->live_out.cbegin(); }
+    auto live_out_end() { return this->live_out.cend(); }
+    auto live_outs() {
+        return helpers::make_range(live_out_begin(), live_out_end());
+    }
+
+    virtual std::string printDefinition(PrintType) = 0 ;
+    virtual std::string printOutputEnable(PrintType, uint32_t) = 0;
+    virtual std::string printOutputData(PrintType, uint32_t) = 0;
+};
+
+
+
 /**
  * Memory unit works as a local memory for each graph
  */
@@ -344,7 +418,6 @@ class MemoryNode : public Node {
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public Node {
-
    public:
     using LoopRegister = std::list<std::unique_ptr<ArgumentNode>>;
 
@@ -649,22 +722,6 @@ class CallNode : public InstructionNode {
     }
 };
 
-class ArgumentNode : public Node {
-   private:
-    Node *parent_call_node;
-    llvm::Argument *parent_argument;
-
-   public:
-    ArgumentNode(NodeInfo _ni, Node *_call_node = nullptr, llvm::Argument *_arg = nullptr)
-        : Node(Node::FunctionArgTy, _ni), parent_call_node(_call_node), parent_argument(_arg) {}
-
-    const llvm::Argument *getArgumentValue() { return parent_argument; }
-
-    virtual std::string printDefinition(PrintType) override;
-    virtual std::string printInputData(PrintType, uint32_t) override;
-    virtual std::string printOutputData(PrintType, uint32_t) override;
-};
-
 class GlobalValueNode : public Node {
    private:
     llvm::GlobalValue *parent_glob;
@@ -691,23 +748,20 @@ class ConstIntNode : public Node {
 /**
  * SplitCall node
  */
-class SplitCallNode : public Node {
+class SplitCallNode : public ContainerNode {
    public:
-    using FunctionArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
+    explicit SplitCallNode(NodeInfo _nf)
+        : ContainerNode(_nf, ContainerNode::SplitCallTy) {}
 
-   private:
-    FunctionArgumentList fun_arg_list;
-
-   public:
-    explicit SplitCallNode(NodeInfo _nf) : Node(Node::SplitCallTy, _nf) {}
-
-    // Define classof function so that we can use dyn_cast function
+    static bool classof(const ContainerNode *T) {
+        return T->getContainerType() == ContainerNode::SplitCallTy;
+    }
     static bool classof(const Node *T) {
-        return T->getType() == Node::SuperNodeTy;
+        return isa<ContainerNode>(T) && classof(cast<ContainerNode>(T));
     }
 
-    ArgumentNode *insertArgument(llvm::Argument &);
-    uint32_t findArgumentIndex(ArgumentNode *);
+    ArgumentNode *insertLiveOutArgument(llvm::Value &) = delete;
+    uint32_t findLiveOutIndex(ArgumentNode *) = delete;
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;

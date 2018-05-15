@@ -394,24 +394,59 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 //                            CallSpliter Class
 //===----------------------------------------------------------------------===//
 
-ArgumentNode *SplitCallNode::insertArgument(llvm::Argument &_f_arg) {
-    fun_arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(fun_arg_list.size(), _f_arg.getName().str()), this, &_f_arg));
+ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value &_val) {
+    live_in.push_back(std::make_unique<ArgumentNode>(
+        NodeInfo(live_in.size(), _val.getName().str()), this, &_val));
 
-    auto ff = std::find_if(fun_arg_list.begin(), fun_arg_list.end(),
-                           [&_f_arg](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == &_f_arg;
+    auto ff = std::find_if(live_in.begin(), live_in.end(),
+                           [&_val](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == &_val;
                            });
     ff->get()->printDefinition(PrintType::Scala);
 
     return ff->get();
 }
 
+ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value &_val) {
+    live_out.push_back(std::make_unique<ArgumentNode>(
+        NodeInfo(live_out.size(), _val.getName().str()), this, &_val));
+
+    auto ff = std::find_if(live_out.begin(), live_out.end(),
+                           [&_val](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == &_val;
+                           });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
+    uint32_t c = 0;
+    for (auto &_a : live_in) {
+        if (_a->getName() == _arg_node->getName()) return c;
+        c++;
+    }
+    return c;
+}
+
+uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
+    uint32_t c = 0;
+    for (auto &_a : live_out) {
+        if (_a->getName() == _arg_node->getName()) return c;
+        c++;
+    }
+    return c;
+}
+
+//===----------------------------------------------------------------------===//
+//                            CallSpliter Class
+//===----------------------------------------------------------------------===//
+
 std::string SplitCallNode::printDefinition(PrintType _pt) {
     string _text("");
     string _name(this->getName());
 
-    auto make_argument_port = [](SplitCallNode::FunctionArgumentList &_list) {
+    auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
         for (auto &l : _list)
             _arg_count.push_back(l->getArgumentValue()->getNumUses());
@@ -430,10 +465,9 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$type", "SplitCall");
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->fun_arg_list), ",");
-            // std::vector<uint32_t>(this->numDataOutputPort(), XLEN), ",");
+                          make_argument_port(this->live_ins()),
+                          ",");
             // TODO: uncomment if you update the list shape.
-            // this->num_ports, ",");
 
             break;
         default:
@@ -477,14 +511,6 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     return _text;
 }
 
-uint32_t SplitCallNode::findArgumentIndex(ArgumentNode *_arg_node) {
-    uint32_t c = 0;
-    for (auto &_a : fun_arg_list) {
-        if (_a->getName() == _arg_node->getName()) return c;
-        c++;
-    }
-    return c;
-}
 
 //===----------------------------------------------------------------------===//
 //                            BranchNode Class
@@ -591,11 +617,10 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.Out($id)";
             _text = "$call.io.Out(\"field$num\")($id)";
             helperReplace(_text, "$call", this->parent_call_node->getName());
             helperReplace(_text, "$num",
-                          this->parent_call_node->findArgumentIndex(this));
+                          this->parent_call_node->findLiveInIndex(this));
             helperReplace(_text, "$id", _idx);
 
             break;
