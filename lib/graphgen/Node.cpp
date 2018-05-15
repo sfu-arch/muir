@@ -76,7 +76,7 @@ uint32_t Node::returnControlInputPortIndex(Node *_node) {
              this->port_control.control_input_port.end(), _node));
 }
 
-//Return memory indexes
+// Return memory indexes
 uint32_t Node::returnMemoryReadInputPortIndex(Node *_node) {
     return std::distance(
         this->read_port_data.memory_req_port.begin(),
@@ -90,7 +90,6 @@ uint32_t Node::returnMemoryReadOutputPortIndex(Node *_node) {
         find(this->read_port_data.memory_resp_port.begin(),
              this->read_port_data.memory_resp_port.end(), _node));
 }
-
 
 uint32_t Node::returnMemoryWriteInputPortIndex(Node *_node) {
     return std::distance(
@@ -269,7 +268,6 @@ std::string SuperNode::printActivateEnable(PrintType pt) {
 //                            MemoryUnitNode Class
 //===----------------------------------------------------------------------===//
 
-
 std::string MemoryNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
@@ -322,12 +320,11 @@ std::string MemoryNode::printMemReadInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.ReadIn($mid)";
+            _text = "$name.io.ReadIn($mid)";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
-            //TODO add mid
+            // TODO add mid
             break;
         default:
             break;
@@ -335,7 +332,6 @@ std::string MemoryNode::printMemReadInput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string MemoryNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -343,12 +339,11 @@ std::string MemoryNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.ReadOut($mid)";
+            _text = "$name.io.ReadOut($mid)";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
-            //TODO add mid
+            // TODO add mid
             break;
         default:
             break;
@@ -356,7 +351,6 @@ std::string MemoryNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string MemoryNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -364,12 +358,11 @@ std::string MemoryNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.WriteIn($mid)";
+            _text = "$name.io.WriteIn($mid)";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
-            //TODO add mid
+            // TODO add mid
             break;
         default:
             break;
@@ -377,7 +370,6 @@ std::string MemoryNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -385,12 +377,11 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.WriteOut($mid)";
+            _text = "$name.io.WriteOut($mid)";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
-            //TODO add mid
+            // TODO add mid
             break;
         default:
             break;
@@ -398,8 +389,6 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
-
 
 //===----------------------------------------------------------------------===//
 //                            CallSpliter Class
@@ -488,12 +477,10 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     return _text;
 }
 
-
-uint32_t SplitCallNode::findArgumentIndex(ArgumentNode *_arg_node){
+uint32_t SplitCallNode::findArgumentIndex(ArgumentNode *_arg_node) {
     uint32_t c = 0;
-    for(auto &_a : fun_arg_list){
-        if(_a->getName() == _arg_node->getName())
-            return c;
+    for (auto &_a : fun_arg_list) {
+        if (_a->getName() == _arg_node->getName()) return c;
         c++;
     }
     return c;
@@ -607,7 +594,8 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
             //_text = "$name.io.Out($id)";
             _text = "$call.io.Out(\"field$num\")($id)";
             helperReplace(_text, "$call", this->parent_call_node->getName());
-            helperReplace(_text, "$num", this->parent_call_node->findArgumentIndex(this));
+            helperReplace(_text, "$num",
+                          this->parent_call_node->findArgumentIndex(this));
             helperReplace(_text, "$id", _idx);
 
             break;
@@ -618,7 +606,6 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            GlobalNode Class
@@ -1129,8 +1116,7 @@ std::string LoadNode::printInputData(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.GepAddr";
+            _text = "$name.io.GepAddr";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mem", mem_unit->getName());
@@ -1148,8 +1134,7 @@ std::string LoadNode::printMemReadInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.memResp";
+            _text = "$name.io.memResp";
 
             helperReplace(_text, "$name", _name.c_str());
             break;
@@ -1160,15 +1145,13 @@ std::string LoadNode::printMemReadInput(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string LoadNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.memReq";
+            _text = "$name.io.memReq";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:
@@ -1269,8 +1252,7 @@ std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
             if (_id == 0)
                 _text = "$name.io.inData($id)";
             else
-                _text =
-                    "$name.io.GepAddr";
+                _text = "$name.io.GepAddr";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
             break;
@@ -1281,15 +1263,13 @@ std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string StoreNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.memResp";
+            _text = "$name.io.memResp";
 
             helperReplace(_text, "$name", _name.c_str());
             break;
@@ -1300,15 +1280,13 @@ std::string StoreNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string StoreNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text =
-                "$name.io.memReq";
+            _text = "$name.io.memReq";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:

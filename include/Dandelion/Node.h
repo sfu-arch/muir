@@ -27,6 +27,7 @@ class LoopNode;
 class MemoryNode;
 class PhiSelectNode;
 class SplitCallNode;
+class ArgumentNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
@@ -343,9 +344,17 @@ class MemoryNode : public Node {
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public Node {
+
+   public:
+    using LoopRegister = std::list<std::unique_ptr<ArgumentNode>>;
+
    private:
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
+
+    LoopRegister loop_live_in;
+    LoopRegister loop_live_out;
+
     SuperNode *head_node;
     SuperNode *latch_node;
 
@@ -642,11 +651,11 @@ class CallNode : public InstructionNode {
 
 class ArgumentNode : public Node {
    private:
-    SplitCallNode *parent_call_node;
+    Node *parent_call_node;
     llvm::Argument *parent_argument;
 
    public:
-    ArgumentNode(NodeInfo _ni, SplitCallNode *_call_node = nullptr, llvm::Argument *_arg = nullptr)
+    ArgumentNode(NodeInfo _ni, Node *_call_node = nullptr, llvm::Argument *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni), parent_call_node(_call_node), parent_argument(_arg) {}
 
     const llvm::Argument *getArgumentValue() { return parent_argument; }
