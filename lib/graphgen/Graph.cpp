@@ -223,19 +223,19 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                 }
 
                 // Print activate signal if the super node is loopNode
-                if (_s_node->getNodeType() ==
-                    SuperNode::SuperNodeType::LoopHead) {
-                    auto _input_node = _s_node->getActivateNode();
+                //if (_s_node->getNodeType() ==
+                    //SuperNode::SuperNodeType::LoopHead) {
+                    //auto _input_node = _s_node->getActivateNode();
 
-                    errs() << "TEST\n";
+                    //errs() << "TEST\n";
 
-                    this->outCode
-                        << "  "
-                        << _s_node->printActivateEnable(PrintType::Scala)
-                        << " <> "
-                        << _input_node->printOutputEnable(PrintType::Scala)
-                        << "\n\n";
-                }
+                    //this->outCode
+                        //<< "  "
+                        //<< _s_node->printActivateEnable(PrintType::Scala)
+                        //<< " <> "
+                        //<< _input_node->printOutputEnable(PrintType::Scala)
+                        //<< "\n\n";
+                //}
             }
 
             break;
@@ -875,10 +875,7 @@ void Graph::breakEdge(Node *_src, Node *_tar, Node *_new_node) {
 
     _new_node->addControlOutputPortBack(_tar);
 
-    if (isa<LoopNode>(_new_node))
-        dyn_cast<SuperNode>(_tar)->setActivateInput(_new_node);
-    else
-        _tar->addControlOutputPortBack(_new_node);
+    _tar->addControlOutputPortBack(_new_node);
 }
 
 /**

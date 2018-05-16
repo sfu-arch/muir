@@ -109,22 +109,22 @@ uint32_t Node::returnMemoryWriteOutputPortIndex(Node *_node) {
              this->write_port_data.memory_resp_port.end(), _node));
 }
 
-std::list<Node *>::const_iterator Node::findDataInputNode(Node *_node) {
+std::list<Node *>::iterator Node::findDataInputNode(Node *_node) {
     return find(this->port_data.data_input_port.begin(),
                 this->port_data.data_input_port.end(), _node);
 }
 
-std::list<Node *>::const_iterator Node::findDataOutputNode(Node *_node) {
+std::list<Node *>::iterator Node::findDataOutputNode(Node *_node) {
     return find(this->port_data.data_output_port.begin(),
                 this->port_data.data_output_port.end(), _node);
 }
 
-std::list<Node *>::const_iterator Node::findControlInputNode(Node *_node) {
+std::list<Node *>::iterator Node::findControlInputNode(Node *_node) {
     return find(this->port_control.control_input_port.begin(),
                 this->port_control.control_input_port.end(), _node);
 }
 
-std::list<Node *>::const_iterator Node::findControlOutputNode(Node *_node) {
+std::list<Node *>::iterator Node::findControlOutputNode(Node *_node) {
     return find(this->port_control.control_output_port.begin(),
                 this->port_control.control_output_port.end(), _node);
 }
@@ -145,16 +145,14 @@ void Node::removeNodeControlOutputNode(Node *_node) {
     this->port_control.control_output_port.remove(_node);
 }
 
-void Node::swapControlInputNode(Node *src, Node *tar) {
-    auto _it = std::find(port_control.control_input_port.begin(),
-                         port_control.control_input_port.end(), src);
-    std::swap(*_it, tar);
+void Node::replaceControlInputNode(Node *src, Node *tar) {
+    std::replace(this->port_control.control_input_port.begin(),
+                 this->port_control.control_input_port.end(), src, tar);
 }
 
-void Node::swapControlOutputNode(Node *src, Node *tar) {
-    auto _it = std::find(port_control.control_output_port.begin(),
-                         port_control.control_output_port.end(), src);
-    std::swap(*_it, tar);
+void Node::replaceControlOutputNode(Node *src, Node *tar) {
+    std::replace(port_control.control_output_port.begin(),
+                         port_control.control_output_port.end(), src, tar);
 }
 
 //===----------------------------------------------------------------------===//
@@ -210,7 +208,12 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.predicateIn($id)";
+            if(this->getNodeType() == SuperNode::LoopHead && _id == 0)
+                _text = "$name.io.activate";
+            else if(this->getNodeType() == SuperNode::LoopHead && _id == 1)
+                _text = "$name.io.loopBack";
+            else
+                _text = "$name.io.predicateIn($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -1532,15 +1535,44 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
     return _text;
 }
 
-std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _idx) {
+
+std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            if(_id == 0)
+                _text = "$name.io.Out.activate";
+            else if(_id == 1)
+                _text = "$name.io.Out.endEnable";
+
+            else
+                _text = "UKNOWN";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.enable($id)";
+            if(_id == 0)
+                _text = "$name.io.enable";
+            else if(_id == 1)
+                _text = "$name.io.loopExit";
+            else if(_id == 2)
+                _text = "$name.io.latchEnable";
+
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _idx);
+            helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:

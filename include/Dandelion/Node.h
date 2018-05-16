@@ -144,10 +144,10 @@ class Node {
         return write_port_data.memory_resp_port.size();
     }
 
-    std::list<Node *>::const_iterator findDataInputNode(Node *);
-    std::list<Node *>::const_iterator findDataOutputNode(Node *);
-    std::list<Node *>::const_iterator findControlInputNode(Node *);
-    std::list<Node *>::const_iterator findControlOutputNode(Node *);
+    std::list<Node *>::iterator findDataInputNode(Node *);
+    std::list<Node *>::iterator findDataOutputNode(Node *);
+    std::list<Node *>::iterator findControlInputNode(Node *);
+    std::list<Node *>::iterator findControlOutputNode(Node *);
 
     void removeNodeDataInputNode(Node *);
     void removeNodeDataOutputNode(Node *);
@@ -155,10 +155,10 @@ class Node {
     void removeNodeControlOutputNode(Node *);
 
     /// Swap two nodes form the control input container
-    void swapControlInputNode(Node* src, Node* tar);
+    void replaceControlInputNode(Node* src, Node* tar);
 
     /// Swap two nodes form the control output container
-    void swapControlOutputNode(Node* src, Node* tar);
+    void replaceControlOutputNode(Node* src, Node* tar);
 
     // Iterator over input data edges
     auto inputDataport_begin() {
@@ -275,9 +275,6 @@ class SuperNode : public Node {
     enum SuperNodeType { Mask, NoMask, LoopHead };
 
    private:
-    Node *activate_input;
-    Node *exit_input;
-
     llvm::BasicBlock *basic_block;
 
     std::list<InstructionNode *> instruction_list;
@@ -288,8 +285,6 @@ class SuperNode : public Node {
    public:
     explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
         : Node(Node::SuperNodeTy, _nf),
-          activate_input(nullptr),
-          exit_input(nullptr),
           basic_block(_bb),
           type(SuperNodeType::NoMask) {}
 
@@ -315,10 +310,8 @@ class SuperNode : public Node {
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
-    void setActivateInput(Node *_n) { this->activate_input = _n; }
-    void setExitInput(Node *_n) { this->exit_input = _n; }
-    auto getActivateNode() { return this->activate_input; }
-    auto getExitNode() { return this->exit_input; }
+    //void setActivateInput(Node *_n) { this->activate_input = _n; }
+    //void setExitInput(Node *_n) { this->exit_input = _n; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -462,6 +455,7 @@ class LoopNode : public ContainerNode{
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
 };
 
 /**
