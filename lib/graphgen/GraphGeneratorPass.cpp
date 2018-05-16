@@ -47,13 +47,24 @@ void inline findAllLoops(Loop *L, SetVector<Loop *> &Loops) {
     Loops.insert(L);
 }
 
-/// definedInCaller - Return true if the specified value is defined in the
-/// function being code extracted, but not in the region being extracted.
-/// These values must be passed in as live-ins to the function.
+/**
+ * definedInCaller - Return true if the specified value is defined in the
+ * function being code extracted, but not in the region being extracted. These
+ * values must be passed in as live-ins to the function.
+ */
 bool definedInCaller(const SetVector<BasicBlock *> &Blocks, Value *V) {
     if (isa<Argument>(V)) return true;
     if (Instruction *I = dyn_cast<Instruction>(V))
         if (!Blocks.count(I->getParent())) return true;
+    return false;
+}
+
+/** definedInRegion - Return true if the specified value is defined in the
+ * extracted region.
+ */
+bool definedInRegion(const SetVector<BasicBlock *> &Blocks, Value *V) {
+    if (Instruction *I = dyn_cast<Instruction>(V))
+        if (Blocks.count(I->getParent())) return true;
     return false;
 }
 
@@ -205,7 +216,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                        "Source node should be instruction node!");
 
                 _node_dest->second->addControlInputPort(_node_src->second);
-                _node_src->second->addControlOutputPort(_node_dest->second);
+                _node_src->second->addControlOutputPortFront(
+                    _node_dest->second);
 
                 this->dependency_graph->insertEdge(Edge::ControlTypeEdge,
                                                    _node_src->second,
@@ -298,7 +310,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 Edge::ControlTypeEdge, this->dependency_graph->getSplitCall(),
                 _en_bb);
             _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
-            this->dependency_graph->getSplitCall()->addControlOutputPort(
+            this->dependency_graph->getSplitCall()->addControlOutputPortBack(
                 _en_bb);
         }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
@@ -317,7 +329,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     }
 
                     // Make a control edge
-                    _bb->addControlOutputPort(_ins);
+                    _bb->addControlOutputPortBack(_ins);
                     _ins->addControlInputPort(_bb);
                     this->dependency_graph->insertEdge(Edge::ControlTypeEdge,
                                                        _bb, _ins);
@@ -339,18 +351,20 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
         auto _new_loop = std::make_unique<LoopNode>(
             NodeInfo(c, "Loop_" + std::to_string(c)),
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
-            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]));
+            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
+            dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]));
 
         // Insert the loop node
         auto _loop_node =
             this->dependency_graph->insertLoopNode(std::move(_new_loop));
         auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
+        auto _l_exit = dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]);
 
         // Change the type of loop head basic block
         _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
 
         auto break_control_edge = [&L, this](auto src, auto tar,
-                                             auto new_node) {
+                                             auto new_node, bool active) {
             // Update the control dependencies
             /**
              * The function does three important tasks:
@@ -360,18 +374,27 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
              */
 
             this->dependency_graph->removeEdge(src, tar);
+
+            if (src->returnControlOutputPortIndex(tar) == 0) {
+                src->removeNodeControlOutputNode(tar);
+                src->addControlOutputPortFront(new_node);
+            } else {
+                src->removeNodeControlOutputNode(tar);
+                src->addControlOutputPortBack(new_node);
+            }
             tar->removeNodeControlInputNode(src);
-            src->removeNodeControlOutputNode(tar);
 
             // Add loop control signals
             this->dependency_graph->insertEdge(Edge::ControlTypeEdge, src,
                                                new_node);
             this->dependency_graph->insertEdge(Edge::ControlTypeEdge, new_node,
                                                tar);
-            src->addControlOutputPort(new_node);
             new_node->addControlInputPort(src);
-            new_node->addControlOutputPort(tar);
-            dyn_cast<SuperNode>(tar)->setActivateInput(new_node);
+            new_node->addControlOutputPortBack(tar);
+            if(active)
+                dyn_cast<SuperNode>(tar)->setActivateInput(new_node);
+            else
+                dyn_cast<SuperNode>(tar)->setExitInput(new_node);
 
         };
 
@@ -406,17 +429,25 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                 tar->addDataInputPort(new_node);
             }
 
-
         };
 
-        auto _src = *(std::find_if(
+        auto _src_head = *(std::find_if(
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto _node_it) {
                 return !L->contains(
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             }));
 
-        break_control_edge(_src, _l_head, _loop_node);
+        auto _tar_exit = *(std::find_if(
+            _l_exit->inputControl_begin(), _l_exit->inputControl_end(),
+            [&L](auto _node_it) {
+                return L->contains(
+                    dyn_cast<BranchNode>(_node_it)->getInstruction());
+            }));
+
+
+        break_control_edge(_src_head, _l_head, _loop_node, true);
+        break_control_edge(_tar_exit, _l_exit, _loop_node, false);
 
         // Update data dependencies
         /**
@@ -439,6 +470,15 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                         auto _tar = map_value_node[&I];
 
                         break_data_edge(_src, _tar, new_live_in);
+                    }
+                }
+
+                for (auto *U : I.users()) {
+                    if (!definedInRegion(
+                            SetVector<BasicBlock *>(L->blocks().begin(),
+                                                    L->blocks().end()),
+                            U)) {
+                        auto new_live_out = _loop_node->insertLiveOutArgument(U);
                     }
                 }
             }

@@ -32,8 +32,12 @@ void Node::addDataOutputPort(Node *n) {
 void Node::addControlInputPort(Node *n) {
     port_control.control_input_port.emplace_back(n);
 }
-void Node::addControlOutputPort(Node *n) {
+void Node::addControlOutputPortBack(Node *n) {
     port_control.control_output_port.emplace_back(n);
+}
+
+void Node::addControlOutputPortFront(Node *n) {
+    port_control.control_output_port.emplace_front(n);
 }
 
 void Node::addReadMemoryReqPort(Node *const n) {
@@ -139,6 +143,18 @@ void Node::removeNodeControlInputNode(Node *_node) {
 
 void Node::removeNodeControlOutputNode(Node *_node) {
     this->port_control.control_output_port.remove(_node);
+}
+
+void Node::swapControlInputNode(Node *src, Node *tar) {
+    auto _it = std::find(port_control.control_input_port.begin(),
+                         port_control.control_input_port.end(), src);
+    std::swap(*_it, tar);
+}
+
+void Node::swapControlOutputNode(Node *src, Node *tar) {
+    auto _it = std::find(port_control.control_output_port.begin(),
+                         port_control.control_output_port.end(), src);
+    std::swap(*_it, tar);
 }
 
 //===----------------------------------------------------------------------===//
@@ -458,8 +474,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        for (auto &l : _list)
-            _arg_count.push_back(l->numDataOutputPort());
+        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
         return _arg_count;
     };
 
@@ -1474,9 +1489,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        for (auto &l : _list)
-            _arg_count.push_back(l->numDataOutputPort());
-        if(_arg_count.size() == 0) _arg_count.push_back(0);
+        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        if (_arg_count.size() == 0) _arg_count.push_back(0);
         return _arg_count;
     };
 
@@ -1484,7 +1498,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumIns=List($<input_vector>), NumOuts = "
+                "  val $name = Module(new $type(NumIns=List($<input_vector>), "
+                "NumOuts = "
                 "$num_out, NumExits=$num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());

@@ -227,6 +227,8 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                     SuperNode::SuperNodeType::LoopHead) {
                     auto _input_node = _s_node->getActivateNode();
 
+                    errs() << "TEST\n";
+
                     this->outCode
                         << "  "
                         << _s_node->printActivateEnable(PrintType::Scala)
@@ -868,15 +870,15 @@ void Graph::breakEdge(Node *_src, Node *_tar, Node *_new_node) {
     // Add loop control signals
     this->insertEdge(Edge::ControlTypeEdge, _src, _new_node);
     this->insertEdge(Edge::ControlTypeEdge, _new_node, _tar);
-    _src->addControlOutputPort(_new_node);
+    _src->addControlOutputPortBack(_new_node);
     _new_node->addControlInputPort(_src);
 
-    _new_node->addControlOutputPort(_tar);
+    _new_node->addControlOutputPortBack(_tar);
 
     if (isa<LoopNode>(_new_node))
         dyn_cast<SuperNode>(_tar)->setActivateInput(_new_node);
     else
-        _tar->addControlOutputPort(_new_node);
+        _tar->addControlOutputPortBack(_new_node);
 }
 
 /**

@@ -112,7 +112,8 @@ class Node {
     void addDataOutputPort(Node *);
 
     void addControlInputPort(Node *);
-    void addControlOutputPort(Node *);
+    void addControlOutputPortBack(Node *);
+    void addControlOutputPortFront(Node *);
 
     void addReadMemoryReqPort(Node *);
     void addReadMemoryRespPort(Node *);
@@ -152,6 +153,12 @@ class Node {
     void removeNodeDataOutputNode(Node *);
     void removeNodeControlInputNode(Node *);
     void removeNodeControlOutputNode(Node *);
+
+    /// Swap two nodes form the control input container
+    void swapControlInputNode(Node* src, Node* tar);
+
+    /// Swap two nodes form the control output container
+    void swapControlOutputNode(Node* src, Node* tar);
 
     // Iterator over input data edges
     auto inputDataport_begin() {
@@ -269,6 +276,7 @@ class SuperNode : public Node {
 
    private:
     Node *activate_input;
+    Node *exit_input;
 
     llvm::BasicBlock *basic_block;
 
@@ -281,6 +289,7 @@ class SuperNode : public Node {
     explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
         : Node(Node::SuperNodeTy, _nf),
           activate_input(nullptr),
+          exit_input(nullptr),
           basic_block(_bb),
           type(SuperNodeType::NoMask) {}
 
@@ -307,7 +316,9 @@ class SuperNode : public Node {
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
     void setActivateInput(Node *_n) { this->activate_input = _n; }
+    void setExitInput(Node *_n) { this->exit_input = _n; }
     auto getActivateNode() { return this->activate_input; }
+    auto getExitNode() { return this->exit_input; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -421,11 +432,12 @@ class LoopNode : public ContainerNode{
 
     SuperNode *head_node;
     SuperNode *latch_node;
+    SuperNode *exit_node;
 
    public:
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
-                      SuperNode *_lnode = nullptr)
-        : ContainerNode(_nf, ContainerNode::LoopNodeTy), head_node(_hnode), latch_node(_lnode) {}
+                      SuperNode *_lnode = nullptr, SuperNode *_ex = nullptr)
+        : ContainerNode(_nf, ContainerNode::LoopNodeTy), head_node(_hnode), exit_node(_ex), latch_node(_lnode) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -548,6 +560,7 @@ class IcmpNode : public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
+
 class BranchNode : public InstructionNode {
    public:
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
@@ -560,6 +573,17 @@ class BranchNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    /**
+     * Because each index is fixed for branch node the user
+     * can not remove any node from the control port
+     * he only can swap
+     */
+    void removeNodeControlInputNode(Node *) = delete;
+    void removeNodeControlOutputNode(Node *) = delete;
+
+    /**
+     * Overloaded print functions
+     */
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
