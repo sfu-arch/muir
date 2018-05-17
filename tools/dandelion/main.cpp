@@ -321,10 +321,10 @@ static void graphGen(Module &m) {
  */
 static void runGraphGen(Module &M) {
     legacy::PassManager pm;
-    //FPM.add(createLoopSimplifyPass());
-    //FPM.add(new DominatorTreeWrapperPass());
     pm.add(new LoopInfoWrapperPass());
+    pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));
+    pm.add(createVerifierPass());
     //pm.doInitialization();
     pm.run(M);
     //pm.doFinalization();

@@ -602,15 +602,14 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
 
     // Filling the containers
     if (I.getNumOperands() == 2) {
-        auto value_int = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
-        auto value_fp = dyn_cast<llvm::ConstantFP>(I.getOperand(1));
-        if (value_int) {
-            common::GepOne tmp_gep = {value_int->getSExtValue(), numByte};
+        auto value = I.getOperand(0)->getType()->getPointerElementType();
+        if (value->isIntegerTy()) {
+            common::GepOne tmp_gep = {0 , numByte};
             SingleGepIns[&I] = tmp_gep;
         }
     } else if (I.getNumOperands() == 3) {
-        auto value1 = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
-        auto value2 = dyn_cast<llvm::ConstantInt>(I.getOperand(2));
+        auto value1 = dyn_cast<llvm::ConstantInt>(I.getOperand(0));
+        auto value2 = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
         if (value1 && value2) {
             common::GepTwo tmp_gep = {value1->getSExtValue(), numByte,
                                       value2->getSExtValue(),

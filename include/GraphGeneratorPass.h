@@ -53,7 +53,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     llvm::raw_ostream &code_out;
 
     // NOTE: Uncomment if there is any dependent analysis
-    // virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+    //virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     virtual bool doInitialization(llvm::Module &M) override;
     virtual bool doFinalization(llvm::Module &M) override;
@@ -93,11 +93,14 @@ class GraphGeneratorPass : public llvm::ModulePass,
           dependency_graph(std::make_unique<Graph>(_n_info)),
           code_out(llvm::outs()) {}
 
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
-        AU.addRequired<LoopInfoWrapperPass>();
-    }
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+    //virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+        //AU.addRequired<LoopInfoWrapperPass>();
+        //AU.addRequired<helpers::GEPAddrCalculation>();
+        //AU.setPreservesAll();
+    //}
 
-    //virtual bool runOnFunction(llvm::Function &) override;
+    // virtual bool runOnFunction(llvm::Function &) override;
     virtual bool runOnModule(llvm::Module &m) override;
 };
 }  // namespace graphgen

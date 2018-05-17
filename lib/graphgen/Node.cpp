@@ -781,6 +781,7 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "ComputeNode");
+            helperReplace(_text, "$opcode", this->getOpCodeName());
 
             break;
         case PrintType::Dot:
@@ -1415,11 +1416,14 @@ std::string GEPNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte1=$nb1))\n\n";
                 helperReplace(_text, "$type", "GepOneNode");
+                helperReplace(_text, "$nb1", num_byte[0]);
             } else {
                 _text =
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n";
                 helperReplace(_text, "$type", "GepTwoNode");
+                helperReplace(_text, "$nb1", num_byte[0]);
+                helperReplace(_text, "$nb2", num_byte[1]);
             }
 
             helperReplace(_text, "$name", _name.c_str());
@@ -1539,6 +1543,10 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$type", "LoopBlock");
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ",");
+            helperReplace(_text, "$num_out", this->numLiveOut());
+
+            //TODO update the exit points!
+            //helperReplace(_text, "num_exit", 1);
 
             break;
         case PrintType::Dot:

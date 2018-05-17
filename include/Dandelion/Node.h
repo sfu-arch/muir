@@ -155,16 +155,16 @@ class Node {
     void removeNodeControlOutputNode(Node *);
 
     /// replace two nodes form the control input container
-    void replaceControlInputNode(Node* src, Node* tar);
+    void replaceControlInputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control output container
-    void replaceControlOutputNode(Node* src, Node* tar);
+    void replaceControlOutputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control input container
-    void replaceDataInputNode(Node* src, Node* tar);
+    void replaceDataInputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control output container
-    void replaceDataOutputNode(Node* src, Node* tar);
+    void replaceDataOutputNode(Node *src, Node *tar);
 
     // Iterator over input data edges
     auto inputDataport_begin() {
@@ -316,8 +316,8 @@ class SuperNode : public Node {
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
-    //void setActivateInput(Node *_n) { this->activate_input = _n; }
-    //void setExitInput(Node *_n) { this->exit_input = _n; }
+    // void setActivateInput(Node *_n) { this->activate_input = _n; }
+    // void setExitInput(Node *_n) { this->exit_input = _n; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -325,7 +325,6 @@ class SuperNode : public Node {
     virtual std::string printMaskOutput(PrintType, uint32_t);
     std::string printActivateEnable(PrintType);
 };
-
 
 class ArgumentNode : public Node {
    private:
@@ -345,7 +344,6 @@ class ArgumentNode : public Node {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
-
 
 /**
  * Container node
@@ -380,6 +378,9 @@ class ContainerNode : public Node {
     uint32_t findLiveInIndex(ArgumentNode *);
     uint32_t findLiveOutIndex(ArgumentNode *);
 
+    uint32_t numLiveIn() { return live_in.size(); }
+    uint32_t numLiveOut() { return live_out.size(); }
+
     auto live_in_begin() { return this->live_in.cbegin(); }
     auto live_in_end() { return this->live_in.cend(); }
     auto live_ins() {
@@ -391,10 +392,7 @@ class ContainerNode : public Node {
     auto live_outs() {
         return helpers::make_range(live_out_begin(), live_out_end());
     }
-
 };
-
-
 
 /**
  * Memory unit works as a local memory for each graph
@@ -424,7 +422,7 @@ class MemoryNode : public Node {
 /**
  * LoopNode contains all the instructions and useful information about the loops
  */
-class LoopNode : public ContainerNode{
+class LoopNode : public ContainerNode {
    private:
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
@@ -436,7 +434,10 @@ class LoopNode : public ContainerNode{
    public:
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
                       SuperNode *_lnode = nullptr, SuperNode *_ex = nullptr)
-        : ContainerNode(_nf, ContainerNode::LoopNodeTy), head_node(_hnode), exit_node(_ex), latch_node(_lnode) {}
+        : ContainerNode(_nf, ContainerNode::LoopNodeTy),
+          head_node(_hnode),
+          exit_node(_ex),
+          latch_node(_lnode) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -560,7 +561,6 @@ class IcmpNode : public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
-
 class BranchNode : public InstructionNode {
    public:
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
@@ -631,6 +631,8 @@ class AllocaNode : public InstructionNode {
 };
 
 class GEPNode : public InstructionNode {
+    private:
+        std::vector<uint32_t> num_byte;
    public:
     GEPNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins) {}
@@ -641,6 +643,8 @@ class GEPNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    void addNumByte(uint32_t _byte){ num_byte.push_back(_byte); }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;

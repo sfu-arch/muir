@@ -159,6 +159,16 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
     return false;
 }
 
+
+/**
+ * Set pass dependencies
+ */
+void GraphGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
+    AU.addRequired<helpers::GEPAddrCalculation>();
+    AU.addRequired<llvm::LoopInfoWrapperPass>();
+    AU.setPreservesAll();
+}
+
 /**
  * Iterating over target function's basicblocks and
  * then make supernode for each of them and add them to the node list
@@ -195,6 +205,20 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     map_value_node[&I] = this->dependency_graph->insertGepNode(I);
+    auto node = map_value_node[&I];
+    auto &gep_pass_ctx = getAnalysis<helpers::GEPAddrCalculation>();
+
+    //Check wether it's gepOne or gepTwo
+    if(I.getNumOperands() == 2)
+        dyn_cast<GEPNode>(node)->addNumByte(gep_pass_ctx.SingleGepIns[&I].numByte);
+    else if(I.getNumOperands() == 3){
+        dyn_cast<GEPNode>(node)->addNumByte(gep_pass_ctx.TwoGepIns[&I].numByte1);
+        dyn_cast<GEPNode>(node)->addNumByte(gep_pass_ctx.TwoGepIns[&I].numByte2);
+    }
+    else
+        assert(!"Not supported gep node");
+
+    errs() << gep_pass_ctx.SingleGepIns[&I].numByte << "\n";
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
