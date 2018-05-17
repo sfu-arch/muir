@@ -432,7 +432,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             });
 
-
         // Add basic block node between the branch and head basic block
         dependency_graph->insertEdge(Edge::ControlTypeEdge, _src_br_inst_it,
                                      _loop_node);
@@ -447,13 +446,14 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
         _l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
 
         // Connect the latch ending branch to loopNode
-        if(auto _latch_br = dyn_cast<BranchNode>(map_value_node[&L->getLoopLatch()->back()])){
-            dependency_graph->insertEdge(Edge::ControlTypeEdge, _latch_br, _loop_node);
+        if (auto _latch_br = dyn_cast<BranchNode>(
+                map_value_node[&L->getLoopLatch()->back()])) {
+            dependency_graph->insertEdge(Edge::ControlTypeEdge, _latch_br,
+                                         _loop_node);
             _latch_br->addControlOutputPortBack(_loop_node);
             _loop_node->addControlInputPort(_latch_br);
 
-        }
-        else
+        } else
             assert(!"Unexpected terminator!");
 
         // Connecting end branch to the loop end input
@@ -463,15 +463,17 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                 return L->contains(
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             });
-        dependency_graph->insertEdge(Edge::ControlTypeEdge, _tar_exit_br_inst_it, _loop_node);
-        dependency_graph->insertEdge(Edge::ControlTypeEdge, _loop_node, _l_exit);
+        dependency_graph->insertEdge(Edge::ControlTypeEdge,
+                                     _tar_exit_br_inst_it, _loop_node);
+        dependency_graph->insertEdge(Edge::ControlTypeEdge, _loop_node,
+                                     _l_exit);
+        dependency_graph->removeEdge(_tar_exit_br_inst_it, _l_exit);
+
         _loop_node->addControlInputPort(_tar_exit_br_inst_it);
         _loop_node->addControlOutputPortBack(_l_exit);
 
         _tar_exit_br_inst_it->replaceControlOutputNode(_l_exit, _loop_node);
         _l_exit->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
-
-
 
         // Update data dependencies
         /**
@@ -480,34 +482,53 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
          * 2) Insert a new Live-in into loop header
          * 3) Update the dependencies
          */
-        // for (auto B : L->blocks()) {
-        // for (auto &I : *B) {
-        //// Detecting Live-ins
-        // for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
-        // Value *V = *OI;
-        // if (definedInCaller(
-        // SetVector<BasicBlock *>(L->blocks().begin(),
-        // L->blocks().end()),
-        // V)) {
-        // auto new_live_in = _loop_node->insertLiveInArgument(V);
-        // auto _src = map_value_node[V];
-        // auto _tar = map_value_node[&I];
+        for (auto B : L->blocks()) {
+            for (auto &I : *B) {
+                // Detecting Live-ins
+                for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
+                    Value *V = *OI;
+                    if (definedInCaller(
+                            SetVector<BasicBlock *>(L->blocks().begin(),
+                                                    L->blocks().end()),
+                            V)) {
+                        auto new_live_in = _loop_node->insertLiveInArgument(V);
+                        auto _src = map_value_node[V];
+                        auto _tar = map_value_node[&I];
 
-        //// break_data_edge(_src, _tar, new_live_in);
-        //}
-        //}
+                        _src->removeNodeDataOutputNode(_tar);
+                        _tar->removeNodeDataInputNode(_src);
+                        dependency_graph->removeEdge(_src, _tar);
 
-        // for (auto *U : I.users()) {
-        // if (!definedInRegion(
-        // SetVector<BasicBlock *>(L->blocks().begin(),
-        // L->blocks().end()),
-        // U)) {
-        // auto new_live_out =
-        //_loop_node->insertLiveOutArgument(U);
-        //}
-        //}
-        //}
-        //}
+                        dependency_graph->insertEdge(Edge::DataTypeEdge,
+                                                     new_live_in, _tar);
+                        new_live_in->addDataOutputPort(_tar);
+                        _tar->addDataInputPort(new_live_in);
+
+                        // We add only one connection between src and new
+                        // live_in
+                        if (!dependency_graph->edgeExist(_src, new_live_in)) {
+                            dependency_graph->insertEdge(Edge::DataTypeEdge,
+                                                         _src, new_live_in);
+                            new_live_in->addDataInputPort(_src);
+
+                            _src->addDataOutputPort(new_live_in);
+                        }
+
+                        // break_data_edge(_src, _tar, new_live_in);
+                    }
+                }
+
+                for (auto *U : I.users()) {
+                    if (!definedInRegion(
+                            SetVector<BasicBlock *>(L->blocks().begin(),
+                                                    L->blocks().end()),
+                            U)) {
+                        auto new_live_out =
+                            _loop_node->insertLiveOutArgument(U);
+                    }
+                }
+            }
+        }
 
         // Increament the counter
         c++;

@@ -155,6 +155,17 @@ void Node::replaceControlOutputNode(Node *src, Node *tar) {
                          port_control.control_output_port.end(), src, tar);
 }
 
+
+void Node::replaceDataInputNode(Node *src, Node *tar) {
+    std::replace(this->port_data.data_input_port.begin(),
+                 this->port_data.data_input_port.end(), src, tar);
+}
+
+void Node::replaceDataOutputNode(Node *src, Node *tar) {
+    std::replace(port_data.data_output_port.begin(),
+                         port_data.data_output_port.end(), src, tar);
+}
+
 //===----------------------------------------------------------------------===//
 //                            SuperNode Class
 //===----------------------------------------------------------------------===//

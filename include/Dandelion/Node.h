@@ -154,11 +154,17 @@ class Node {
     void removeNodeControlInputNode(Node *);
     void removeNodeControlOutputNode(Node *);
 
-    /// Swap two nodes form the control input container
+    /// replace two nodes form the control input container
     void replaceControlInputNode(Node* src, Node* tar);
 
-    /// Swap two nodes form the control output container
+    /// replace two nodes form the control output container
     void replaceControlOutputNode(Node* src, Node* tar);
+
+    /// replace two nodes form the control input container
+    void replaceDataInputNode(Node* src, Node* tar);
+
+    /// replace two nodes form the control output container
+    void replaceDataOutputNode(Node* src, Node* tar);
 
     // Iterator over input data edges
     auto inputDataport_begin() {
