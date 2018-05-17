@@ -513,8 +513,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
                             _src->addDataOutputPort(new_live_in);
                         }
-
-                        // break_data_edge(_src, _tar, new_live_in);
                     }
                 }
 
@@ -525,6 +523,28 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                             U)) {
                         auto new_live_out =
                             _loop_node->insertLiveOutArgument(U);
+
+                        auto _src = map_value_node[U];
+                        auto _tar = map_value_node[&I];
+
+                        _src->removeNodeDataOutputNode(_tar);
+                        _tar->removeNodeDataInputNode(_src);
+                        dependency_graph->removeEdge(_src, _tar);
+
+                        dependency_graph->insertEdge(Edge::DataTypeEdge,
+                                                     new_live_out, _tar);
+                        new_live_out->addDataOutputPort(_tar);
+                        _tar->addDataInputPort(new_live_out);
+
+                        // We add only one connection between src and new
+                        // live_in
+                        if (!dependency_graph->edgeExist(_src, new_live_out)) {
+                            dependency_graph->insertEdge(Edge::DataTypeEdge,
+                                                         _src, new_live_out);
+                            new_live_out->addDataInputPort(_src);
+
+                            _src->addDataOutputPort(new_live_out);
+                        }
                     }
                 }
             }
@@ -532,6 +552,16 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Increament the counter
         c++;
+    }
+}
+
+void GraphGeneratorPass::connectOutToReturn(Function &F){
+    for(auto &BB : F){
+        for(auto &I : BB){
+            if(isa<llvm::ReturnInst>(I)){
+                dependency_graph->setOutputNode(map_value_node[&I]);
+            }
+        }
     }
 }
 
@@ -543,6 +573,7 @@ void GraphGeneratorPass::init(Function &F) {
     findDataPort(F);
     fillBasicBlockDependencies(F);
     fillLoopDependencies(*LI);
+    connectOutToReturn(F);
 
     // Printing the graph
     dependency_graph->printGraph(PrintType::Scala);

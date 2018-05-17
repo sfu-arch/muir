@@ -66,7 +66,7 @@ void Graph::printGraph(PrintType _pt) {
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printScalaInputSpliter();
-            PrintLoopHeader(PrintType::Scala);
+            printLoopHeader(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
@@ -75,6 +75,7 @@ void Graph::printGraph(PrintType _pt) {
             printPhiNodesConnections(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
+            printOutPort(PrintType::Scala);
             printClosingclass(PrintType::Scala);
             printScalaMainClass();
 
@@ -109,7 +110,7 @@ void Graph::printFunctionArgument(PrintType _pt) {
 /**
  * Print loop headers
  */
-void Graph::PrintLoopHeader(PrintType _pt) {
+void Graph::printLoopHeader(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Print Loop header\n");
@@ -223,18 +224,18 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                 }
 
                 // Print activate signal if the super node is loopNode
-                //if (_s_node->getNodeType() ==
-                    //SuperNode::SuperNodeType::LoopHead) {
-                    //auto _input_node = _s_node->getActivateNode();
+                // if (_s_node->getNodeType() ==
+                // SuperNode::SuperNodeType::LoopHead) {
+                // auto _input_node = _s_node->getActivateNode();
 
-                    //errs() << "TEST\n";
+                // errs() << "TEST\n";
 
-                    //this->outCode
-                        //<< "  "
-                        //<< _s_node->printActivateEnable(PrintType::Scala)
-                        //<< " <> "
-                        //<< _input_node->printOutputEnable(PrintType::Scala)
-                        //<< "\n\n";
+                // this->outCode
+                //<< "  "
+                //<< _s_node->printActivateEnable(PrintType::Scala)
+                //<< " <> "
+                //<< _input_node->printOutputEnable(PrintType::Scala)
+                //<< "\n\n";
                 //}
             }
 
@@ -800,7 +801,6 @@ bool Graph::edgeExist(Node *_node_src, Node *_node_dst) {
  * Find an edge
  */
 
-
 /**
  * Inserting memory edges
  */
@@ -852,8 +852,8 @@ void Graph::setFunction(Function *_fn) { this->function_ptr = _fn; }
 
 void Graph::removeEdge(Node *_src, Node *_dest) {
     this->edge_list.remove_if([_src, _dest](std::unique_ptr<Edge> &_e) -> bool {
-                       return (_e->getSrc() == _src) && (_e->getTar() == _dest);
-                   });
+        return (_e->getSrc() == _src) && (_e->getTar() == _dest);
+    });
 }
 
 void Graph::breakEdge(Node *_src, Node *_tar, Node *_new_node) {
@@ -913,5 +913,20 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
             assert(!"Dot file format is not supported!");
         default:
             assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print the output port
+ */
+void Graph::printOutPort(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            this->outCode << "  io.out <> "
+                          << out_node->printOutputData(PrintType::Scala)
+                          << "\n\n";
+            break;
+        default:
+            assert(!"We don't support the other types right now");
     }
 }

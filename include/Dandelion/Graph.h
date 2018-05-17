@@ -12,9 +12,9 @@
 
 #include "json/json.h"
 
-#include "iterator_range.h"
 #include "Dandelion/Edge.h"
 #include "Dandelion/Node.h"
+#include "iterator_range.h"
 
 namespace dandelion {
 
@@ -54,33 +54,41 @@ class Graph {
     // Loop nodes
     LoopNodeList loop_nodes;
 
+    // Out interface
+    Node *out_node;
 
     // Keep track of nodes and values
     std::map<llvm::Value *, Node *> map_value_node;
-   public:
 
+   public:
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
-          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+          split_call(
+              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(llvm::outs()),
-          function_ptr(nullptr) {}
+          function_ptr(nullptr),
+          out_node(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
-          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+          split_call(
+              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
-          function_ptr(nullptr) {}
+          function_ptr(nullptr),
+          out_node(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output,
                    llvm::Function *_fn)
         : graph_info(_n_info),
-          split_call(std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+          split_call(
+              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           graph_empty(false),
           outCode(_output),
-          function_ptr(_fn) {}
+          function_ptr(_fn),
+          out_node(nullptr) {}
 
     void init(BasicBlockList &, InstructionList &, ArgumentList &,
               GlobalValueList &, ConstIntList &, EdgeList &);
@@ -88,16 +96,18 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    MemoryNode *getMemoryUnit() const{ return memory_unit.get(); }
+    MemoryNode *getMemoryUnit() const { return memory_unit.get(); }
 
     // InstructionList *getInstructionList();
-    auto instList_begin() {return this->inst_list.cbegin();}
-    auto instList_end() {return this->inst_list.cend();}
-    auto instructions() {return helpers::make_range(instList_begin(), instList_end());}
+    auto instList_begin() { return this->inst_list.cbegin(); }
+    auto instList_end() { return this->inst_list.cend(); }
+    auto instructions() {
+        return helpers::make_range(instList_begin(), instList_end());
+    }
 
     auto funarg_begin() { return this->arg_list.cbegin(); }
     auto funarg_end() { return this->arg_list.cend(); }
-    auto args() {return helpers::make_range(funarg_begin(), funarg_end());}
+    auto args() { return helpers::make_range(funarg_begin(), funarg_end()); }
 
     auto edge_begin() { return this->edge_list.cbegin(); }
     auto edge_end() { return this->edge_list.cend(); }
@@ -122,16 +132,17 @@ class Graph {
 
     LoopNode *insertLoopNode(std::unique_ptr<LoopNode>);
 
-    void breakEdge(Node*, Node*, Node *);
-
+    void breakEdge(Node *, Node *, Node *);
 
     Edge *insertEdge(Edge::EdgeType, Node *, Node *);
     bool edgeExist(Node *_node_src, Node *_node_dst);
-    void removeEdge(Node*, Node *);
+    void removeEdge(Node *, Node *);
 
     Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
 
     SplitCallNode *getSplitCall() const { return split_call.get(); }
+
+    void setOutputNode(Node *_n){ out_node = _n; }
 
    protected:
     // General print functions with accepting print type
@@ -146,8 +157,8 @@ class Graph {
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
     void printLoopBranchEdges(PrintType);
-
-    void PrintLoopHeader(PrintType);
+    void printLoopHeader(PrintType);
+    void printOutPort(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);
