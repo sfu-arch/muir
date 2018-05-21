@@ -15,6 +15,7 @@
 #include "iterator_range.h"
 
 #define XLEN 32
+#define LOOPCONTROL 2
 
 using namespace llvm;
 
@@ -32,8 +33,6 @@ class ArgumentNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
-// enum MemoryMode { Cache = 0, Reg };
-
 struct DataPort {
     std::list<Node *> data_input_port;
     std::list<Node *> data_output_port;
@@ -42,11 +41,6 @@ struct DataPort {
 struct ControlPort {
     std::list<Node *> control_input_port;
     std::list<Node *> control_output_port;
-};
-
-struct DependencyPort {
-    std::list<Node *> depen_input_port;
-    std::list<Node *> depen_output_port;
 };
 
 struct MemoryPort {
@@ -59,6 +53,18 @@ struct NodeInfo {
     std::string Name;
 
     NodeInfo(uint32_t _id, std::string _n) : ID(_id), Name(_n){};
+};
+
+struct PortID {
+    uint32_t ID;
+
+    // Default value for ID is equalt to zero
+    PortID() : ID(0) {}
+    PortID(uint32_t _id) : ID(_id) {}
+
+    uint32_t getID(){ return ID; }
+
+    bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
 };
 
 class Node {
@@ -88,9 +94,6 @@ class Node {
     // List of Control ports
     ControlPort port_control;
 
-    // List of Dependency port
-    DependencyPort port_depen;
-
     // Memory ports
     MemoryPort read_port_data;
     MemoryPort write_port_data;
@@ -98,28 +101,34 @@ class Node {
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
 
-    uint32_t returnDataInputPortIndex(Node *);
-    uint32_t returnControlInputPortIndex(Node *);
-    uint32_t returnMemoryReadInputPortIndex(Node *);
-    uint32_t returnMemoryWriteInputPortIndex(Node *);
+    PortID returnDataInputPortIndex(Node *);
+    PortID returnControlInputPortIndex(Node *);
+    PortID returnMemoryReadInputPortIndex(Node *);
+    PortID returnMemoryWriteInputPortIndex(Node *);
 
-    uint32_t returnDataOutputPortIndex(Node *);
-    uint32_t returnControlOutputPortIndex(Node *);
-    uint32_t returnMemoryReadOutputPortIndex(Node *);
-    uint32_t returnMemoryWriteOutputPortIndex(Node *);
+    PortID returnDataOutputPortIndex(Node *);
+    PortID returnControlOutputPortIndex(Node *);
+    PortID returnMemoryReadOutputPortIndex(Node *);
+    PortID returnMemoryWriteOutputPortIndex(Node *);
 
-    void addDataInputPort(Node *);
-    void addDataOutputPort(Node *);
+    PortID addDataInputPort(Node *);
+    PortID addDataOutputPort(Node *);
 
-    void addControlInputPort(Node *);
-    void addControlOutputPortBack(Node *);
-    void addControlOutputPortFront(Node *);
+    PortID addControlInputPort(Node *);
+    PortID addControlOutputPort(Node *);
 
-    void addReadMemoryReqPort(Node *);
-    void addReadMemoryRespPort(Node *);
+    void resizeControlInputPort(uint32_t _s) {
+        this->port_control.control_input_port.resize(_s);
+    }
+    void resizeControlOutputPort(uint32_t _s) {
+        this->port_control.control_output_port.resize(_s);
+    }
 
-    void addWriteMemoryReqPort(Node *);
-    void addWriteMemoryRespPort(Node *);
+    PortID addReadMemoryReqPort(Node *);
+    PortID addReadMemoryRespPort(Node *);
+
+    PortID addWriteMemoryReqPort(Node *);
+    PortID addWriteMemoryRespPort(Node *);
 
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
@@ -218,6 +227,28 @@ class Node {
 
     uint32_t getType() const { return node_type; }
 
+   protected:
+    /**
+     * Adding a node to a specific index of control input port
+     */
+    void addControlInputPortIndex(Node *_n, uint32_t _id) {
+        auto it = port_control.control_input_port.begin();
+        std::advance(it, _id);
+        std::replace(port_control.control_input_port.begin(),
+                     port_control.control_input_port.end(), *it, _n);
+    }
+
+    /**
+     * Adding a node to a specific index of control output port
+     */
+    void addControlOutputPortIndex(Node *_n, uint32_t _id) {
+        auto it = port_control.control_output_port.begin();
+        std::advance(it, _id);
+        std::replace(port_control.control_output_port.begin(),
+                     port_control.control_output_port.end(), *it, _n);
+    }
+
+   public:
     virtual std::string printDefinition(PrintType) {
         return this->info.Name + std::string(" Definition is Not defined!");
     }
@@ -431,13 +462,20 @@ class LoopNode : public ContainerNode {
     SuperNode *latch_node;
     SuperNode *exit_node;
 
+    // Restrict the access to these two functions
+    using Node::addControlInputPort;
+    using Node::addControlOutputPort;
+
    public:
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
                       SuperNode *_lnode = nullptr, SuperNode *_ex = nullptr)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
           head_node(_hnode),
           exit_node(_ex),
-          latch_node(_lnode) {}
+          latch_node(_lnode) {
+        // Set the size of control input prot to at least two
+        resizeControlInputPort(LOOPCONTROL);
+    }
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -459,6 +497,39 @@ class LoopNode : public ContainerNode {
     void setHeadNode(SuperNode *_n) { head_node = _n; }
     void setLatchNode(SuperNode *_n) { latch_node = _n; }
 
+    /**
+     * Make sure that loop enable signal is always set to index 0
+     */
+    void setEnableLoopSignal(Node *_n) { addControlInputPortIndex(_n, 0); }
+
+    /**
+     * Make sure the loop enable signal is always set to index 0
+     */
+    void setActiveOutputLoopSignal(Node *_n) {
+        addControlOutputPortIndex(_n, 0);
+    }
+
+    /**
+     * Make sure that loop latch enable signal is always fix to index 1
+     */
+    void setLoopLatchEnable(Node *_n) { addControlInputPortIndex(_n, 1); }
+
+    /**
+     * Make sure that loop end enable signal is always fix to index 1
+     */
+    void setLoopEndEnable(Node *_n) { addControlOutputPortIndex(_n, 1); }
+
+    /**
+     * Make sure that loop exit points are always starting from index 2
+     */
+    PortID pushLoopExitLatch(Node *_n) {
+        assert(numControlInputPort() > 1 && "Error in loop control signal!");
+        return addControlInputPort(_n);
+    }
+
+    /**
+     * Print functions
+     */
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -631,8 +702,9 @@ class AllocaNode : public InstructionNode {
 };
 
 class GEPNode : public InstructionNode {
-    private:
-        std::vector<uint32_t> num_byte;
+   private:
+    std::vector<uint32_t> num_byte;
+
    public:
     GEPNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins) {}
@@ -644,7 +716,7 @@ class GEPNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
-    void addNumByte(uint32_t _byte){ num_byte.push_back(_byte); }
+    void addNumByte(uint32_t _byte) { num_byte.push_back(_byte); }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;

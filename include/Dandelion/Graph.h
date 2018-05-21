@@ -25,8 +25,11 @@ using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<ConstIntNode>;
 using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
 using EdgeList = std::list<std::unique_ptr<Edge>>;
+using Port = std::pair<Node *, PortID>;
 
 class Graph {
+   public:
+
    private:
     // Node information
     NodeInfo graph_info;
@@ -134,15 +137,17 @@ class Graph {
 
     void breakEdge(Node *, Node *, Node *);
 
-    Edge *insertEdge(Edge::EdgeType, Node *, Node *);
-    bool edgeExist(Node *_node_src, Node *_node_dst);
+    Edge *insertEdge(Edge::EdgeType, Port src, Port dst);
+    bool edgeExist(Port _node_src, Port _node_dst);
     void removeEdge(Node *, Node *);
+    Edge *findEdge(const Port _src, const Port _dst) const;
+    Edge *findEdge(const Node *_src, const Node * _dst) const;
 
-    Edge *insertMemoryEdge(Edge::EdgeType, Node *, Node *);
+    Edge *insertMemoryEdge(Edge::EdgeType, Port src, Port dst);
 
     SplitCallNode *getSplitCall() const { return split_call.get(); }
 
-    void setOutputNode(Node *_n){ out_node = _n; }
+    void setOutputNode(Node *_n) { out_node = _n; }
 
    protected:
     // General print functions with accepting print type

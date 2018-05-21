@@ -22,58 +22,70 @@ using namespace helpers;
 //                            Node Class
 //===----------------------------------------------------------------------===//
 
-void Node::addDataInputPort(Node *n) {
+PortID Node::addDataInputPort(Node *n) {
+    auto _port_info = PortID(port_data.data_input_port.size());
     port_data.data_input_port.emplace_back(n);
+    return _port_info;
 }
-void Node::addDataOutputPort(Node *n) {
+PortID Node::addDataOutputPort(Node *n) {
+    auto _port_info = PortID(port_data.data_output_port.size());
     port_data.data_output_port.emplace_back(n);
+    return _port_info;
 }
 
-void Node::addControlInputPort(Node *n) {
+PortID Node::addControlInputPort(Node *n) {
+    auto _port_info = PortID(port_control.control_input_port.size());
     port_control.control_input_port.emplace_back(n);
+    return _port_info;
 }
-void Node::addControlOutputPortBack(Node *n) {
+PortID Node::addControlOutputPort(Node *n) {
+    auto _port_info = PortID(port_control.control_output_port.size());
     port_control.control_output_port.emplace_back(n);
+    return _port_info;
 }
 
-void Node::addControlOutputPortFront(Node *n) {
-    port_control.control_output_port.emplace_front(n);
-}
-
-void Node::addReadMemoryReqPort(Node *const n) {
+PortID Node::addReadMemoryReqPort(Node *const n) {
+    auto _port_info = PortID(read_port_data.memory_req_port.size());
     read_port_data.memory_req_port.emplace_back(n);
+    return _port_info;
 }
-void Node::addReadMemoryRespPort(Node *const n) {
+PortID Node::addReadMemoryRespPort(Node *const n) {
+    auto _port_info = PortID(read_port_data.memory_resp_port.size());
     read_port_data.memory_resp_port.emplace_back(n);
+    return _port_info;
 }
 
-void Node::addWriteMemoryReqPort(Node *const n) {
+PortID Node::addWriteMemoryReqPort(Node *const n) {
+    auto _port_info = PortID(write_port_data.memory_req_port.size());
     write_port_data.memory_req_port.emplace_back(n);
+    return _port_info;
 }
-void Node::addWriteMemoryRespPort(Node *const n) {
+PortID Node::addWriteMemoryRespPort(Node *const n) {
+    auto _port_info = PortID(write_port_data.memory_resp_port.size());
     write_port_data.memory_resp_port.emplace_back(n);
+    return _port_info;
 }
 
-uint32_t Node::returnDataOutputPortIndex(Node *_node) {
+PortID Node::returnDataOutputPortIndex(Node *_node) {
     return std::distance(this->port_data.data_output_port.begin(),
                          find(this->port_data.data_output_port.begin(),
                               this->port_data.data_output_port.end(), _node));
 }
 
-uint32_t Node::returnDataInputPortIndex(Node *_node) {
+PortID Node::returnDataInputPortIndex(Node *_node) {
     return std::distance(this->port_data.data_input_port.begin(),
                          find(this->port_data.data_input_port.begin(),
                               this->port_data.data_input_port.end(), _node));
 }
 
-uint32_t Node::returnControlOutputPortIndex(Node *_node) {
+PortID Node::returnControlOutputPortIndex(Node *_node) {
     return std::distance(
         this->port_control.control_output_port.begin(),
         find(this->port_control.control_output_port.begin(),
              this->port_control.control_output_port.end(), _node));
 }
 
-uint32_t Node::returnControlInputPortIndex(Node *_node) {
+PortID Node::returnControlInputPortIndex(Node *_node) {
     return std::distance(
         this->port_control.control_input_port.begin(),
         find(this->port_control.control_input_port.begin(),
@@ -81,28 +93,28 @@ uint32_t Node::returnControlInputPortIndex(Node *_node) {
 }
 
 // Return memory indexes
-uint32_t Node::returnMemoryReadInputPortIndex(Node *_node) {
+PortID Node::returnMemoryReadInputPortIndex(Node *_node) {
     return std::distance(
         this->read_port_data.memory_req_port.begin(),
         find(this->read_port_data.memory_req_port.begin(),
              this->read_port_data.memory_req_port.end(), _node));
 }
 
-uint32_t Node::returnMemoryReadOutputPortIndex(Node *_node) {
+PortID Node::returnMemoryReadOutputPortIndex(Node *_node) {
     return std::distance(
         this->read_port_data.memory_resp_port.begin(),
         find(this->read_port_data.memory_resp_port.begin(),
              this->read_port_data.memory_resp_port.end(), _node));
 }
 
-uint32_t Node::returnMemoryWriteInputPortIndex(Node *_node) {
+PortID Node::returnMemoryWriteInputPortIndex(Node *_node) {
     return std::distance(
         this->write_port_data.memory_req_port.begin(),
         find(this->write_port_data.memory_req_port.begin(),
              this->write_port_data.memory_req_port.end(), _node));
 }
 
-uint32_t Node::returnMemoryWriteOutputPortIndex(Node *_node) {
+PortID Node::returnMemoryWriteOutputPortIndex(Node *_node) {
     return std::distance(
         this->write_port_data.memory_resp_port.begin(),
         find(this->write_port_data.memory_resp_port.begin(),
@@ -152,9 +164,8 @@ void Node::replaceControlInputNode(Node *src, Node *tar) {
 
 void Node::replaceControlOutputNode(Node *src, Node *tar) {
     std::replace(port_control.control_output_port.begin(),
-                         port_control.control_output_port.end(), src, tar);
+                 port_control.control_output_port.end(), src, tar);
 }
-
 
 void Node::replaceDataInputNode(Node *src, Node *tar) {
     std::replace(this->port_data.data_input_port.begin(),
@@ -163,7 +174,7 @@ void Node::replaceDataInputNode(Node *src, Node *tar) {
 
 void Node::replaceDataOutputNode(Node *src, Node *tar) {
     std::replace(port_data.data_output_port.begin(),
-                         port_data.data_output_port.end(), src, tar);
+                 port_data.data_output_port.end(), src, tar);
 }
 
 //===----------------------------------------------------------------------===//
@@ -219,9 +230,9 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if(this->getNodeType() == SuperNode::LoopHead && _id == 0)
+            if (this->getNodeType() == SuperNode::LoopHead && _id == 0)
                 _text = "$name.io.activate";
-            else if(this->getNodeType() == SuperNode::LoopHead && _id == 1)
+            else if (this->getNodeType() == SuperNode::LoopHead && _id == 1)
                 _text = "$name.io.loopBack";
             else
                 _text = "$name.io.predicateIn($id)";
@@ -1088,7 +1099,6 @@ std::string ReturnNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string ReturnNode::printOutputData(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -1545,8 +1555,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
                           make_argument_port(this->live_ins()), ",");
             helperReplace(_text, "$num_out", this->numLiveOut());
 
-            //TODO update the exit points!
-            //helperReplace(_text, "num_exit", 1);
+            // TODO update the exit points!
+            // helperReplace(_text, "num_exit", 1);
 
             break;
         case PrintType::Dot:
@@ -1573,16 +1583,15 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
     return _text;
 }
 
-
 std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            if(_id == 0)
+            if (_id == 0)
                 _text = "$name.io.Out.activate";
-            else if(_id == 1)
+            else if (_id == 1)
                 _text = "$name.io.Out.endEnable";
 
             else
@@ -1602,11 +1611,11 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if(_id == 0)
+            if (_id == 0)
                 _text = "$name.io.enable";
-            else if(_id == 1)
+            else if (_id == 1)
                 _text = "$name.io.loopExit";
-            else if(_id == 2)
+            else if (_id == 2)
                 _text = "$name.io.latchEnable";
 
             helperReplace(_text, "$name", _name.c_str());

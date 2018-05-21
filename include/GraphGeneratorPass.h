@@ -1,7 +1,5 @@
-
-
-#ifndef STATICCALLCOUNTER_H
-#define STATICCALLCOUNTER_H
+#ifndef GRAPHGENERATORPASS_H
+#define GRAPHGENERATORPASS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/LoopInfo.h"

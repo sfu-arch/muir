@@ -19,34 +19,38 @@ namespace dandelion {
 
 class Edge {
    public:
+    using Port = std::pair<Node *, PortID>;
+
     enum EdgeType {
         DataTypeEdge = 0,
         ControlTypeEdge,
-        DataToControlTypeEdge,
-        ControlToDataTypeEdge,
         MaskTypeEdge,
         MemoryReadTypeEdge,
         MemoryWriteTypeEdge,
-        MemoryToDataTypeEdge,
-        MemoryToControlTypeEdge,
         UknownType
     };
 
    private:
     EdgeType edge_type;
-    Node *src;
-    Node *tar;
+    Port src;
+    Port tar;
 
    public:
     explicit Edge(EdgeType _ty) : edge_type(_ty) {}
-    explicit Edge(Node *_src = nullptr, Node *_tar = nullptr) : src(_src), tar(_tar) {}
-    explicit Edge(EdgeType _ty = UknownType, Node *_src = nullptr, Node *_tar = nullptr)
+    explicit Edge(Port _src, Port _tar)
+        : edge_type(UknownType), src(_src), tar(_tar) {}
+    explicit Edge(EdgeType _ty = UknownType, Port _src = {nullptr, 0},
+                  Port _tar = {nullptr, 0})
         : edge_type(_ty), src(_src), tar(_tar) {}
 
     uint32_t getType() const { return edge_type; }
 
-    Node *getSrc() { return src; }
-    Node *getTar() { return tar; }
+    Port getSrc() const { return src; }
+    Port getTar() const { return tar; }
+
+    bool operator == (const Edge &rhs) const {
+        return this->getSrc() == rhs.getSrc();
+    }
 };
 }
 
