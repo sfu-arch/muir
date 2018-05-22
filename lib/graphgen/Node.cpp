@@ -564,6 +564,23 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
 //                            BranchNode Class
 //===----------------------------------------------------------------------===//
 
+std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.PredOp($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id - 1);
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
 std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -1319,19 +1336,22 @@ std::string StoreNode::printInputEnable(PrintType pt) {
     return _text;
 }
 
-std::string StoreNode::printInputData(PrintType _pt) {
-    string _name(this->getName());
-    std::replace(_name.begin(), _name.end(), '.', '_');
+std::string StoreNode::printOutputEnable(PrintType pt, uint32_t _id) {
     string _text;
-    switch (_pt) {
+    string _name(this->getName());
+    switch (pt) {
         case PrintType::Scala:
-            _text = "$mem.io.inData";
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.SuccOp($id)";
             helperReplace(_text, "$name", _name.c_str());
-            break;
-        default:
-            break;
-    }
+            helperReplace(_text, "$id", _id);
 
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
     return _text;
 }
 
@@ -1530,6 +1550,20 @@ std::string GEPNode::printInputData(PrintType _pt, uint32_t _id) {
 //                            LoopNode Class
 //===----------------------------------------------------------------------===//
 
+/**
+ * Finding the ending insturctions inside the loop
+ */
+void LoopNode::setEndingInstructions() {
+    // Iterate over the supernodes and then find the store nodes
+    for (auto &_s_node : this->bblocks()) {
+        for (auto &_ins_node : _s_node->instructions()) {
+            if (isa<StoreNode>(&*_ins_node)) {
+                ending_instructions.push_back(&*_ins_node);
+            }
+        }
+    }
+}
+
 std::string LoopNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -1614,9 +1648,9 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
             if (_id == 0)
                 _text = "$name.io.enable";
             else if (_id == 1)
-                _text = "$name.io.loopExit";
-            else if (_id == 2)
                 _text = "$name.io.latchEnable";
+            else if (_id == 2)
+                _text = "$name.io.loopExit";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);

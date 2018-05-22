@@ -157,7 +157,7 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     } else
         assert(!"Not supported gep node");
 
-    //errs() << gep_pass_ctx.SingleGepIns[&I].numByte << "\n";
+    // errs() << gep_pass_ctx.SingleGepIns[&I].numByte << "\n";
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
@@ -451,6 +451,7 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
         // Connect the latch ending branch to loopNode
         if (auto _latch_br = dyn_cast<BranchNode>(
                 map_value_node[&L->getLoopLatch()->back()])) {
+
             auto _src_idx = _latch_br->addControlOutputPort(_loop_node);
             _loop_node->setLoopLatchEnable(_latch_br);
 
@@ -521,8 +522,14 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
                         // We add only one connection between src and new
                         // live_in
-                        if (!dependency_graph->edgeExist(std::make_pair(_src, _src->returnDataOutputPortIndex(new_live_in)),
-                                    std::make_pair(new_live_in, new_live_in->returnDataInputPortIndex(_src)))) {
+                        if (!dependency_graph->edgeExist(
+                                std::make_pair(_src,
+                                               _src->returnDataOutputPortIndex(
+                                                   new_live_in)),
+                                std::make_pair(
+                                    new_live_in,
+                                    new_live_in->returnDataInputPortIndex(
+                                        _src)))) {
                             auto _src_idx =
                                 _src->addDataOutputPort(new_live_in);
                             auto _dst_idx = new_live_in->addDataInputPort(_src);
@@ -559,8 +566,14 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
                         // We add only one connection between src and new
                         // live_in
-                        if (!dependency_graph->edgeExist(std::make_pair(_src, _src->returnDataOutputPortIndex(new_live_out)),
-                                    std::make_pair(new_live_out, new_live_out->returnDataInputPortIndex(_src)))) {
+                        if (!dependency_graph->edgeExist(
+                                std::make_pair(_src,
+                                               _src->returnDataOutputPortIndex(
+                                                   new_live_out)),
+                                std::make_pair(
+                                    new_live_out,
+                                    new_live_out->returnDataInputPortIndex(
+                                        _src)))) {
                             auto _src_idx =
                                 _src->addDataOutputPort(new_live_out);
                             auto _dst_idx =
@@ -578,6 +591,38 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Increament the counter
         c++;
+
+        // Filling the containers
+        for (auto B : L->blocks()) {
+            if (!B->empty()) {
+                _loop_node->pushSuperNode(
+                    dyn_cast<SuperNode>(map_value_node[B]));
+                for (auto &I : *B) {
+                    _loop_node->pushInstructionNode(
+                        dyn_cast<InstructionNode>(map_value_node[&I]));
+                }
+            }
+        }
+        _loop_node->setEndingInstructions();
+
+        for (auto _en_instruction : _loop_node->endings()) {
+             auto _en = _en_instruction->getInstruction();
+            auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
+                                                ->getParent()
+                                                ->getInstList()
+                                                .back()];
+
+            _en_instruction->addControlOutputPort(_br_ins);
+            _br_ins->addControlInputPort(_en_instruction);
+            this->dependency_graph->insertEdge(
+                Edge::ControlTypeEdge,
+                make_pair(
+                    _en_instruction,
+                    _en_instruction->returnControlOutputPortIndex(_br_ins)),
+                make_pair(
+                    _br_ins,
+                    _br_ins->returnControlInputPortIndex(_en_instruction)));
+        }
     }
 }
 

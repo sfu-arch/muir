@@ -71,6 +71,7 @@ void Graph::printGraph(PrintType _pt) {
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
             printLoopBranchEdges(PrintType::Scala);
+            printLoopEndingDependencies(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
@@ -197,7 +198,6 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                 for (auto _enable_iterator = _s_node->inputControl_begin();
                      _enable_iterator != _s_node->inputControl_end();
                      _enable_iterator++) {
-
                     auto _input_node = dyn_cast<Node>(*_enable_iterator);
                     auto _input_index = std::distance(
                         _s_node->inputControl_begin(), _enable_iterator);
@@ -209,20 +209,18 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                                                return _s_node.get() == &*arg;
                                            });
 
-                    auto _output_index = _input_node->returnControlOutputPortIndex(_s_node.get());
+                    auto _output_index =
+                        _input_node->returnControlOutputPortIndex(
+                            _s_node.get());
 
-                        //std::distance(_input_node->outputControl_begin(), &*ff);
-
-                    //if (ff == _input_node->outputControl_end())
-                        //assert(!"Couldn't find the control edge\n");
-
-                    this->outCode << "  "
-                                  << _s_node->printInputEnable(PrintType::Scala,
-                                                               _input_index)
-                                  << " <> "
-                                  << _input_node->printOutputEnable(
-                                         PrintType::Scala, _output_index.getID())
-                                  << "\n\n";
+                    this->outCode
+                        << "  "
+                        << _s_node->printInputEnable(PrintType::Scala,
+                                                     _input_index)
+                        << " <> "
+                        << _input_node->printOutputEnable(PrintType::Scala,
+                                                          _output_index.getID())
+                        << "\n\n";
                 }
             }
 
@@ -331,10 +329,12 @@ void Graph::printDatadependencies(PrintType _pt) {
                     this->outCode
                         << "  "
                         << _data_edge->getTar().first->printInputData(
-                               PrintType::Scala, _data_edge->getTar().second.getID())
+                               PrintType::Scala,
+                               _data_edge->getTar().second.getID())
                         << " <> "
                         << _data_edge->getSrc().first->printOutputData(
-                               PrintType::Scala, _data_edge->getSrc().second.getID())
+                               PrintType::Scala,
+                               _data_edge->getSrc().second.getID())
                         << "\n\n";
                 }
             }
@@ -358,21 +358,27 @@ void Graph::printMemInsConnections(PrintType _pt) {
                 "Connecting memory connections");
             for (auto &_mem_edge : edge_list) {
                 if (_mem_edge->getType() == Edge::MemoryReadTypeEdge) {
-                    this->outCode << "  "
-                                  << _mem_edge->getTar().first->printMemReadInput(
-                                         PrintType::Scala, _mem_edge->getTar().second.getID())
-                                  << " <> "
-                                  << _mem_edge->getSrc().first->printMemReadOutput(
-                                         PrintType::Scala,_mem_edge->getSrc().second.getID())
-                                  << "\n\n";
+                    this->outCode
+                        << "  "
+                        << _mem_edge->getTar().first->printMemReadInput(
+                               PrintType::Scala,
+                               _mem_edge->getTar().second.getID())
+                        << " <> "
+                        << _mem_edge->getSrc().first->printMemReadOutput(
+                               PrintType::Scala,
+                               _mem_edge->getSrc().second.getID())
+                        << "\n\n";
                 } else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
-                    this->outCode << "  "
-                                  << _mem_edge->getTar().first->printMemWriteInput(
-                                         PrintType::Scala, _mem_edge->getTar().second.getID())
-                                  << " <> "
-                                  << _mem_edge->getSrc().first->printMemWriteOutput(
-                                         PrintType::Scala, _mem_edge->getSrc().second.getID())
-                                  << "\n\n";
+                    this->outCode
+                        << "  "
+                        << _mem_edge->getTar().first->printMemWriteInput(
+                               PrintType::Scala,
+                               _mem_edge->getTar().second.getID())
+                        << " <> "
+                        << _mem_edge->getSrc().first->printMemWriteOutput(
+                               PrintType::Scala,
+                               _mem_edge->getSrc().second.getID())
+                        << "\n\n";
                 }
             }
 
@@ -749,28 +755,24 @@ GlobalValueNode *Graph::insertFunctionGlobalValue(GlobalValue &G) {
 /**
  * Insert a new Edge
  */
-Edge *Graph::insertEdge(Edge::EdgeType _typ,
-                        Port _node_src,
-                        Port _node_dst) {
+Edge *Graph::insertEdge(Edge::EdgeType _typ, Port _node_src, Port _node_dst) {
     // TODO fix the indexing
     edge_list.push_back(std::make_unique<Edge>(_typ, _node_src, _node_dst));
     auto ff = std::find_if(
         edge_list.begin(), edge_list.end(),
         [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
-        return (e->getSrc() == _node_src) &&
-               (e->getTar() == _node_dst);
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
         });
 
     return ff->get();
 }
 
 bool Graph::edgeExist(Port _node_src, Port _node_dst) {
-    auto ff =
-        std::find_if(edge_list.begin(), edge_list.end(),
-                     [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
-                         return (e->getSrc() == _node_src) &&
-                                (e->getTar() == _node_dst);
-                     });
+    auto ff = std::find_if(
+        edge_list.begin(), edge_list.end(),
+        [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
+        });
     return ff != edge_list.end();
 }
 
@@ -805,12 +807,11 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
                               Port _node_dst) {
     edge_list.push_back(
         std::make_unique<Edge>(_edge_type, _node_src, _node_dst));
-    auto ff =
-        std::find_if(edge_list.begin(), edge_list.end(),
-                     [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
-                         return (e->getSrc() == _node_src) &&
-                                (e->getTar() == _node_dst);
-                     });
+    auto ff = std::find_if(
+        edge_list.begin(), edge_list.end(),
+        [_node_src, _node_dst](std::unique_ptr<Edge> &e) -> bool {
+            return (e->getSrc() == _node_src) && (e->getTar() == _node_dst);
+        });
 
     return ff->get();
 }
@@ -867,7 +868,6 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
                 for (auto _enable_iterator = _l_node->inputControl_begin();
                      _enable_iterator != _l_node->inputControl_end();
                      _enable_iterator++) {
-
                     auto _input_node = dyn_cast<Node>(*_enable_iterator);
 
                     auto _input_index =
@@ -877,13 +877,56 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
                         _input_node->returnControlOutputPortIndex(
                             _l_node.get());
 
-                    this->outCode << "  "
-                                  << _l_node->printInputEnable(PrintType::Scala,
-                                                               _input_index.getID())
-                                  << " <> "
-                                  << _input_node->printOutputEnable(
-                                         PrintType::Scala, _output_index.getID())
-                                  << "\n\n";
+                    this->outCode
+                        << "  "
+                        << _l_node->printInputEnable(PrintType::Scala,
+                                                     _input_index.getID())
+                        << " <> "
+                        << _input_node->printOutputEnable(PrintType::Scala,
+                                                          _output_index.getID())
+                        << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print loop control signals
+ */
+void Graph::printLoopEndingDependencies(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader("Ending instructions");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_ending_ins : _l_node->endings()) {
+                    for (auto &_cn_dependencies :
+                         _ending_ins->output_control_range()) {
+
+                        auto _input_index =
+                            _cn_dependencies->returnControlInputPortIndex(_ending_ins);
+
+                        auto _output_index =
+                            _ending_ins->returnControlOutputPortIndex(
+                                _cn_dependencies);
+
+                        this->outCode
+                            << "  "
+                            << _cn_dependencies->printInputEnable(PrintType::Scala,
+                                                         _input_index.getID())
+                            << " <> "
+                            << _ending_ins->printOutputEnable(
+                                   PrintType::Scala, _output_index.getID())
+                            << "\n\n";
+                    }
+
+                    // auto _input_node = dyn_cast<Node>(*_enable_iterator);
                 }
             }
 

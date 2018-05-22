@@ -323,7 +323,7 @@ static void runGraphGen(Module &M) {
     legacy::PassManager pm;
     //pm.add(new LoopInfoWrapperPass());
     //Usefull passes
-    pm.add(llvm::createCFGSimplificationPass());
+    //pm.add(llvm::createCFGSimplificationPass());
     pm.add(llvm::createLoopSimplifyPass());
     pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));

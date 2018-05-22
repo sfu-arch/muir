@@ -455,8 +455,10 @@ class MemoryNode : public Node {
  */
 class LoopNode : public ContainerNode {
    private:
+
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
+    std::list<InstructionNode *> ending_instructions;
 
     SuperNode *head_node;
     SuperNode *latch_node;
@@ -492,6 +494,11 @@ class LoopNode : public ContainerNode {
     auto bb_end() { return basic_block_list.cend(); }
     auto bblocks() { return helpers::make_range(bb_begin(), bb_end()); }
 
+    // Iterator over ending instructions
+    auto ending_begin() { return ending_instructions.cbegin(); }
+    auto ending_end() { return ending_instructions.cend(); }
+    auto endings() { return helpers::make_range(ending_begin(), ending_end()); }
+
     // Iterator over input edges
 
     void setHeadNode(SuperNode *_n) { head_node = _n; }
@@ -510,6 +517,16 @@ class LoopNode : public ContainerNode {
     }
 
     /**
+     * Push supernode to the super node container
+     */
+    void pushSuperNode(SuperNode *_n){ basic_block_list.push_back(_n);}
+
+    /**
+     * Push instrucitions
+     */
+    void pushInstructionNode(InstructionNode *_n){ instruction_list.push_back(_n); }
+
+    /**
      * Make sure that loop latch enable signal is always fix to index 1
      */
     void setLoopLatchEnable(Node *_n) { addControlInputPortIndex(_n, 1); }
@@ -526,6 +543,10 @@ class LoopNode : public ContainerNode {
         assert(numControlInputPort() > 1 && "Error in loop control signal!");
         return addControlInputPort(_n);
     }
+
+    //TODO the function should move to private section and get calls inside the init fuctions
+    void setEndingInstructions();
+    std::list<InstructionNode*> findEndingInstructions();
 
     /**
      * Print functions
@@ -657,6 +678,7 @@ class BranchNode : public InstructionNode {
      */
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
@@ -774,7 +796,8 @@ class StoreNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
-    virtual std::string printInputData(PrintType) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    //virtual std::string printInputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     virtual std::string printMemWriteOutput(PrintType, uint32_t) override;

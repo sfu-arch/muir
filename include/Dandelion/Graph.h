@@ -161,6 +161,7 @@ class Graph {
     void printMemInsConnections(PrintType _pt);
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
+    void printLoopEndingDependencies(PrintType _pt);
     void printLoopBranchEdges(PrintType);
     void printLoopHeader(PrintType);
     void printOutPort(PrintType);
