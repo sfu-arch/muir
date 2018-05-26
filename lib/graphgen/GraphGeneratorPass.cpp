@@ -117,13 +117,16 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
     // Here we have to check see whether we have missed any instruction or not
     // TODO Couldn't figure out about Tapir visitor functions
-    if(auto _detach_ins = dyn_cast<llvm::DetachInst>(&Ins))
-        map_value_node[&Ins] = this->dependency_graph->insertDetachNode(*_detach_ins);
-    else if(auto _reattach_ins = dyn_cast<llvm::ReattachInst>(&Ins))
-        map_value_node[&Ins] = this->dependency_graph->insertReattachNode(*_reattach_ins);
-    else if(auto _sync_ins = dyn_cast<llvm::SyncInst>(&Ins))
-        map_value_node[&Ins] = this->dependency_graph->insertSyncNode(*_sync_ins);
-    else{
+    if (auto _detach_ins = dyn_cast<llvm::DetachInst>(&Ins))
+        map_value_node[&Ins] =
+            this->dependency_graph->insertDetachNode(*_detach_ins);
+    else if (auto _reattach_ins = dyn_cast<llvm::ReattachInst>(&Ins))
+        map_value_node[&Ins] =
+            this->dependency_graph->insertReattachNode(*_reattach_ins);
+    else if (auto _sync_ins = dyn_cast<llvm::SyncInst>(&Ins))
+        map_value_node[&Ins] =
+            this->dependency_graph->insertSyncNode(*_sync_ins);
+    else {
         Ins.dump();
         assert(!"Instruction is not supported");
     }
@@ -233,6 +236,11 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
         // Connecting DFG and CFG edges
+        //
+        if (auto _call_node =
+                dyn_cast<CallNode>(this->map_value_node.find(&*ins_it)->second))
+            continue;
+
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
@@ -266,12 +274,18 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     map_value_node[operand] =
                         this->dependency_graph->insertConstIntNode(
                             *const_value);
+                // if (auto called =
+                // dyn_cast<Function>(CallSite(operand)
+                //.getCalledValue()
+                //->stripPointerCasts())) {
+                // continue;
+                //}
 
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
                 if (_node_src == this->map_value_node.end()) {
-                    DEBUG(ins_it->dump());
+                    ins_it->dump();
                     assert(!"The destination instruction couldn't find!");
                 }
 
@@ -321,7 +335,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph->getMemoryUnit());
             auto _dst_resp_idx = _st_node->addWriteMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
-
         }
     }
 }

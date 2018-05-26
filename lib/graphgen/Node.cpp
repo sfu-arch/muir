@@ -94,27 +94,26 @@ PortID Node::returnControlInputPortIndex(Node *_node) {
 
 bool Node::existControlInput(Node *_n) {
     return find(this->port_control.control_input_port.begin(),
-                   this->port_control.control_input_port.end(),
-                   _n) != this->port_control.control_input_port.end();
+                this->port_control.control_input_port.end(),
+                _n) != this->port_control.control_input_port.end();
 }
 
 bool Node::existControlOutput(Node *_n) {
     return find(this->port_control.control_output_port.begin(),
-                   this->port_control.control_output_port.end(),
-                   _n) != this->port_control.control_output_port.end();
+                this->port_control.control_output_port.end(),
+                _n) != this->port_control.control_output_port.end();
 }
-
 
 bool Node::existDataInput(Node *_n) {
     return find(this->port_data.data_input_port.begin(),
-                   this->port_data.data_input_port.end(),
-                   _n) != this->port_data.data_input_port.end();
+                this->port_data.data_input_port.end(),
+                _n) != this->port_data.data_input_port.end();
 }
 
 bool Node::existDataOutput(Node *_n) {
     return find(this->port_data.data_output_port.begin(),
-                   this->port_data.data_output_port.end(),
-                   _n) != this->port_data.data_output_port.end();
+                this->port_data.data_output_port.end(),
+                _n) != this->port_data.data_output_port.end();
 }
 
 // Return memory indexes
@@ -1702,8 +1701,8 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumPredOps= "
                 "$num_out, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$num_out",
-                          //std::to_string(this->numDataOutputPort()));
+            // helperReplace(_text, "$num_out",
+            // std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "Reattach");
 
@@ -1716,7 +1715,6 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 //===----------------------------------------------------------------------===//
 //                            DeattachNode Class
 //===----------------------------------------------------------------------===//
@@ -1726,8 +1724,7 @@ std::string DetachNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type(ID = $id))\n\n";
+            _text = "  val $name = Module(new $type(ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "Detach");
@@ -1751,10 +1748,11 @@ std::string SyncNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(ID = $id, NumInc=$num_inc, NumDec=$num_dec, NumOuts=$num_out))\n\n";
+                "  val $name = Module(new $type(ID = $id, NumInc=$num_inc, "
+                "NumDec=$num_dec, NumOuts=$num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "Detach");
+            helperReplace(_text, "$type", "Sync");
 
             break;
         case PrintType::Dot:
@@ -1765,3 +1763,28 @@ std::string SyncNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+//===----------------------------------------------------------------------===//
+//                            AllocaNode Class
+//===----------------------------------------------------------------------===//
+std::string AllocaNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(ID = $id"
+                ", RouteID=$r_i, NumOuts=$num_out))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$num_out", this->numDataOutputPort());
+            helperReplace(_text, "$type", "AllocaNode");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}

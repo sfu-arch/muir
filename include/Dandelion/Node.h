@@ -727,6 +727,7 @@ class AllocaNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+    virtual std::string printDefinition(PrintType) override;
 };
 
 class GEPNode : public InstructionNode {
