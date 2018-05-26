@@ -1688,3 +1688,80 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
     }
     return _text;
 }
+
+//===----------------------------------------------------------------------===//
+//                            ReattachNode Class
+//===----------------------------------------------------------------------===//
+std::string ReattachNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumPredOps= "
+                "$num_out, ID = $id))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            //helperReplace(_text, "$num_out",
+                          //std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "Reattach");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+//===----------------------------------------------------------------------===//
+//                            DeattachNode Class
+//===----------------------------------------------------------------------===//
+std::string DetachNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(ID = $id))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "Detach");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            DeattachNode Class
+//===----------------------------------------------------------------------===//
+std::string SyncNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(ID = $id, NumInc=$num_inc, NumDec=$num_dec, NumOuts=$num_out))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "Detach");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+

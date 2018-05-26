@@ -889,6 +889,69 @@ class SplitCallNode : public ContainerNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
+class DetachNode: public InstructionNode {
+   public:
+    DetachNode(NodeInfo _ni, llvm::DetachInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::DetachInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::DetachInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    //virtual std::string printInputEnable(PrintType) override;
+    //virtual std::string printOutputData(PrintType, uint32_t) override;
+    //virtual std::string printOutputData(PrintType) override;
+    //virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+class ReattachNode: public InstructionNode {
+   public:
+    ReattachNode(NodeInfo _ni, llvm::ReattachInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::ReattachInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    //virtual std::string printInputEnable(PrintType) override;
+    //virtual std::string printOutputData(PrintType, uint32_t) override;
+    //virtual std::string printOutputData(PrintType) override;
+    //virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+class SyncNode: public InstructionNode {
+   public:
+    SyncNode(NodeInfo _ni, llvm::SyncInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::SyncInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::SyncInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    //virtual std::string printInputEnable(PrintType) override;
+    //virtual std::string printOutputData(PrintType, uint32_t) override;
+    //virtual std::string printOutputData(PrintType) override;
+    //virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+
+
+
 }  // namespace dandelion
 
 #endif  // end of DANDDELION_NODE_H

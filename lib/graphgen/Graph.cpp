@@ -594,6 +594,54 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     return ff->get();
 }
 
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertDetachNode(DetachInst &I) {
+    inst_list.push_back(std::make_unique<DetachNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
+    inst_list.push_back(std::make_unique<ReattachNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertSyncNode(SyncInst &I) {
+    inst_list.push_back(std::make_unique<SyncNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+
 /**
  * Insert a new computation instruction
  */

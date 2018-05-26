@@ -116,8 +116,17 @@ void GraphGeneratorPass::visitBasicBlock(BasicBlock &BB) {
 
 void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
     // Here we have to check see whether we have missed any instruction or not
-    Ins.dump();
-    assert(!"Instruction is not supported");
+    // TODO Couldn't figure out about Tapir visitor functions
+    if(auto _detach_ins = dyn_cast<llvm::DetachInst>(&Ins))
+        map_value_node[&Ins] = this->dependency_graph->insertDetachNode(*_detach_ins);
+    else if(auto _reattach_ins = dyn_cast<llvm::ReattachInst>(&Ins))
+        map_value_node[&Ins] = this->dependency_graph->insertReattachNode(*_reattach_ins);
+    else if(auto _sync_ins = dyn_cast<llvm::SyncInst>(&Ins))
+        map_value_node[&Ins] = this->dependency_graph->insertSyncNode(*_sync_ins);
+    else{
+        Ins.dump();
+        assert(!"Instruction is not supported");
+    }
 }
 
 void GraphGeneratorPass::visitBinaryOperator(llvm::BinaryOperator &I) {
@@ -300,19 +309,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             auto _dst_resp_idx = _ld_node->addReadMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
 
-            // Adding edges
-            // this->dependency_graph->insertEdge(
-            // Edge::MemoryReadTypeEdge,
-            // std::make_pair(_ld_node, _src_req_idx),
-            // std::make_pair(this->dependency_graph->getMemoryUnit(),
-            //_dst_req_idx));
-
-            // this->dependency_graph->insertEdge(
-            // Edge::MemoryReadTypeEdge,
-            // std::make_pair(this->dependency_graph->getMemoryUnit(),
-            //_src_resp_idx),
-            // std::make_pair(_ld_node, _dst_req_idx));
-
         } else if (auto _st_node = dyn_cast<StoreNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
             auto _dst_req_idx =
@@ -326,17 +322,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             auto _dst_resp_idx = _st_node->addWriteMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
 
-            // Adding edges
-            // this->dependency_graph->insertEdge(
-            // Edge::MemoryWriteTypeEdge,
-            // std::make_pair(_st_node, _src_req_idx),
-            // std::make_pair(this->dependency_graph->getMemoryUnit(),
-            //_dst_req_idx));
-            // this->dependency_graph->insertEdge(
-            // Edge::MemoryWriteTypeEdge,
-            // std::make_pair(this->dependency_graph->getMemoryUnit(),
-            //_src_resp_idx),
-            // std::make_pair(_st_node, _dst_resp_idx));
         }
     }
 }

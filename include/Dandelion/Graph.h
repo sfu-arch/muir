@@ -132,6 +132,9 @@ class Graph {
     InstructionNode *insertStoreNode(llvm::StoreInst &);
     InstructionNode *insertReturnNode(llvm::ReturnInst &);
     InstructionNode *insertCallNode(llvm::CallInst &);
+    InstructionNode *insertDetachNode(llvm::DetachInst &);
+    InstructionNode *insertReattachNode(llvm::ReattachInst &);
+    InstructionNode *insertSyncNode(llvm::SyncInst &);
     ArgumentNode *insertFunctionArgument(llvm::Argument &);
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
