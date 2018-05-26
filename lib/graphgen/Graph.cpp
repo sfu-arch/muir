@@ -594,7 +594,6 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     return ff->get();
 }
 
-
 /**
  * Insert a new computation instruction
  */
@@ -639,8 +638,6 @@ InstructionNode *Graph::insertSyncNode(SyncInst &I) {
 
     return ff->get();
 }
-
-
 
 /**
  * Insert a new computation instruction
@@ -746,8 +743,12 @@ InstructionNode *Graph::insertStoreNode(StoreInst &I) {
  * Insert a new Call node
  */
 InstructionNode *Graph::insertCallNode(CallInst &I) {
-    inst_list.push_back(std::make_unique<CallNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName().str() == "")
+        inst_list.push_back(std::make_unique<CallNode>(
+            NodeInfo(inst_list.size(), "call_" + std::to_string(inst_list.size())), &I));
+    else
+        inst_list.push_back(std::make_unique<CallNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1044,21 +1045,21 @@ void Graph::doInitialization() {
             // Adding edges
             insertEdge(
                 Edge::MemoryWriteTypeEdge,
-                std::make_pair(
-                    _st_node,
-                    _st_node->returnMemoryWriteOutputPortIndex(getMemoryUnit())),
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryWriteInputPortIndex(_ld_node)));
+                std::make_pair(_st_node,
+                               _st_node->returnMemoryWriteOutputPortIndex(
+                                   getMemoryUnit())),
+                std::make_pair(getMemoryUnit(),
+                               getMemoryUnit()->returnMemoryWriteInputPortIndex(
+                                   _ld_node)));
 
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryWriteOutputPortIndex(_ld_node)),
-                std::make_pair(
-                    _st_node,
-                    _st_node->returnMemoryWriteInputPortIndex(getMemoryUnit())));
+            insertEdge(Edge::MemoryReadTypeEdge,
+                       std::make_pair(
+                           getMemoryUnit(),
+                           getMemoryUnit()->returnMemoryWriteOutputPortIndex(
+                               _ld_node)),
+                       std::make_pair(_st_node,
+                                      _st_node->returnMemoryWriteInputPortIndex(
+                                          getMemoryUnit())));
         }
     }
 }

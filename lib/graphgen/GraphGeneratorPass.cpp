@@ -228,21 +228,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
         auto src_idx = _spliter->addDataOutputPort(_fun_arg_node);
         auto dst_idx = _fun_arg_node->addDataInputPort(_spliter);
-
-        // this->dependency_graph->insertEdge(
-        // Edge::DataTypeEdge, std::make_pair(_spliter, src_idx),
-        // std::make_pair(_fun_arg_node, dst_idx));
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
-        // Connecting DFG and CFG edges
-        //
-        if (auto _call_node =
-                dyn_cast<CallNode>(this->map_value_node.find(&*ins_it)->second))
-            continue;
-
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
+
+            // First operand of a call function is the pointer its self function
+            if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
                 // Here we have to add a new edge from instruction to BB
                 // 1) First find the basicblock node
@@ -263,28 +256,18 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 auto dst_idx =
                     _node_dest->second->addControlInputPort(_node_src->second);
 
-                // this->dependency_graph->insertEdge(
-                // Edge::ControlTypeEdge,
-                // std::make_pair(_node_src->second, src_idx),
-                // std::make_pair(_node_dest->second, dst_idx));
-
             } else {
                 // If the operand is constant we have to create a new node
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand))
                     map_value_node[operand] =
                         this->dependency_graph->insertConstIntNode(
                             *const_value);
-                // if (auto called =
-                // dyn_cast<Function>(CallSite(operand)
-                //.getCalledValue()
-                //->stripPointerCasts())) {
-                // continue;
-                //}
 
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
                 if (_node_src == this->map_value_node.end()) {
+                    operand->dump();
                     ins_it->dump();
                     assert(!"The destination instruction couldn't find!");
                 }
@@ -298,11 +281,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     _node_src->second->addDataOutputPort(_node_dest->second);
                 auto dst_idx =
                     _node_dest->second->addDataInputPort(_node_src->second);
-
-                // this->dependency_graph->insertEdge(
-                // Edge::DataTypeEdge,
-                // std::make_pair(_node_src->second, src_idx),
-                // std::make_pair(_node_dest->second, dst_idx));
             }
         }
 
@@ -425,21 +403,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
         auto _old_edge =
             this->dependency_graph->findEdge(_src_br_inst_it, _l_head);
 
-        // dependency_graph->insertEdge(
-        // Edge::ControlTypeEdge,
-        // std::make_pair(
-        //_src_br_inst_it,
-        //_src_br_inst_it->returnControlOutputPortIndex(_l_head)),
-        // std::make_pair(_loop_node, 0));
-
-        // dependency_graph->insertEdge(
-        // Edge::ControlTypeEdge, std::make_pair(_loop_node, 0),
-        // std::make_pair(
-        //_l_head,
-        //_l_head->returnControlInputPortIndex(_src_br_inst_it)));
-
-        // dependency_graph->removeEdge(_src_br_inst_it, _l_head);
-
         _loop_node->setEnableLoopSignal(_src_br_inst_it);
         _loop_node->setActiveOutputLoopSignal(_l_head);
 
@@ -451,10 +414,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                 map_value_node[&L->getLoopLatch()->back()])) {
             auto _src_idx = _latch_br->addControlOutputPort(_loop_node);
             _loop_node->setLoopLatchEnable(_latch_br);
-
-            // dependency_graph->insertEdge(Edge::ControlTypeEdge,
-            // std::make_pair(_latch_br, _src_idx),
-            // std::make_pair(_loop_node, 1));
 
         } else
             assert(!"Unexpected terminator!");
@@ -474,13 +433,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
         //_tar_exit_br_inst_it,
         //_tar_exit_br_inst_it->returnControlOutputPortIndex(_l_exit)),
         // std::make_pair(_loop_node, _src_idx));
-
-        // dependency_graph->insertEdge(
-        // Edge::ControlTypeEdge, std::make_pair(_loop_node, 1),
-        // std::make_pair(
-        //_l_exit,
-        //_l_exit->returnControlInputPortIndex(_tar_exit_br_inst_it)));
-        // dependency_graph->removeEdge(_tar_exit_br_inst_it, _l_exit);
 
         _loop_node->setLoopEndEnable(_l_exit);
 
@@ -508,57 +460,13 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                         auto _src = map_value_node[V];
                         auto _tar = map_value_node[&I];
 
-                        // dependency_graph->removeEdge(_src, _tar);
-                        //_tar->removeNodeDataInputNode(_src);
-
-                        // if (!dependency_graph->edgeExist(
-                        // std::make_pair(_src,
-                        //_src->returnDataOutputPortIndex(
-                        // new_live_in)),
-                        // std::make_pair(
-                        // new_live_in,
-                        // new_live_in->returnDataInputPortIndex(
-                        //_src)))) {
-                        if (_src->existDataOutput(new_live_in)) {
+                        if (!_src->existDataOutput(new_live_in))
                             _src->replaceDataOutputNode(_tar, new_live_in);
-
-                            // dependency_graph->insertEdge(
-                            // Edge::DataTypeEdge,
-                            // std::make_pair(_src,
-                            //_src->returnDataOutputPortIndex(
-                            // new_live_in)),
-                            // std::make_pair(
-                            // new_live_in,
-                            // new_live_in->returnDataInputPortIndex(
-                            //_src)));
-                        } else
+                        else
                             _src->removeNodeDataOutputNode(_tar);
 
-                        auto _src_idx = new_live_in->addDataOutputPort(_tar);
-                        auto _dst_idx = _tar->addDataInputPort(new_live_in);
-                        // dependency_graph->insertEdge(
-                        // Edge::DataTypeEdge,
-                        // std::make_pair(new_live_in, _src_idx),
-                        // std::make_pair(_tar, _dst_idx));
-
-                        // We add only one connection between src and new
-                        // live_in
-                        // if (!dependency_graph->edgeExist(
-                        // std::make_pair(_src,
-                        //_src->returnDataOutputPortIndex(
-                        // new_live_in)),
-                        // std::make_pair(
-                        // new_live_in,
-                        // new_live_in->returnDataInputPortIndex(
-                        //_src)))) {
-                        // auto _src_idx =
-                        //_src->addDataOutputPort(new_live_in);
-                        // auto _dst_idx = new_live_in->addDataInputPort(_src);
-                        // dependency_graph->insertEdge(
-                        // Edge::DataTypeEdge,
-                        // std::make_pair(_src, _src_idx),
-                        // std::make_pair(new_live_in, _dst_idx));
-                        //}
+                        new_live_in->addDataOutputPort(_tar);
+                        _tar->addDataInputPort(new_live_in);
                     }
                 }
 
@@ -575,36 +483,15 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
                         _src->removeNodeDataOutputNode(_tar);
                         _tar->removeNodeDataInputNode(_src);
-                        // dependency_graph->removeEdge(_src, _tar);
 
                         auto _src_idx = new_live_out->addDataOutputPort(_tar);
                         auto _dst_idx = _tar->addDataInputPort(new_live_out);
 
-                        // dependency_graph->insertEdge(
-                        // Edge::DataTypeEdge,
-                        // std::make_pair(new_live_out, _src_idx),
-                        // std::make_pair(_tar, _dst_idx));
-
-                        // We add only one connection between src and new
-                        // live_in
-                        // if (!dependency_graph->edgeExist(
-                        // std::make_pair(_src,
-                        //_src->returnDataOutputPortIndex(
-                        // new_live_out)),
-                        // std::make_pair(
-                        // new_live_out,
-                        // new_live_out->returnDataInputPortIndex(
-                        //_src)))) {
                         if (_src->existDataOutput(new_live_out)) {
                             auto _src_idx =
                                 _src->addDataOutputPort(new_live_out);
                             auto _dst_idx =
                                 new_live_out->addDataInputPort(_src);
-
-                            // dependency_graph->insertEdge(
-                            // Edge::DataTypeEdge,
-                            // std::make_pair(_src, _src_idx),
-                            // std::make_pair(new_live_out, _dst_idx));
                         }
                     }
                 }
