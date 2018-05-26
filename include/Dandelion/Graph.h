@@ -96,6 +96,9 @@ class Graph {
     void init(BasicBlockList &, InstructionList &, ArgumentList &,
               GlobalValueList &, ConstIntList &, EdgeList &);
 
+    void doInitialization();
+    void doFinalization();
+
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }

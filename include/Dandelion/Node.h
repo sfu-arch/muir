@@ -117,6 +117,12 @@ class Node {
     PortID addControlInputPort(Node *);
     PortID addControlOutputPort(Node *);
 
+    bool existControlInput(Node *);
+    bool existControlOutput(Node *);
+
+    bool existDataInput(Node *);
+    bool existDataOutput(Node *);
+
     void resizeControlInputPort(uint32_t _s) {
         this->port_control.control_input_port.resize(_s);
     }

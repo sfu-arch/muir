@@ -92,6 +92,31 @@ PortID Node::returnControlInputPortIndex(Node *_node) {
              this->port_control.control_input_port.end(), _node));
 }
 
+bool Node::existControlInput(Node *_n) {
+    return find(this->port_control.control_input_port.begin(),
+                   this->port_control.control_input_port.end(),
+                   _n) != this->port_control.control_input_port.end();
+}
+
+bool Node::existControlOutput(Node *_n) {
+    return find(this->port_control.control_output_port.begin(),
+                   this->port_control.control_output_port.end(),
+                   _n) != this->port_control.control_output_port.end();
+}
+
+
+bool Node::existDataInput(Node *_n) {
+    return find(this->port_data.data_input_port.begin(),
+                   this->port_data.data_input_port.end(),
+                   _n) != this->port_data.data_input_port.end();
+}
+
+bool Node::existDataOutput(Node *_n) {
+    return find(this->port_data.data_output_port.begin(),
+                   this->port_data.data_output_port.end(),
+                   _n) != this->port_data.data_output_port.end();
+}
+
 // Return memory indexes
 PortID Node::returnMemoryReadInputPortIndex(Node *_node) {
     return std::distance(

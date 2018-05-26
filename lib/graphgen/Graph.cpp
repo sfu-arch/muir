@@ -63,6 +63,8 @@ void Graph::printGraph(PrintType _pt) {
             // TODO: pass the corect config path
             printScalaHeader("config.json", "dataflow");
 
+            doInitialization();
+
             printScalaFunctionHeader();
             printMemoryModules(PrintType::Scala);
             printScalaInputSpliter();
@@ -324,6 +326,7 @@ void Graph::printDatadependencies(PrintType _pt) {
             DEBUG(dbgs() << "\t Data dependencies\n");
             this->outCode << helperScalaPrintHeader(
                 "Connecting data dependencies");
+
             for (auto &_data_edge : edge_list) {
                 if (_data_edge->getType() == Edge::DataTypeEdge) {
                     this->outCode
@@ -908,9 +911,9 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
                 for (auto &_ending_ins : _l_node->endings()) {
                     for (auto &_cn_dependencies :
                          _ending_ins->output_control_range()) {
-
                         auto _input_index =
-                            _cn_dependencies->returnControlInputPortIndex(_ending_ins);
+                            _cn_dependencies->returnControlInputPortIndex(
+                                _ending_ins);
 
                         auto _output_index =
                             _ending_ins->returnControlOutputPortIndex(
@@ -918,8 +921,8 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
 
                         this->outCode
                             << "  "
-                            << _cn_dependencies->printInputEnable(PrintType::Scala,
-                                                         _input_index.getID())
+                            << _cn_dependencies->printInputEnable(
+                                   PrintType::Scala, _input_index.getID())
                             << " <> "
                             << _ending_ins->printOutputEnable(
                                    PrintType::Scala, _output_index.getID())
@@ -950,5 +953,64 @@ void Graph::printOutPort(PrintType _pt) {
             break;
         default:
             assert(!"We don't support the other types right now");
+    }
+}
+
+/**
+ * Initializing the graph
+ */
+void Graph::doInitialization() {
+    // Filling the data dependencies
+    for (auto &_node : inst_list) {
+        for (auto &_child : _node->output_data_range()) {
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_node,
+                               _node->returnDataOutputPortIndex(&*_child)),
+                std::make_pair(&*_child,
+                               _child->returnDataInputPortIndex(&*_node)));
+        }
+    }
+
+    for (auto &_node : inst_list) {
+        if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {
+            // Adding edges
+            insertEdge(
+                Edge::MemoryReadTypeEdge,
+                std::make_pair(
+                    _ld_node,
+                    _ld_node->returnMemoryReadOutputPortIndex(getMemoryUnit())),
+                std::make_pair(
+                    getMemoryUnit(),
+                    getMemoryUnit()->returnMemoryReadInputPortIndex(_ld_node)));
+
+            insertEdge(
+                Edge::MemoryReadTypeEdge,
+                std::make_pair(
+                    getMemoryUnit(),
+                    getMemoryUnit()->returnMemoryReadOutputPortIndex(_ld_node)),
+                std::make_pair(
+                    _ld_node,
+                    _ld_node->returnMemoryReadInputPortIndex(getMemoryUnit())));
+        } else if (auto _st_node = dyn_cast<StoreNode>(&*_node)) {
+            // Adding edges
+            insertEdge(
+                Edge::MemoryWriteTypeEdge,
+                std::make_pair(
+                    _st_node,
+                    _st_node->returnMemoryWriteOutputPortIndex(getMemoryUnit())),
+                std::make_pair(
+                    getMemoryUnit(),
+                    getMemoryUnit()->returnMemoryWriteInputPortIndex(_ld_node)));
+
+            insertEdge(
+                Edge::MemoryReadTypeEdge,
+                std::make_pair(
+                    getMemoryUnit(),
+                    getMemoryUnit()->returnMemoryWriteOutputPortIndex(_ld_node)),
+                std::make_pair(
+                    _st_node,
+                    _st_node->returnMemoryWriteInputPortIndex(getMemoryUnit())));
+        }
     }
 }
