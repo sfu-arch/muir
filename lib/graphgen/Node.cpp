@@ -222,11 +222,7 @@ std::string SuperNode::printDefinition(PrintType pt) {
             _text =
                 "  val $name = Module(new $type(NumInputs = $num_in, NumOuts = "
                 "$num_out, BID = $bid))\n\n";
-            helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$num_in", this->numControlInputPort());
-            helperReplace(_text, "$num_out",
-                          std::to_string(this->numControlOutputPort()));
-            helperReplace(_text, "$bid", this->getID());
+
             switch (this->getNodeType()) {
                 case SuperNodeType::NoMask:
                     helperReplace(_text, "$type", "BasicBlockNoMaskNode");
@@ -235,9 +231,20 @@ std::string SuperNode::printDefinition(PrintType pt) {
                     helperReplace(_text, "$type", "BasicBlockNode");
                     break;
                 case SuperNodeType::LoopHead:
+                    _text =
+                        "  val $name = Module(new $type("
+                        "NumOuts = "
+                        "$num_out, NumPhi=$num_phi, BID = $bid))\n\n";
                     helperReplace(_text, "$type", "LoopHead");
                     break;
             }
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_in", this->numControlInputPort());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numControlOutputPort()));
+            helperReplace(_text, "$bid", this->getID());
+            helperReplace(_text, "$num_phi", this->getNumPhi());
 
             break;
         case PrintType::Dot:
@@ -1612,6 +1619,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ",");
             helperReplace(_text, "$num_out", this->numLiveOut());
+            helperReplace(_text, "$num_exit", this->numControlInputPort() - 2);
 
             // TODO update the exit points!
             // helperReplace(_text, "num_exit", 1);
@@ -1631,7 +1639,7 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.Out.activate";
+            _text = "$name.io.Out.endEnable";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:
@@ -1673,11 +1681,11 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
                 _text = "$name.io.enable";
             else if (_id == 1)
                 _text = "$name.io.latchEnable";
-            else if (_id == 2)
-                _text = "$name.io.loopExit";
+            else if (_id >= 2)
+                _text = "$name.io.loopExit($id)";
 
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
+            helperReplace(_text, "$id", _id - 2);
 
             break;
         case PrintType::Dot:
@@ -1788,3 +1796,31 @@ std::string AllocaNode::printDefinition(PrintType _pt) {
     }
     return _text;
 }
+
+//===----------------------------------------------------------------------===//
+//                            CallNode Class
+//===----------------------------------------------------------------------===//
+//std::string CallNode::printDefinition(PrintType _pt) {
+    //string _text;
+    //string _name(this->getName());
+    //switch (_pt) {
+        //case PrintType::Scala:
+            //std::replace(_name.begin(), _name.end(), '.', '_');
+            //_text =
+                //"  val $name = Module(new $type(ID = $id"
+                //", RouteID=$r_i, NumOuts=$num_out))\n\n";
+            //helperReplace(_text, "$name", _name.c_str());
+            //helperReplace(_text, "$id", this->getID());
+            //helperReplace(_text, "$num_out", this->numDataOutputPort());
+            //helperReplace(_text, "$type", "AllocaNode");
+
+            //break;
+        //case PrintType::Dot:
+            //assert(!"Dot file format is not supported!");
+        //default:
+            //assert(!"Uknown print type!");
+    //}
+    //return _text;
+//}
+
+

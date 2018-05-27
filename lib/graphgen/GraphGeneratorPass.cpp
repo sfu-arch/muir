@@ -400,11 +400,12 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
             });
 
         // Add basic block node between the branch and head basic block
-        auto _old_edge =
-            this->dependency_graph->findEdge(_src_br_inst_it, _l_head);
+        //auto _old_edge =
+            //this->dependency_graph->findEdge(_src_br_inst_it, _l_head);
 
         _loop_node->setEnableLoopSignal(_src_br_inst_it);
         _loop_node->setActiveOutputLoopSignal(_l_head);
+        _loop_node->setLoopEndEnable(_l_exit);
 
         _src_br_inst_it->replaceControlOutputNode(_l_head, _loop_node);
         _l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
@@ -427,14 +428,7 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
             });
 
         auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
-        // dependency_graph->insertEdge(
-        // Edge::ControlTypeEdge,
-        // std::make_pair(
-        //_tar_exit_br_inst_it,
-        //_tar_exit_br_inst_it->returnControlOutputPortIndex(_l_exit)),
-        // std::make_pair(_loop_node, _src_idx));
 
-        _loop_node->setLoopEndEnable(_l_exit);
 
         _tar_exit_br_inst_it->replaceControlOutputNode(_l_exit, _loop_node);
         _l_exit->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);

@@ -353,8 +353,6 @@ class SuperNode : public Node {
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
-    // void setActivateInput(Node *_n) { this->activate_input = _n; }
-    // void setExitInput(Node *_n) { this->exit_input = _n; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
@@ -483,6 +481,7 @@ class LoopNode : public ContainerNode {
           latch_node(_lnode) {
         // Set the size of control input prot to at least two
         resizeControlInputPort(LOOPCONTROL);
+        resizeControlOutputPort(LOOPCONTROL);
     }
 
     // Define classof function so that we can use dyn_cast function
@@ -842,6 +841,7 @@ class CallNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+    //virtual std::string printDefinition(PrintType) override;
 };
 
 class GlobalValueNode : public Node {

@@ -201,16 +201,19 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                      _enable_iterator != _s_node->inputControl_end();
                      _enable_iterator++) {
                     auto _input_node = dyn_cast<Node>(*_enable_iterator);
-                    auto _input_index = std::distance(
-                        _s_node->inputControl_begin(), _enable_iterator);
+                    // auto _input_index = std::distance(
+                    //_s_node->inputControl_begin(), _enable_iterator);
 
                     // Finding super node
-                    auto ff = std::find_if(_input_node->outputControl_begin(),
-                                           _input_node->outputControl_end(),
-                                           [&_s_node](auto &arg) -> bool {
-                                               return _s_node.get() == &*arg;
-                                           });
+                    // auto ff =
+                    // std::find_if(_input_node->outputControl_begin(),
+                    //_input_node->outputControl_end(),
+                    //[&_s_node](auto &arg) -> bool {
+                    // return _s_node.get() == &*arg;
+                    //});
 
+                    auto _input_index =
+                        _s_node->returnControlInputPortIndex(_input_node);
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
@@ -218,7 +221,7 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                     this->outCode
                         << "  "
                         << _s_node->printInputEnable(PrintType::Scala,
-                                                     _input_index)
+                                                     _input_index.getID())
                         << " <> "
                         << _input_node->printOutputEnable(PrintType::Scala,
                                                           _output_index.getID())
@@ -598,8 +601,14 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertDetachNode(DetachInst &I) {
-    inst_list.push_back(std::make_unique<DetachNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName().str() == "")
+        inst_list.push_back(std::make_unique<DetachNode>(
+            NodeInfo(inst_list.size(),
+                     "detach" + std::to_string(inst_list.size())),
+            &I));
+    else
+        inst_list.push_back(std::make_unique<DetachNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -613,8 +622,14 @@ InstructionNode *Graph::insertDetachNode(DetachInst &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
-    inst_list.push_back(std::make_unique<ReattachNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName().str() == "")
+        inst_list.push_back(std::make_unique<ReattachNode>(
+            NodeInfo(inst_list.size(),
+                     "reattach" + std::to_string(inst_list.size())),
+            &I));
+    else
+        inst_list.push_back(std::make_unique<ReattachNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -628,8 +643,14 @@ InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertSyncNode(SyncInst &I) {
-    inst_list.push_back(std::make_unique<SyncNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+    if (I.getName() == "")
+        inst_list.push_back(std::make_unique<SyncNode>(
+            NodeInfo(inst_list.size(),
+                     "sync" + std::to_string(inst_list.size())),
+            &I));
+    else
+        inst_list.push_back(std::make_unique<SyncNode>(
+            NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -745,7 +766,9 @@ InstructionNode *Graph::insertStoreNode(StoreInst &I) {
 InstructionNode *Graph::insertCallNode(CallInst &I) {
     if (I.getName().str() == "")
         inst_list.push_back(std::make_unique<CallNode>(
-            NodeInfo(inst_list.size(), "call_" + std::to_string(inst_list.size())), &I));
+            NodeInfo(inst_list.size(),
+                     "call_" + std::to_string(inst_list.size())),
+            &I));
     else
         inst_list.push_back(std::make_unique<CallNode>(
             NodeInfo(inst_list.size(), I.getName().str()), &I));
@@ -977,8 +1000,6 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
                                    PrintType::Scala, _output_index.getID())
                             << "\n\n";
                     }
-
-                    // auto _input_node = dyn_cast<Node>(*_enable_iterator);
                 }
             }
 
