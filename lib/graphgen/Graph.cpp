@@ -55,6 +55,16 @@ Node *findParallelNode(Graph *_graph) {
     return nullptr;
 }
 
+template <class T>
+std::vector<T *> getNodeList(Graph *_graph) {
+    std::vector<T *> return_list;
+    for (auto &_node : _graph->instructions()) {
+        if (auto cast_node = dyn_cast<T>(&*_node))
+            return_list.push_back(cast_node);
+    }
+    return return_list;
+}
+
 //===----------------------------------------------------------------------===//
 //                           Graph Class
 //===----------------------------------------------------------------------===//
@@ -311,6 +321,14 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                 for (auto _ins_iterator = _s_node->ins_begin();
                      _ins_iterator != _s_node->ins_end(); _ins_iterator++) {
                     auto _output_node = dyn_cast<Node>(*_ins_iterator);
+
+                    if (auto detach = dyn_cast<ReattachNode>(_output_node)) {
+                        this->outCode
+                            << "  "
+                            << _output_node->printInputEnable(PrintType::Scala)
+                            << "\n\n";
+                        continue;
+                    }
 
                     if (auto _call_node = dyn_cast<CallNode>(_output_node)) {
                         _output_node = _call_node->getCallOut();
@@ -1101,14 +1119,13 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop input Data dependencies");
             for (auto &_l_node : loop_nodes) {
+                // TODO remove the counter
+                uint32_t c = 0;
                 for (auto &_live_in : _l_node->live_ins()) {
                     for (auto &_data_in : _live_in->input_data_range()) {
                         this->outCode
                             << "  "
-                            << _live_in->printInputData(
-                                   PrintType::Scala,
-                                   _l_node->returnDataInputPortIndex(_data_in)
-                                       .getID())
+                            << _live_in->printInputData(PrintType::Scala, c++)
                             << " <> "
                             << _data_in->printOutputData(
                                    PrintType::Scala,
@@ -1158,11 +1175,32 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
  */
 void Graph::printOutPort(PrintType _pt) {
     switch (_pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
+            // Print Call node connections
+            auto call_node_list = getNodeList<CallNode>(this);
+            for (auto _c_node : call_node_list) {
+                this->outCode << helperScalaPrintHeader(
+                    "Printing callin and callout interface");
+                this->outCode
+                    << "  "
+                    << _c_node->getCallIn()->printInputData(PrintType::Scala)
+                    << " <> "
+                    << "io." + _c_node->getCallIn()->getName() << "\n\n";
+                this->outCode
+                    << "  "
+                    << "io." + _c_node->getCallOut()->getName() << " <> "
+                    << _c_node->getCallOut()->printOutputData(PrintType::Scala,
+                                                              0)
+                    << "\n\n";
+            }
+
+            this->outCode << helperScalaPrintHeader(
+                "Printing output interface");
             this->outCode << "  io.out <> "
                           << out_node->printOutputData(PrintType::Scala)
                           << "\n\n";
             break;
+        }
         default:
             assert(!"We don't support the other types right now");
     }
@@ -1175,6 +1213,7 @@ void Graph::doInitialization() {
     // Filling the data dependencies
     for (auto &_node : inst_list) {
         for (auto &_child : _node->output_data_range()) {
+            if (isa<ArgumentNode>(&*_child)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_node,
@@ -1215,7 +1254,7 @@ void Graph::doInitialization() {
                                getMemoryUnit()->returnMemoryWriteInputPortIndex(
                                    _ld_node)));
 
-            insertEdge(Edge::MemoryReadTypeEdge,
+            insertEdge(Edge::MemoryWriteTypeEdge,
                        std::make_pair(
                            getMemoryUnit(),
                            getMemoryUnit()->returnMemoryWriteOutputPortIndex(

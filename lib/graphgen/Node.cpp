@@ -1724,6 +1724,25 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+
+std::string ReattachNode::printInputEnable(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable.enq(ControlBundle.active())";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -2083,8 +2102,28 @@ std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+
+std::string CallOutNode::printOutputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
-//                            CallOutNode Class
+//                            CallInNode Class
 //===----------------------------------------------------------------------===//
 std::string CallInNode::printInputEnable(PrintType pt) {
     string _text;
@@ -2104,3 +2143,18 @@ std::string CallInNode::printInputEnable(PrintType pt) {
     return _text;
 }
 
+std::string CallInNode::printInputData(PrintType _pt) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.In";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}

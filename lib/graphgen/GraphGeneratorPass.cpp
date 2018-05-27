@@ -264,11 +264,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 auto _src = _node_src->second;
                 auto _dst = _node_dest->second;
 
-                if (auto call_out = dyn_cast<CallNode>(_dst))
-                    _dst = call_out->getCallOut();
-                if (auto call_in = dyn_cast<CallNode>(_src))
-                    _src = call_in->getCallIn();
-
                 _src->addControlOutputPort(_dst);
                 _dst->addControlInputPort(_src);
 
@@ -301,8 +296,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 if (auto call_in = dyn_cast<CallNode>(_src))
                     _src = call_in->getCallIn();
 
-                _node_src->second->addDataOutputPort(_node_dest->second);
-                _node_dest->second->addDataInputPort(_node_src->second);
+                _src->addDataOutputPort(_dst);
+                _dst->addDataInputPort(_src);
             }
         }
 
@@ -362,6 +357,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
+
+                    if (auto detach = dyn_cast<ReattachNode>(_ins)) continue;
 
                     // Detect Phi instrucctions
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
@@ -477,12 +474,15 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
                         if (!_src->existDataOutput(new_live_in)) {
                             _src->replaceDataOutputNode(_tar, new_live_in);
+                            _tar->replaceDataInputNode(_src, new_live_in);
                             new_live_in->addDataInputPort(_src);
-                        } else
+                        } else {
                             _src->removeNodeDataOutputNode(_tar);
+                            _tar->removeNodeControlOutputNode(_src);
+                        }
 
                         new_live_in->addDataOutputPort(_tar);
-                        _tar->addDataInputPort(new_live_in);
+                        //_tar->addDataInputPort(new_live_in);
                     }
                 }
 

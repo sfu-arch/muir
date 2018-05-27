@@ -380,6 +380,11 @@ class ArgumentNode : public Node {
 
     const llvm::Value *getArgumentValue() { return parent_argument; }
 
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::FunctionArgTy;
+    }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
@@ -882,8 +887,8 @@ class CallNode : public InstructionNode {
     CallInNode *getCallIn() { return call_in.get(); }
     CallOutNode *getCallOut() { return call_out.get(); }
 
-    //virtual PortID addDataInputPort(Node *_node) override;
-    //virtual PortID addDataOutputPort(Node *_node) override;
+    // virtual PortID addDataInputPort(Node *_node) override;
+    // virtual PortID addDataOutputPort(Node *_node) override;
 
     void setCallOutEnable(Node *_n);
 
@@ -911,6 +916,7 @@ class CallInNode : public InstructionNode {
     void setParent(Graph *_g) { parent_graph = _g; }
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType) override;
 };
 
 class CallOutNode : public InstructionNode {
@@ -934,6 +940,7 @@ class CallOutNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class GlobalValueNode : public Node {
@@ -1019,7 +1026,7 @@ class ReattachNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    // virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
     // virtual std::string printOutputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType) override;
     // virtual std::string printInputData(PrintType, uint32_t) override;
