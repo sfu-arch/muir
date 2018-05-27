@@ -216,7 +216,14 @@ void Graph::printInstructions(PrintType _pt) {
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
                 this->outCode << "\n";
-                this->outCode << ins_node->printDefinition(PrintType::Scala);
+                if (auto call_node = dyn_cast<CallNode>(&*ins_node)) {
+                    this->outCode << call_node->getCallOut()->printDefinition(
+                        PrintType::Scala);
+                    this->outCode << call_node->getCallIn()->printDefinition(
+                        PrintType::Scala);
+                } else
+                    this->outCode
+                        << ins_node->printDefinition(PrintType::Scala);
             }
             break;
         default:
@@ -304,6 +311,16 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                 for (auto _ins_iterator = _s_node->ins_begin();
                      _ins_iterator != _s_node->ins_end(); _ins_iterator++) {
                     auto _output_node = dyn_cast<Node>(*_ins_iterator);
+
+                    if (auto _call_node = dyn_cast<CallNode>(_output_node)) {
+                        _output_node = _call_node->getCallOut();
+
+                        this->outCode
+                            << "  "
+                            << _call_node->getCallIn()->printInputEnable(
+                                   PrintType::Scala)
+                            << "\n\n";
+                    }
 
                     auto _output_index =
                         std::distance(_s_node->ins_begin(), _ins_iterator);
@@ -830,6 +847,15 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+
+    auto call_in = dyn_cast<CallNode>(ff->get())->getCallIn();
+    auto call_out = dyn_cast<CallNode>(ff->get())->getCallOut();
+
+    call_in->setParent(this);
+    call_in->setParent(this);
+    this->pushCallIn(call_in);
+    this->pushCallOut(call_out);
+
     return ff->get();
 }
 
@@ -1108,6 +1134,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                                        ->returnDataInputPortIndex(
                                            _live_in.get())
                                        .getID())
+                            << " <> "
                             << _live_in->printOutputData(
                                    PrintType::Scala,
                                    _live_in

@@ -28,8 +28,6 @@ using EdgeList = std::list<std::unique_ptr<Edge>>;
 using Port = std::pair<Node *, PortID>;
 
 class Graph {
-   public:
-
    private:
     // Node information
     NodeInfo graph_info;
@@ -40,6 +38,9 @@ class Graph {
     BasicBlockList super_node_list;
     GlobalValueList glob_list;
     ConstIntList const_list;
+
+    std::list<CallInNode *> call_in_list;
+    std::list<CallOutNode *> call_out_list;
 
     // Splitcall for the function
     std::unique_ptr<SplitCallNode> split_call;
@@ -118,6 +119,10 @@ class Graph {
     auto edge_begin() { return this->edge_list.cbegin(); }
     auto edge_end() { return this->edge_list.cend(); }
     auto edges() { return helpers::make_range(edge_begin(), edge_end()); }
+
+    void pushCallIn(CallInNode *_call_node){call_in_list.push_back(_call_node);}
+    void pushCallOut(CallOutNode *_call_node){call_out_list.push_back(_call_node);}
+
 
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);

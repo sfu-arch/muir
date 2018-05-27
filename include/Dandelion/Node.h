@@ -21,6 +21,7 @@ using namespace llvm;
 
 namespace dandelion {
 
+class Graph;
 class Node;
 class SuperNode;
 class ContainerNode;
@@ -30,6 +31,9 @@ class MemoryNode;
 class PhiSelectNode;
 class SplitCallNode;
 class ArgumentNode;
+class CallNode;
+class CallInNode;
+class CallOutNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
@@ -53,6 +57,7 @@ struct NodeInfo {
     std::string Name;
 
     NodeInfo(uint32_t _id, std::string _n) : ID(_id), Name(_n){};
+    NodeInfo(std::string _n, uint32_t _id) : ID(_id), Name(_n){};
 };
 
 struct PortID {
@@ -111,8 +116,8 @@ class Node {
     PortID returnMemoryReadOutputPortIndex(Node *);
     PortID returnMemoryWriteOutputPortIndex(Node *);
 
-    PortID addDataInputPort(Node *);
-    PortID addDataOutputPort(Node *);
+    virtual PortID addDataInputPort(Node *);
+    virtual PortID addDataOutputPort(Node *);
 
     PortID addControlInputPort(Node *);
     PortID addControlOutputPort(Node *);
@@ -437,8 +442,14 @@ class MemoryNode : public Node {
     explicit MemoryNode(NodeInfo _nf) : Node(Node::MemoryUnitTy, _nf) {}
 
     // Restrict access to data input ports
-    void addDataInputPort(Node *) = delete;
-    void addDataOutputPort(Node *) = delete;
+    virtual PortID addDataInputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    }
+    virtual PortID addDataOutputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    };
     uint32_t numDataInputPort() = delete;
     uint32_t numDataOutputPort() = delete;
 
@@ -591,7 +602,9 @@ class InstructionNode : public Node {
         SyncInstructionTy,
 #endif
         ReturnInstrunctionTy,
-        CallInstructionTy
+        CallInstructionTy,
+        CallInInstructionTy,
+        CallOutInstructionTy
     };
 
    private:
@@ -834,11 +847,30 @@ class ReturnNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
+/**
+ * For ease of use for now we use callnode as wraper around two other nodes
+ * the first node is CallIn and the second one is CallOut
+ * The reason behind having wraper node is that we are still maintaining a
+ * direct
+ * maping from LLVM values to each node and it's hard to have two nodes instead
+ * of one node
+ * and keep having the direct mapping, in the future we have get ride of the
+ * restriction
+ */
 class CallNode : public InstructionNode {
+   private:
+    std::unique_ptr<CallInNode> call_in;
+    std::unique_ptr<CallOutNode> call_out;
+
    public:
     CallNode(NodeInfo _ni, llvm::CallInst *_ins = nullptr,
              NodeType _nd = UnkonwTy)
-        : InstructionNode(_ni, InstructionNode::CallInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::CallInstructionTy, _ins) {
+        call_in = std::make_unique<CallInNode>(
+            NodeInfo(_ni.Name + "_in", _ni.ID), this, _ins);
+        call_out = std::make_unique<CallOutNode>(
+            NodeInfo(_ni.Name + "_out", _ni.ID), this, _ins);
+    }
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::CallInstructionTy;
@@ -846,7 +878,62 @@ class CallNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    CallInNode *getCallIn() { return call_in.get(); }
+    CallOutNode *getCallOut() { return call_out.get(); }
+
+    //virtual PortID addDataInputPort(Node *_node) override;
+    //virtual PortID addDataOutputPort(Node *_node) override;
+
+    void setCallOutEnable(Node *_n);
+
     // virtual std::string printDefinition(PrintType) override;
+};
+
+class CallInNode : public InstructionNode {
+   private:
+    CallNode *parent_node;
+    Graph *parent_graph;
+
+   public:
+    CallInNode(NodeInfo _ni, CallNode *_parent, llvm::CallInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::CallInInstructionTy, _ins),
+          parent_node(_parent) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::CallInInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    void setParent(Graph *_g) { parent_graph = _g; }
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+};
+
+class CallOutNode : public InstructionNode {
+   private:
+    CallNode *parent_node;
+    Graph *parent_graph;
+
+   public:
+    CallOutNode(NodeInfo _ni, CallNode *_node, llvm::CallInst *_ins = nullptr,
+                NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::CallOutInstructionTy, _ins),
+          parent_node(_node) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::CallOutInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+    void setParent(Graph *_g) { parent_graph = _g; }
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class GlobalValueNode : public Node {

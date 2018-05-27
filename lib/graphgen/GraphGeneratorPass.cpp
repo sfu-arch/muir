@@ -68,13 +68,11 @@ bool definedInRegion(const SetVector<BasicBlock *> &Blocks, Value *V) {
     return false;
 }
 
-
 template <class T>
-Instruction *findParallelInstruction(Function &F){
-    for(auto &BB : F){
-        for(auto &I : BB){
-            if(isa<T>(I))
-                return &I;
+Instruction *findParallelInstruction(Function &F) {
+    for (auto &BB : F) {
+        for (auto &I : BB) {
+            if (isa<T>(I)) return &I;
         }
     }
     return nullptr;
@@ -263,10 +261,16 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
-                auto src_idx =
-                    _node_src->second->addControlOutputPort(_node_dest->second);
-                auto dst_idx =
-                    _node_dest->second->addControlInputPort(_node_src->second);
+                auto _src = _node_src->second;
+                auto _dst = _node_dest->second;
+
+                if (auto call_out = dyn_cast<CallNode>(_dst))
+                    _dst = call_out->getCallOut();
+                if (auto call_in = dyn_cast<CallNode>(_src))
+                    _src = call_in->getCallIn();
+
+                _src->addControlOutputPort(_dst);
+                _dst->addControlInputPort(_src);
 
             } else {
                 // If the operand is constant we have to create a new node
@@ -289,10 +293,16 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     assert(!"The destination instruction couldn't find!");
                 }
 
-                auto src_idx =
-                    _node_src->second->addDataOutputPort(_node_dest->second);
-                auto dst_idx =
-                    _node_dest->second->addDataInputPort(_node_src->second);
+                auto _src = _node_src->second;
+                auto _dst = _node_dest->second;
+
+                if (auto call_out = dyn_cast<CallNode>(_dst))
+                    _dst = call_out->getCallOut();
+                if (auto call_in = dyn_cast<CallNode>(_src))
+                    _src = call_in->getCallIn();
+
+                _node_src->second->addDataOutputPort(_node_dest->second);
+                _node_dest->second->addDataInputPort(_node_src->second);
             }
         }
 
@@ -345,7 +355,6 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     _en_bb);
             auto _dst_idx = _en_bb->addControlInputPort(
                 this->dependency_graph->getSplitCall());
-
         }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
@@ -360,9 +369,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         _phi_ins->setParentNode(_bb);
                     }
 
-                    // Make a control edge
-                    auto _src_idx = _bb->addControlOutputPort(_ins);
-                    auto _dst_idx = _ins->addControlInputPort(_bb);
+                    if (auto _call_node = dyn_cast<CallNode>(_ins)) {
+                        _bb->addControlOutputPort(_call_node->getCallOut());
+                        _call_node->setCallOutEnable(_bb);
+                    } else {
+                        // Make a control edge
+                        _bb->addControlOutputPort(_ins);
+                        _ins->addControlInputPort(_bb);
+                    }
+
                 } else
                     assert(!"The instruction is not visited!");
             }
@@ -401,8 +416,8 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
             });
 
         // Add basic block node between the branch and head basic block
-        //auto _old_edge =
-            //this->dependency_graph->findEdge(_src_br_inst_it, _l_head);
+        // auto _old_edge =
+        // this->dependency_graph->findEdge(_src_br_inst_it, _l_head);
 
         _loop_node->setEnableLoopSignal(_src_br_inst_it);
         _loop_node->setActiveOutputLoopSignal(_l_head);
@@ -430,7 +445,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
         auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
 
-
         _tar_exit_br_inst_it->replaceControlOutputNode(_l_exit, _loop_node);
         _l_exit->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
 
@@ -455,11 +469,16 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                         auto _src = map_value_node[V];
                         auto _tar = map_value_node[&I];
 
-                        if (!_src->existDataOutput(new_live_in)){
+                        // TODO later we need to get ride of these lines
+                        if (auto call_out = dyn_cast<CallNode>(_tar))
+                            _tar = call_out->getCallOut();
+                        if (auto call_in = dyn_cast<CallNode>(_src))
+                            _src = call_in->getCallIn();
+
+                        if (!_src->existDataOutput(new_live_in)) {
                             _src->replaceDataOutputNode(_tar, new_live_in);
                             new_live_in->addDataInputPort(_src);
-                        }
-                        else
+                        } else
                             _src->removeNodeDataOutputNode(_tar);
 
                         new_live_in->addDataOutputPort(_tar);
@@ -542,15 +561,17 @@ void GraphGeneratorPass::connectOutToReturn(Function &F) {
     }
 }
 
-void GraphGeneratorPass::connectParalleNodes(Function &F){
-    auto _sync_node     = this->map_value_node[findParallelInstruction<llvm::SyncInst>(F)];
-    auto _detach_node   = this->map_value_node[findParallelInstruction<llvm::DetachInst>(F)];
-    auto _reattach_node = this->map_value_node[findParallelInstruction<llvm::ReattachInst>(F)];
+void GraphGeneratorPass::connectParalleNodes(Function &F) {
+    auto _sync_node =
+        this->map_value_node[findParallelInstruction<llvm::SyncInst>(F)];
+    auto _detach_node =
+        this->map_value_node[findParallelInstruction<llvm::DetachInst>(F)];
+    auto _reattach_node =
+        this->map_value_node[findParallelInstruction<llvm::ReattachInst>(F)];
 
     _sync_node->addControlInputPort(_detach_node);
     _sync_node->addControlInputPort(_reattach_node);
 }
-
 
 /**
  * All the initializations for function members

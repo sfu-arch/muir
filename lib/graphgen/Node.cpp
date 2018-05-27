@@ -524,6 +524,7 @@ uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
 //                            CallSpliter Class
 //===----------------------------------------------------------------------===//
 
+
 std::string SplitCallNode::printDefinition(PrintType _pt) {
     string _text("");
     string _name(this->getName());
@@ -1742,8 +1743,6 @@ std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
-
 //===----------------------------------------------------------------------===//
 //                            DeatachNode Class
 //===----------------------------------------------------------------------===//
@@ -1853,12 +1852,13 @@ std::string SyncNode::printInputEnable(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if(_id == 1)
+            if (_id == 1)
                 _text = "$name.io.incIn(0)";
-            else if(_id == 2)
+            else if (_id == 2)
                 _text = "$name.io.decIn(0)";
             else
-                assert(!"Sync node can not have more than three control inputs!");
+                assert(
+                    !"Sync node can not have more than three control inputs!");
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -1869,7 +1869,6 @@ std::string SyncNode::printInputEnable(PrintType _pt, uint32_t _id) {
     }
     return _text;
 }
-
 
 std::string SyncNode::printOutputEnable(PrintType pt, uint32_t _id) {
     string _text;
@@ -1974,27 +1973,134 @@ std::string AllocaNode::printInputEnable(PrintType _pt, uint32_t _id) {
 //===----------------------------------------------------------------------===//
 //                            CallNode Class
 //===----------------------------------------------------------------------===//
-//std::string CallNode::printDefinition(PrintType _pt) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text =
-                //"  val $name = Module(new $type(ID = $id"
-                //", RouteID=$r_i, NumOuts=$num_out))\n\n";
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", this->getID());
-            //helperReplace(_text, "$num_out", this->numDataOutputPort());
-            //helperReplace(_text, "$type", "AllocaNode");
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
-//}
+void CallNode::setCallOutEnable(Node *_n){ call_out->addControlInputPort(_n); }
 
+//===----------------------------------------------------------------------===//
+//                            CallInNode Class
+//===----------------------------------------------------------------------===//
+std::string CallInNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+
+    auto make_argument_port = [](const auto &_list) {
+        std::vector<uint32_t> _arg_count;
+        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        return _arg_count;
+    };
+
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(ID = $id"
+                ", argTypes = List($<output_vector>)))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "CallInNode");
+            helperReplace(_text, "$<output_vector>",
+                          make_argument_port(this->output_data_range()), ",");
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            CallOutNode Class
+//===----------------------------------------------------------------------===//
+std::string CallOutNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+
+    auto make_argument_port = [](const auto &_list) {
+        std::vector<uint32_t> _arg_count;
+        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        return _arg_count;
+    };
+
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(ID = $id"
+                ", NumSuccOps = $num_succ, argTypes = List($<input_vector>)))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "CallOutNode");
+            helperReplace(_text, "$num_succ", this->numControlOutputPort());
+            helperReplace(_text, "$<input_vector>",
+                          make_argument_port(this->input_data_range()), ",");
+
+            // helperReplace(_text, "$num_out", this->numDataOutputPort());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string CallOutNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.In(\"field$id\")";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            CallOutNode Class
+//===----------------------------------------------------------------------===//
+std::string CallInNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable.enq(ControlBundle.active())";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
 
