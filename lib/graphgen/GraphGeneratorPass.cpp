@@ -68,6 +68,18 @@ bool definedInRegion(const SetVector<BasicBlock *> &Blocks, Value *V) {
     return false;
 }
 
+
+template <class T>
+Instruction *findParallelInstruction(Function &F){
+    for(auto &BB : F){
+        for(auto &I : BB){
+            if(isa<T>(I))
+                return &I;
+        }
+    }
+    return nullptr;
+}
+
 static SetVector<Loop *> getLoops(LoopInfo &LI) {
     SetVector<Loop *> Loops;
 
@@ -334,11 +346,6 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
             auto _dst_idx = _en_bb->addControlInputPort(
                 this->dependency_graph->getSplitCall());
 
-            // this->dependency_graph->insertEdge(
-            // Edge::ControlTypeEdge,
-            // std::make_pair(this->dependency_graph->getSplitCall(),
-            //_src_idx),
-            // std::make_pair(_en_bb, _dst_idx));
         }
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
@@ -351,17 +358,11 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
-                        // this->dependency_graph->insertEdge(
-                        // Edge::MaskTypeEdge, std::make_pair(_bb, 0),
-                        // std::make_pair(_phi_ins, 0));
                     }
 
                     // Make a control edge
                     auto _src_idx = _bb->addControlOutputPort(_ins);
                     auto _dst_idx = _ins->addControlInputPort(_bb);
-                    // this->dependency_graph->insertEdge(
-                    // Edge::ControlTypeEdge, std::make_pair(_bb, _src_idx),
-                    // std::make_pair(_ins, _dst_idx));
                 } else
                     assert(!"The instruction is not visited!");
             }
@@ -454,8 +455,10 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                         auto _src = map_value_node[V];
                         auto _tar = map_value_node[&I];
 
-                        if (!_src->existDataOutput(new_live_in))
+                        if (!_src->existDataOutput(new_live_in)){
                             _src->replaceDataOutputNode(_tar, new_live_in);
+                            new_live_in->addDataInputPort(_src);
+                        }
                         else
                             _src->removeNodeDataOutputNode(_tar);
 
@@ -539,6 +542,16 @@ void GraphGeneratorPass::connectOutToReturn(Function &F) {
     }
 }
 
+void GraphGeneratorPass::connectParalleNodes(Function &F){
+    auto _sync_node     = this->map_value_node[findParallelInstruction<llvm::SyncInst>(F)];
+    auto _detach_node   = this->map_value_node[findParallelInstruction<llvm::DetachInst>(F)];
+    auto _reattach_node = this->map_value_node[findParallelInstruction<llvm::ReattachInst>(F)];
+
+    _sync_node->addControlInputPort(_detach_node);
+    _sync_node->addControlInputPort(_reattach_node);
+}
+
+
 /**
  * All the initializations for function members
  */
@@ -548,6 +561,7 @@ void GraphGeneratorPass::init(Function &F) {
     fillBasicBlockDependencies(F);
     fillLoopDependencies(*LI);
     connectOutToReturn(F);
+    connectParalleNodes(F);
 
     // Printing the graph
     dependency_graph->printGraph(PrintType::Scala);

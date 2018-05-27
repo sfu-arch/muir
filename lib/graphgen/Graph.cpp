@@ -47,6 +47,14 @@ std::string helperScalaPrintHeader(string header) {
     return tmp_line;
 }
 
+template <class T>
+Node *findParallelNode(Graph *_graph) {
+    for (auto &_node : _graph->instructions()) {
+        if (isa<T>(&*_node)) return &*_node;
+    }
+    return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 //                           Graph Class
 //===----------------------------------------------------------------------===//
@@ -72,8 +80,10 @@ void Graph::printGraph(PrintType _pt) {
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
+            printParallelConnections(PrintType::Scala);
             printLoopBranchEdges(PrintType::Scala);
             printLoopEndingDependencies(PrintType::Scala);
+            printLoopDataDependencies(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
@@ -123,6 +133,50 @@ void Graph::printLoopHeader(PrintType _pt) {
             }
             break;
         case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print loop headers
+ */
+void Graph::printParallelConnections(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            DEBUG(dbgs() << "\t Print parallel Connections\n");
+            this->outCode << helperScalaPrintHeader(
+                "Printing parallel connections");
+            auto _sync_node = findParallelNode<SyncNode>(this);
+            auto _detach_node = findParallelNode<DetachNode>(this);
+            auto _reattach_node = findParallelNode<ReattachNode>(this);
+
+            auto printConnection = [&_sync_node](Node *_node) {
+                std::stringstream _output;
+                _output << "  "
+                        << _sync_node->printInputEnable(
+                               PrintType::Scala,
+                               _sync_node->returnControlInputPortIndex(_node)
+                                   .getID())
+                        << " <> "
+                        << _node->printOutputEnable(
+                               PrintType::Scala,
+                               _node->returnControlOutputPortIndex(_sync_node)
+                                   .getID())
+                        << "\n\n";
+
+                return _output;
+            };
+
+            this->outCode << printConnection(_detach_node).str();
+            this->outCode << printConnection(_reattach_node).str();
+
+            break;
+        }
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        case PrintType::Json:
             assert(!"Dot file format is not supported!");
         default:
             assert(!"Uknown print type!");
@@ -998,6 +1052,67 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
                             << " <> "
                             << _ending_ins->printOutputEnable(
                                    PrintType::Scala, _output_index.getID())
+                            << "\n\n";
+                    }
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print loop data dependencies
+ */
+void Graph::printLoopDataDependencies(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader(
+                "Loop input Data dependencies");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_live_in : _l_node->live_ins()) {
+                    for (auto &_data_in : _live_in->input_data_range()) {
+                        this->outCode
+                            << "  "
+                            << _live_in->printInputData(
+                                   PrintType::Scala,
+                                   _l_node->returnDataInputPortIndex(_data_in)
+                                       .getID())
+                            << " <> "
+                            << _data_in->printOutputData(
+                                   PrintType::Scala,
+                                   _data_in
+                                       ->returnDataOutputPortIndex(
+                                           _live_in.get())
+                                       .getID())
+                            << "\n\n";
+                    }
+                }
+            }
+
+            this->outCode << helperScalaPrintHeader(
+                "Loop Data output dependencies");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_live_in : _l_node->live_ins()) {
+                    for (auto &_data_out : _live_in->output_data_range()) {
+                        this->outCode
+                            << "  "
+                            << _data_out->printInputData(
+                                   PrintType::Scala,
+                                   _data_out
+                                       ->returnDataInputPortIndex(
+                                           _live_in.get())
+                                       .getID())
+                            << _live_in->printOutputData(
+                                   PrintType::Scala,
+                                   _live_in
+                                       ->returnDataOutputPortIndex(_data_out)
+                                       .getID())
                             << "\n\n";
                     }
                 }

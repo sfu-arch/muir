@@ -62,7 +62,7 @@ struct PortID {
     PortID() : ID(0) {}
     PortID(uint32_t _id) : ID(_id) {}
 
-    uint32_t getID(){ return ID; }
+    uint32_t getID() { return ID; }
 
     bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
 };
@@ -459,7 +459,6 @@ class MemoryNode : public Node {
  */
 class LoopNode : public ContainerNode {
    private:
-
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
     std::list<InstructionNode *> ending_instructions;
@@ -524,12 +523,14 @@ class LoopNode : public ContainerNode {
     /**
      * Push supernode to the super node container
      */
-    void pushSuperNode(SuperNode *_n){ basic_block_list.push_back(_n);}
+    void pushSuperNode(SuperNode *_n) { basic_block_list.push_back(_n); }
 
     /**
      * Push instrucitions
      */
-    void pushInstructionNode(InstructionNode *_n){ instruction_list.push_back(_n); }
+    void pushInstructionNode(InstructionNode *_n) {
+        instruction_list.push_back(_n);
+    }
 
     /**
      * Make sure that loop latch enable signal is always fix to index 1
@@ -549,9 +550,10 @@ class LoopNode : public ContainerNode {
         return addControlInputPort(_n);
     }
 
-    //TODO the function should move to private section and get calls inside the init fuctions
+    // TODO the function should move to private section and get calls inside the
+    // init fuctions
     void setEndingInstructions();
-    std::list<InstructionNode*> findEndingInstructions();
+    std::list<InstructionNode *> findEndingInstructions();
 
     /**
      * Print functions
@@ -727,6 +729,9 @@ class AllocaNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
     virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class GEPNode : public InstructionNode {
@@ -803,7 +808,7 @@ class StoreNode : public InstructionNode {
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    //virtual std::string printInputData(PrintType) override;
+    // virtual std::string printInputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
@@ -841,7 +846,7 @@ class CallNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
-    //virtual std::string printDefinition(PrintType) override;
+    // virtual std::string printDefinition(PrintType) override;
 };
 
 class GlobalValueNode : public Node {
@@ -890,7 +895,7 @@ class SplitCallNode : public ContainerNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
-class DetachNode: public InstructionNode {
+class DetachNode : public InstructionNode {
    public:
     DetachNode(NodeInfo _ni, llvm::DetachInst *_ins = nullptr,
                NodeType _nd = UnkonwTy)
@@ -904,16 +909,18 @@ class DetachNode: public InstructionNode {
     }
 
     virtual std::string printDefinition(PrintType) override;
-    //virtual std::string printInputEnable(PrintType) override;
-    //virtual std::string printOutputData(PrintType, uint32_t) override;
-    //virtual std::string printOutputData(PrintType) override;
-    //virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType) override;
+    // virtual std::string printInputEnable(PrintType) override;
+    // virtual std::string printOutputData(PrintType, uint32_t) override;
+    // virtual std::string printOutputData(PrintType) override;
+    // virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
-class ReattachNode: public InstructionNode {
+class ReattachNode : public InstructionNode {
    public:
     ReattachNode(NodeInfo _ni, llvm::ReattachInst *_ins = nullptr,
-               NodeType _nd = UnkonwTy)
+                 NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -924,16 +931,17 @@ class ReattachNode: public InstructionNode {
     }
 
     virtual std::string printDefinition(PrintType) override;
-    //virtual std::string printInputEnable(PrintType) override;
-    //virtual std::string printOutputData(PrintType, uint32_t) override;
-    //virtual std::string printOutputData(PrintType) override;
-    //virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    // virtual std::string printInputEnable(PrintType) override;
+    // virtual std::string printOutputData(PrintType, uint32_t) override;
+    // virtual std::string printOutputData(PrintType) override;
+    // virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
-class SyncNode: public InstructionNode {
+class SyncNode : public InstructionNode {
    public:
     SyncNode(NodeInfo _ni, llvm::SyncInst *_ins = nullptr,
-               NodeType _nd = UnkonwTy)
+             NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::SyncInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -944,14 +952,14 @@ class SyncNode: public InstructionNode {
     }
 
     virtual std::string printDefinition(PrintType) override;
-    //virtual std::string printInputEnable(PrintType) override;
-    //virtual std::string printOutputData(PrintType, uint32_t) override;
-    //virtual std::string printOutputData(PrintType) override;
-    //virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
+    // virtual std::string printInputEnable(PrintType) override;
+    // virtual std::string printOutputData(PrintType, uint32_t) override;
+    // virtual std::string printOutputData(PrintType) override;
+    // virtual std::string printInputData(PrintType, uint32_t) override;
 };
-
-
-
 
 }  // namespace dandelion
 

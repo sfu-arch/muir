@@ -170,7 +170,9 @@ class Graph {
     void printLoopEndingDependencies(PrintType _pt);
     void printLoopBranchEdges(PrintType);
     void printLoopHeader(PrintType);
+    void printLoopDataDependencies(PrintType);
     void printOutPort(PrintType);
+    void printParallelConnections(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);
