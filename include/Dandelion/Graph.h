@@ -22,7 +22,7 @@ using InstructionList = std::list<std::unique_ptr<InstructionNode>>;
 using ArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
 using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
-using ConstIntList = std::list<ConstIntNode>;
+using ConstIntList = std::list<std::unique_ptr<ConstIntNode>>;
 using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
 using EdgeList = std::list<std::unique_ptr<Edge>>;
 using Port = std::pair<Node *, PortID>;
@@ -165,6 +165,7 @@ class Graph {
     void printFunctionArgument(PrintType);
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
+    void printConstants(PrintType);
     void printMemoryModules(PrintType);
     void printBasickBlockPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);

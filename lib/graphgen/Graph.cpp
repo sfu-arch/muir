@@ -89,6 +89,7 @@ void Graph::printGraph(PrintType _pt) {
             printLoopHeader(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
+            printConstants(PrintType::Scala);
             printBasickBlockPredicateEdges(PrintType::Scala);
             printParallelConnections(PrintType::Scala);
             printLoopBranchEdges(PrintType::Scala);
@@ -158,6 +159,9 @@ void Graph::printParallelConnections(PrintType _pt) {
             DEBUG(dbgs() << "\t Print parallel Connections\n");
             this->outCode << helperScalaPrintHeader(
                 "Printing parallel connections");
+
+            if(!findParallelNode<SyncNode>(this))
+                return;
             auto _sync_node = findParallelNode<SyncNode>(this);
             auto _detach_node = findParallelNode<DetachNode>(this);
             auto _reattach_node = findParallelNode<ReattachNode>(this);
@@ -240,6 +244,30 @@ void Graph::printInstructions(PrintType _pt) {
             assert(!"We don't support the other types right now");
     }
 }
+
+/**
+ * Print the insturctions definition
+ */
+void Graph::printConstants(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            this->outCode << helperScalaPrintHeader(
+                "Printing constants nodes");
+            for (auto &const_node : this->const_list) {
+                // ins_node->getInstruction()->dump();
+                this->outCode << "  //";
+                const_node->getConstantParent()->print(this->outCode);
+                this->outCode << "\n";
+                    this->outCode
+                        << const_node->printDefinition(PrintType::Scala);
+            }
+            break;
+        default:
+            assert(!"We don't support the other types right now");
+    }
+}
+
+
 
 /**
  * Print memory modules definition
@@ -586,15 +614,15 @@ void Graph::printScalaFunctionHeader() {
     }
 
     // Print global memory interface
-    c = 0;
-    for (uint32_t c = 0; c < this->glob_list.size(); c++) {
-        _command =
-            "    val glob_$index = Flipped(Decoupled(new "
-            "DataBundle))\n";
-        helperReplace(_command, "$index", static_cast<int>(c++));
-        _final_command.append(_command);
-        break;
-    }
+    //c = 0;
+    //for (uint32_t c = 0; c < this->glob_list.size(); c++) {
+        //_command =
+            //"    val glob_$index = Flipped(Decoupled(new "
+            //"DataBundle))\n";
+        //helperReplace(_command, "$index", static_cast<int>(c++));
+        //_final_command.append(_command);
+        //break;
+    //}
 
     // Print cache memory interface
     _final_command.append(
@@ -993,16 +1021,12 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
  * Insert a new const node
  */
 ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
-    const_list.push_back(
-        ConstIntNode(NodeInfo(const_list.size(),
+    const_list.push_back(std::make_unique<
+        ConstIntNode>(NodeInfo(const_list.size(),
                               "const" + std::to_string(const_list.size())),
                      &C));
 
-    auto ff = std::find_if(const_list.begin(), const_list.end(),
-                           [&C](ConstIntNode &cs) -> bool {
-                               return cs.getConstantParent() == &C;
-                           });
-    return &*ff;
+    return const_list.back().get();
 }
 
 LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
@@ -1211,6 +1235,20 @@ void Graph::printOutPort(PrintType _pt) {
  */
 void Graph::doInitialization() {
     // Filling the data dependencies
+    //
+    
+    for (auto &_node : const_list) {
+        for (auto &_child : _node->output_data_range()) {
+            if (isa<ArgumentNode>(&*_child)) continue;
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_node,
+                               _node->returnDataOutputPortIndex(&*_child)),
+                std::make_pair(&*_child,
+                               _child->returnDataInputPortIndex(&*_node)));
+        }
+    }
+    
     for (auto &_node : inst_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;

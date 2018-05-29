@@ -626,6 +626,7 @@ class InstructionNode : public Node {
     llvm::Instruction *getInstruction();
 
     uint32_t getOpCode() const { return ins_type; }
+
     const std::string getOpCodeName() {
         return parent_instruction->getOpcodeName();
     }
@@ -957,13 +958,24 @@ class GlobalValueNode : public Node {
 class ConstIntNode : public Node {
    private:
     llvm::ConstantInt *parent_const_int;
+    uint32_t value;
 
    public:
     ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
-        : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {}
+        : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {
+            value = parent_const_int->getSExtValue();
+        }
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::ConstIntTy;
+    }
+
+    uint32_t getValue(){return value;}
 
     llvm::ConstantInt *getConstantParent();
-    virtual std::string printOutputData(PrintType, uint32_t);
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 /**

@@ -524,7 +524,6 @@ uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
 //                            CallSpliter Class
 //===----------------------------------------------------------------------===//
 
-
 std::string SplitCallNode::printDefinition(PrintType _pt) {
     string _text("");
     string _name(this->getName());
@@ -689,6 +688,37 @@ std::string ArgumentNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+//===----------------------------------------------------------------------===//
+//                            CosntNode Class
+//===----------------------------------------------------------------------===//
+std::string ConstIntNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(value = $val"
+                ", NumOuts = $num_out, ID = $id))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "ArgumentNode");
+            helperReplace(_text, "$val", this->getValue());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+
+
 std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
@@ -841,7 +871,10 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "ComputeNode");
-            helperReplace(_text, "$opcode", this->getOpCodeName());
+            helperReplace(_text, "$opcode",
+                          llvm::ICmpInst::getPredicateName(
+                              dyn_cast<llvm::ICmpInst>(this->getInstruction())
+                                  ->getUnsignedPredicate()));
 
             break;
         case PrintType::Dot:
@@ -920,14 +953,16 @@ std::string BranchNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "  val $name = Module(new $type(ID = $id))\n\n";
+            _text =
+                "  val $name = Module(new $type(NumPredOps=$npo, ID = "
+                "$id))\n\n";
             if (this->numDataInputPort() > 0) {
                 helperReplace(_text, "$type", "CBranchNode");
                 helperReplace(_text, "$num_out",
                               std::to_string(this->numControlOutputPort()));
             } else
                 helperReplace(_text, "$type", "UBranchNode");
-
+            helperReplace(_text, "$npo", this->numControlInputPort() - 1);
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
 
@@ -1187,6 +1222,8 @@ std::string LoadNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$rid", 0);
             helperReplace(_text, "$num_out", this->numDataOutputPort());
+            helperReplace(_text, "$npo", this->numControlInputPort() - 1);
+            helperReplace(_text, "$nso", this->numControlOutputPort());
 
             break;
         default:
@@ -1323,6 +1360,8 @@ std::string StoreNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$rid", 0);
             helperReplace(_text, "$num_out", this->numDataOutputPort());
+            helperReplace(_text, "$npo", this->numControlInputPort() - 1);
+            helperReplace(_text, "$nso", this->numControlOutputPort());
 
             break;
         default:
@@ -1724,7 +1763,6 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string ReattachNode::printInputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -1993,7 +2031,7 @@ std::string AllocaNode::printInputEnable(PrintType _pt, uint32_t _id) {
 //                            CallNode Class
 //===----------------------------------------------------------------------===//
 
-void CallNode::setCallOutEnable(Node *_n){ call_out->addControlInputPort(_n); }
+void CallNode::setCallOutEnable(Node *_n) { call_out->addControlInputPort(_n); }
 
 //===----------------------------------------------------------------------===//
 //                            CallInNode Class
@@ -2047,7 +2085,8 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(ID = $id"
-                ", NumSuccOps = $num_succ, argTypes = List($<input_vector>)))\n\n";
+                ", NumSuccOps = $num_succ, argTypes = "
+                "List($<input_vector>)))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "CallOutNode");
@@ -2084,7 +2123,6 @@ std::string CallOutNode::printInputEnable(PrintType pt) {
     return _text;
 }
 
-
 std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -2101,7 +2139,6 @@ std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string CallOutNode::printOutputData(PrintType _pt, uint32_t _idx) {
     string _text;

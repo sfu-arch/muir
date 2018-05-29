@@ -78,6 +78,17 @@ Instruction *findParallelInstruction(Function &F) {
     return nullptr;
 }
 
+
+template <class T>
+std::vector<T *> getNodeList(Graph *_graph) {
+    std::vector<T *> return_list;
+    for (auto &_node : _graph->instructions()) {
+        if (auto cast_node = dyn_cast<T>(&*_node))
+            return_list.push_back(cast_node);
+    }
+    return return_list;
+}
+
 static SetVector<Loop *> getLoops(LoopInfo &LI) {
     SetVector<Loop *> Loops;
 
@@ -269,10 +280,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
             } else {
                 // If the operand is constant we have to create a new node
-                if (auto const_value = dyn_cast<llvm::ConstantInt>(operand))
-                    map_value_node[operand] =
-                        this->dependency_graph->insertConstIntNode(
+                ConstIntNode *_const_node = nullptr;
+                if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)){
+                    //errs() << operand << "\n";
+                        _const_node = this->dependency_graph->insertConstIntNode(
                             *const_value);
+                    map_value_node[operand] = _const_node;
+                }
 
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
@@ -291,6 +305,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 auto _src = _node_src->second;
                 auto _dst = _node_dest->second;
 
+                if(_const_node)
+                    _src = _const_node;
                 if (auto call_out = dyn_cast<CallNode>(_dst))
                     _dst = call_out->getCallOut();
                 if (auto call_in = dyn_cast<CallNode>(_src))
@@ -539,14 +555,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 
             _en_instruction->addControlOutputPort(_br_ins);
             _br_ins->addControlInputPort(_en_instruction);
-            // this->dependency_graph->insertEdge(
-            // Edge::ControlTypeEdge,
-            // make_pair(
-            //_en_instruction,
-            //_en_instruction->returnControlOutputPortIndex(_br_ins)),
-            // make_pair(
-            //_br_ins,
-            //_br_ins->returnControlInputPortIndex(_en_instruction)));
         }
     }
 }
@@ -562,6 +570,9 @@ void GraphGeneratorPass::connectOutToReturn(Function &F) {
 }
 
 void GraphGeneratorPass::connectParalleNodes(Function &F) {
+
+    if(!findParallelInstruction<llvm::SyncInst>(F))
+        return;
     auto _sync_node =
         this->map_value_node[findParallelInstruction<llvm::SyncInst>(F)];
     auto _detach_node =
@@ -569,8 +580,13 @@ void GraphGeneratorPass::connectParalleNodes(Function &F) {
     auto _reattach_node =
         this->map_value_node[findParallelInstruction<llvm::ReattachInst>(F)];
 
+
     _sync_node->addControlInputPort(_detach_node);
     _sync_node->addControlInputPort(_reattach_node);
+}
+
+void GraphGeneratorPass::connectingCalldependencies(Function &F){
+    auto call_instructions = getNodeList<CallNode>(this->dependency_graph.get());
 }
 
 /**
@@ -583,6 +599,7 @@ void GraphGeneratorPass::init(Function &F) {
     fillLoopDependencies(*LI);
     connectOutToReturn(F);
     connectParalleNodes(F);
+    connectingCalldependencies(F);
 
     // Printing the graph
     dependency_graph->printGraph(PrintType::Scala);

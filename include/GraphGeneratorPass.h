@@ -77,6 +77,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);
+    void connectingCalldependencies(llvm::Function &);
 
     void buildingGraph();
 
