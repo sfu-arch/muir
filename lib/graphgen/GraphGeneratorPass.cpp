@@ -282,10 +282,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 // If the operand is constant we have to create a new node
                 ConstIntNode *_const_node = nullptr;
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)){
-                    //errs() << operand << "\n";
                         _const_node = this->dependency_graph->insertConstIntNode(
                             *const_value);
                     map_value_node[operand] = _const_node;
+
+                    _const_node->addControlInputPort(this->map_value_node[ins_it->getParent()]);
+                    this->map_value_node[ins_it->getParent()]->addControlOutputPort(_const_node);
+                    dyn_cast<SuperNode>(this->map_value_node[ins_it->getParent()])->addconstIntNode(_const_node);
+
                 }
 
                 auto _node_src = this->map_value_node.find(operand);

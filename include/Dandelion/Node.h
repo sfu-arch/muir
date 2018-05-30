@@ -34,6 +34,7 @@ class ArgumentNode;
 class CallNode;
 class CallInNode;
 class CallOutNode;
+class ConstIntNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
@@ -320,6 +321,7 @@ class SuperNode : public Node {
    public:
     // List of the instructions
     using PhiNodeList = std::list<PhiSelectNode *>;
+    using ConstNodeList = std::list<ConstIntNode *>;
     enum SuperNodeType { Mask, NoMask, LoopHead };
 
    private:
@@ -327,6 +329,7 @@ class SuperNode : public Node {
 
     std::list<InstructionNode *> instruction_list;
     PhiNodeList phi_list;
+    ConstNodeList const_list;
 
     SuperNodeType type;
 
@@ -344,6 +347,7 @@ class SuperNode : public Node {
     llvm::BasicBlock *getBasicBlock();
     void addInstruction(InstructionNode *);
     void addPhiInstruction(PhiSelectNode *);
+    void addconstIntNode(ConstIntNode *);
 
     bool hasPhi() { return !phi_list.empty(); }
     uint32_t getNumPhi() const { return phi_list.size(); }
@@ -355,6 +359,11 @@ class SuperNode : public Node {
     auto ins_begin() const { return this->instruction_list.begin(); }
     auto ins_end() const { return this->instruction_list.end(); }
     auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
+
+
+    auto const_begin() const { return this->const_list.begin(); }
+    auto const_end() const { return this->const_list.end(); }
+    auto consts() { return helpers::make_range(const_begin(), const_end()); }
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
@@ -976,6 +985,7 @@ class ConstIntNode : public Node {
     llvm::ConstantInt *getConstantParent();
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType) override;
 };
 
 /**

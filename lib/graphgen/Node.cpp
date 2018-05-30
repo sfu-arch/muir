@@ -213,6 +213,10 @@ void SuperNode::addPhiInstruction(PhiSelectNode *node) {
     this->phi_list.push_back(node);
 }
 
+void SuperNode::addconstIntNode(ConstIntNode *node) {
+    this->const_list.push_back(node);
+}
+
 std::string SuperNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
@@ -348,14 +352,16 @@ std::string MemoryNode::printDefinition(PrintType pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $reg_type(ID=$id, Size=$size, "
-                "NReads=$num_read, NWrites=$num_write))\n"
+                "NReads=$num_read, NWrites=$num_write)\n"
                 "\t\t (WControl=new "
                 "WriteMemoryController(NumOps=$write_num_op, "
                 "BaseSize=$read_base_size, NumEntries=$read_num_entries))\n"
                 "\t\t (RControl=new ReadMemoryController(NumOps=$read_num_op, "
                 "BaseSize=$write_base_size, "
-                "NumEntries=$write_num_entries)))\n\n"
-                "  io.MemReq <> $name.MemReq\n"
+                "NumEntries=$write_num_entries))\n"
+                "(RWArbiter=new ReadWriteArbiter()))"
+                "\n\n"
+                "  io.MemReq <> $name.io.MemReq\n"
                 "  $name.io.MemResp <> io.MemResp\n\n";
             ;
             helperReplace(_text, "$name", _name.c_str());
@@ -704,7 +710,7 @@ std::string ConstIntNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ArgumentNode");
+            helperReplace(_text, "$type", "ConstNode");
             helperReplace(_text, "$val", this->getValue());
 
             break;
@@ -1005,7 +1011,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumInputs = $num_in, "
-                "NumOutputs = $num_out, ID = $id))\n\n";
+                "NumOuts = $num_out, ID = $id))\n\n";
             helperReplace(_text, "$type", "PhiNode");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
@@ -1502,6 +1508,25 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+
+std::string ConstIntNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            GetElementPtr Class
 //===----------------------------------------------------------------------===//
@@ -1696,9 +1721,9 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             if (_id == 0)
-                _text = "$name.io.Out.activate";
+                _text = "$name.io.activate";
             else if (_id == 1)
-                _text = "$name.io.Out.endEnable";
+                _text = "$name.io.endEnable";
 
             else
                 _text = "UKNOWN";

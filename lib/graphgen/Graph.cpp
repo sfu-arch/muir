@@ -160,8 +160,7 @@ void Graph::printParallelConnections(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing parallel connections");
 
-            if(!findParallelNode<SyncNode>(this))
-                return;
+            if (!findParallelNode<SyncNode>(this)) return;
             auto _sync_node = findParallelNode<SyncNode>(this);
             auto _detach_node = findParallelNode<DetachNode>(this);
             auto _reattach_node = findParallelNode<ReattachNode>(this);
@@ -251,23 +250,19 @@ void Graph::printInstructions(PrintType _pt) {
 void Graph::printConstants(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
-            this->outCode << helperScalaPrintHeader(
-                "Printing constants nodes");
+            this->outCode << helperScalaPrintHeader("Printing constants nodes");
             for (auto &const_node : this->const_list) {
                 // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 const_node->getConstantParent()->print(this->outCode);
                 this->outCode << "\n";
-                    this->outCode
-                        << const_node->printDefinition(PrintType::Scala);
+                this->outCode << const_node->printDefinition(PrintType::Scala);
             }
             break;
         default:
             assert(!"We don't support the other types right now");
     }
 }
-
-
 
 /**
  * Print memory modules definition
@@ -346,6 +341,19 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> enable instruction");
             for (auto &_s_node : super_node_list) {
+                for (auto &_const_iterator : _s_node->consts()) {
+                    this->outCode
+                        << "  "
+                        << _const_iterator->printInputEnable(PrintType::Scala)
+                        << " <> "
+                        << _s_node->printOutputEnable(
+                               PrintType::Scala,
+                               _s_node
+                                   ->returnControlOutputPortIndex(
+                                       &*_const_iterator)
+                                   .getID())
+                        << "\n\n";
+                }
                 for (auto _ins_iterator = _s_node->ins_begin();
                      _ins_iterator != _s_node->ins_end(); _ins_iterator++) {
                     auto _output_node = dyn_cast<Node>(*_ins_iterator);
@@ -564,6 +572,13 @@ void Graph::printScalaInputSpliter() {
  * Print the basicblock definition
  */
 void Graph::printScalaFunctionHeader() {
+
+    auto make_argument_port = [](const auto &_list) {
+        std::vector<uint32_t> _arg_count;
+        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        return _arg_count;
+    };
+
     // print the header
     this->outCode << helperScalaPrintHeader("Printing ports definition");
 
@@ -576,15 +591,16 @@ void Graph::printScalaFunctionHeader() {
     _final_command.append(_command);
 
     // Print input call parameters
-    _command = "    val in = Flipped(new CallDecoupled(List(";
+    _command = "    val in = Flipped(new Decoupled(Call(List(";
+    //helperReplace(_command, "$<vector_arg>", );
     _final_command.append((_command));
-    for (uint32_t c = 0; c < this->arg_list.size(); c++) {
+    for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
         _command = "32,";
         helperReplace(_command, "$index", c);
         _final_command.append(_command);
     }
     _final_command.pop_back();
-    _command = ")))\n";
+    _command = "))))\n";
     _final_command.append(_command);
 
     // Print sub-function call interface
@@ -614,19 +630,19 @@ void Graph::printScalaFunctionHeader() {
     }
 
     // Print global memory interface
-    //c = 0;
-    //for (uint32_t c = 0; c < this->glob_list.size(); c++) {
-        //_command =
-            //"    val glob_$index = Flipped(Decoupled(new "
-            //"DataBundle))\n";
-        //helperReplace(_command, "$index", static_cast<int>(c++));
-        //_final_command.append(_command);
-        //break;
+    // c = 0;
+    // for (uint32_t c = 0; c < this->glob_list.size(); c++) {
+    //_command =
+    //"    val glob_$index = Flipped(Decoupled(new "
+    //"DataBundle))\n";
+    // helperReplace(_command, "$index", static_cast<int>(c++));
+    //_final_command.append(_command);
+    // break;
     //}
 
     // Print cache memory interface
     _final_command.append(
-        "    val MemResp = Flipped(Valid(new MemRespT))\n"
+        "    val MemResp = Flipped(Valid(new MemResp))\n"
         "    val MemReq = Decoupled(new MemReq)\n");
 
     // Print output (return) parameters
@@ -1021,10 +1037,10 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
  * Insert a new const node
  */
 ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
-    const_list.push_back(std::make_unique<
-        ConstIntNode>(NodeInfo(const_list.size(),
-                              "const" + std::to_string(const_list.size())),
-                     &C));
+    const_list.push_back(std::make_unique<ConstIntNode>(
+        NodeInfo(const_list.size(),
+                 "const" + std::to_string(const_list.size())),
+        &C));
 
     return const_list.back().get();
 }
@@ -1236,7 +1252,7 @@ void Graph::printOutPort(PrintType _pt) {
 void Graph::doInitialization() {
     // Filling the data dependencies
     //
-    
+
     for (auto &_node : const_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
@@ -1248,7 +1264,7 @@ void Graph::doInitialization() {
                                _child->returnDataInputPortIndex(&*_node)));
         }
     }
-    
+
     for (auto &_node : inst_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
