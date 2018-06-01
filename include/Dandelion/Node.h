@@ -244,6 +244,13 @@ class Node {
      * Adding a node to a specific index of control input port
      */
     void addControlInputPortIndex(Node *_n, uint32_t _id) {
+        if(port_control.control_input_port.size() == _id)
+            port_control.control_input_port.push_back(_n);
+        else if(port_control.control_input_port.size() < _id){
+            port_control.control_input_port.resize(_id);
+            port_control.control_input_port.push_back(_n);
+        }
+
         auto it = port_control.control_input_port.begin();
         std::advance(it, _id);
         std::replace(port_control.control_input_port.begin(),
@@ -254,6 +261,13 @@ class Node {
      * Adding a node to a specific index of control output port
      */
     void addControlOutputPortIndex(Node *_n, uint32_t _id) {
+        if(port_control.control_output_port.size() == _id)
+            port_control.control_output_port.push_back(_n);
+        else if(port_control.control_output_port.size() < _id){
+            port_control.control_output_port.resize(_id);
+            port_control.control_output_port.push_back(_n);
+        }
+
         auto it = port_control.control_output_port.begin();
         std::advance(it, _id);
         std::replace(port_control.control_output_port.begin(),
@@ -359,7 +373,6 @@ class SuperNode : public Node {
     auto ins_begin() const { return this->instruction_list.begin(); }
     auto ins_end() const { return this->instruction_list.end(); }
     auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
-
 
     auto const_begin() const { return this->const_list.begin(); }
     auto const_end() const { return this->const_list.end(); }
@@ -691,7 +704,8 @@ class IcmpNode : public InstructionNode {
 class BranchNode : public InstructionNode {
    public:
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {
+    }
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -707,6 +721,9 @@ class BranchNode : public InstructionNode {
      */
     void removeNodeControlInputNode(Node *) = delete;
     void removeNodeControlOutputNode(Node *) = delete;
+
+    void setTrueBranch(Node *_n) { this->addControlOutputPortIndex(_n, 0); }
+    void setFalseBranch(Node *_n) { this->addControlOutputPortIndex(_n, 1); }
 
     /**
      * Overloaded print functions
@@ -789,12 +806,14 @@ class GEPNode : public InstructionNode {
 class LoadNode : public InstructionNode {
    private:
     MemoryNode *mem_unit;
+    uint32_t route_id;
 
    public:
     LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr,
-             MemoryNode *_node = nullptr)
+             MemoryNode *_node = nullptr, uint32_t _id = 0)
         : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins),
-          mem_unit(_node) {}
+          mem_unit(_node),
+          route_id(_id) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::LoadInstructionTy;
@@ -804,6 +823,8 @@ class LoadNode : public InstructionNode {
     }
 
     void setMemoryUnit(MemoryNode *_node) { mem_unit = _node; }
+    void setRouteID(uint32_t _id) { route_id = _id; }
+    auto getRouteID() { return route_id; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -817,13 +838,15 @@ class LoadNode : public InstructionNode {
 class StoreNode : public InstructionNode {
    private:
     MemoryNode *mem_node;
+    uint32_t route_id;
 
    public:
     StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
-              MemoryNode *_mem = nullptr)
+              MemoryNode *_mem = nullptr, uint32_t _id = 0)
         // NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::StoreInstructionTy, _ins),
-          mem_node(_mem) {}
+          mem_node(_mem),
+          route_id(_id) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::StoreInstructionTy;
@@ -831,6 +854,8 @@ class StoreNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    auto getRouteID() { return route_id; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -972,15 +997,15 @@ class ConstIntNode : public Node {
    public:
     ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
         : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {
-            value = parent_const_int->getSExtValue();
-        }
+        value = parent_const_int->getSExtValue();
+    }
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
         return T->getType() == Node::ConstIntTy;
     }
 
-    uint32_t getValue(){return value;}
+    uint32_t getValue() { return value; }
 
     llvm::ConstantInt *getConstantParent();
     virtual std::string printDefinition(PrintType) override;

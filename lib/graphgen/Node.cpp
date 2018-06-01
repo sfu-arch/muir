@@ -67,12 +67,27 @@ PortID Node::addWriteMemoryRespPort(Node *const n) {
 }
 
 PortID Node::returnDataOutputPortIndex(Node *_node) {
+    auto ff = std::find_if(this->port_data.data_output_port.begin(), this->port_data.data_output_port.end(),
+                           [&_node](auto &arg) -> bool {
+                               return arg == _node;
+                           });
+    if(ff == this->port_data.data_output_port.end())
+        assert(!"Node doesn't exist\n");
+
     return std::distance(this->port_data.data_output_port.begin(),
                          find(this->port_data.data_output_port.begin(),
                               this->port_data.data_output_port.end(), _node));
 }
 
 PortID Node::returnDataInputPortIndex(Node *_node) {
+
+    auto ff = std::find_if(this->port_data.data_input_port.begin(), this->port_data.data_input_port.end(),
+                           [&_node](auto &arg) -> bool {
+                               return arg == _node;
+                           });
+
+    if(ff == this->port_data.data_input_port.end())
+        assert(!"Node doesn't exist\n");
     return std::distance(this->port_data.data_input_port.begin(),
                          find(this->port_data.data_input_port.begin(),
                               this->port_data.data_input_port.end(), _node));
@@ -270,7 +285,7 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
             else if (this->getNodeType() == SuperNode::LoopHead && _id == 1)
                 _text = "$name.io.loopBack";
             else
-                _text = "$name.io.predicateIn($id)";
+                _text = "$name.io.predicateIn";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -359,7 +374,7 @@ std::string MemoryNode::printDefinition(PrintType pt) {
                 "\t\t (RControl=new ReadMemoryController(NumOps=$read_num_op, "
                 "BaseSize=$write_base_size, "
                 "NumEntries=$write_num_entries))\n"
-                "(RWArbiter=new ReadWriteArbiter()))"
+                "\t\t (RWArbiter=new ReadWriteArbiter()))"
                 "\n\n"
                 "  io.MemReq <> $name.io.MemReq\n"
                 "  $name.io.MemResp <> io.MemResp\n\n";
@@ -549,7 +564,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
                 "  $name.io.In <> io.in\n\n";
 
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$type", "SplitCall");
+            helperReplace(_text, "$type", "SplitCallNew");
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ",");
@@ -641,9 +656,8 @@ std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.CmpIO($id)";
+            _text = "$name.io.CmpIO";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
             break;
         default:
             break;
@@ -722,9 +736,6 @@ std::string ConstIntNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
-
-
 std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
@@ -750,10 +761,16 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$call.io.Out(\"field$num\")($id)";
+            _text = "$call.io.$out.data(\"field$num\")($id)";
             helperReplace(_text, "$call", this->parent_call_node->getName());
             helperReplace(_text, "$num",
                           this->parent_call_node->findLiveInIndex(this));
+            if (this->parent_call_node->getContainerType() ==
+                ContainerNode::LoopNodeTy)
+                helperReplace(_text, "$out", "liveIn");
+            else
+                helperReplace(_text, "$out", "Out");
+
             helperReplace(_text, "$id", _idx);
 
             break;
@@ -845,9 +862,9 @@ std::string BinaryOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             if (_idx == 0)
-                _text = "$name.io.Left";
+                _text = "$name.io.LeftIO";
             else
-                _text = "$name.io.Right";
+                _text = "$name.io.RightIO";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -876,7 +893,7 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ComputeNode");
+            helperReplace(_text, "$type", "IcmpNode");
             helperReplace(_text, "$opcode",
                           llvm::ICmpInst::getPredicateName(
                               dyn_cast<llvm::ICmpInst>(this->getInstruction())
@@ -916,9 +933,9 @@ std::string IcmpNode::printInputData(PrintType _pt, uint32_t _idx) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             if (_idx == 0)
-                _text = "$name.io.Left";
+                _text = "$name.io.LeftIO";
             else
-                _text = "$name.io.Right";
+                _text = "$name.io.RightIO";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -959,15 +976,37 @@ std::string BranchNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type(NumPredOps=$npo, ID = "
-                "$id))\n\n";
+            if (this->numControlInputPort() > 1 &&
+                this->numControlOutputPort() == 1 &&
+                this->numDataInputPort() == 0)
+                _text =
+                    "  val $name = Module(new $type(NumPredOps=$npo, ID = "
+                    "$id))\n\n";
+            else if (this->numControlInputPort() > 1 &&
+                     this->numControlOutputPort() > 1 &&
+                     this->numDataInputPort() == 0)
+                _text =
+                    "  val $name = Module(new $type(NumPredOps=$npo, "
+                    "NumOuts=$nout ID = "
+                    "$id))\n\n";
+            else if (this->numControlInputPort() == 1 &&
+                     this->numControlOutputPort() > 1 &&
+                     this->numDataInputPort() == 0)
+                _text =
+                    "  val $name = Module(new $type(NumOuts=$nout, ID = "
+                    "$id))\n\n";
+            else
+                _text =
+                    "  val $name = Module(new $type(ID = "
+                    "$id))\n\n";
+
             if (this->numDataInputPort() > 0) {
                 helperReplace(_text, "$type", "CBranchNode");
                 helperReplace(_text, "$num_out",
                               std::to_string(this->numControlOutputPort()));
             } else
                 helperReplace(_text, "$type", "UBranchNode");
+            helperReplace(_text, "$nout", this->numControlOutputPort());
             helperReplace(_text, "$npo", this->numControlInputPort() - 1);
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
@@ -1157,7 +1196,7 @@ std::string ReturnNode::printInputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.in.data(\"field$id\")";
+            _text = "$name.io.In.data(\"field$id\")";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -1221,12 +1260,12 @@ std::string LoadNode::printDefinition(PrintType _pt) {
             _text =
                 "  val $name = Module(new $type(NumPredOps=$npo, "
                 "NumSuccOps=$nso, "
-                "NumOuts=$num_out,ID=$id,RouteID=$rid))\n\n";
+                "NumOuts=$num_out, ID=$id, RouteID=$rid))\n\n";
             helperReplace(_text, "$type", "UnTypLoad");
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$rid", 0);
+            helperReplace(_text, "$rid", this->getRouteID());
             helperReplace(_text, "$num_out", this->numDataOutputPort());
             helperReplace(_text, "$npo", this->numControlInputPort() - 1);
             helperReplace(_text, "$nso", this->numControlOutputPort());
@@ -1359,13 +1398,12 @@ std::string StoreNode::printDefinition(PrintType _pt) {
             _text =
                 "  val $name = Module(new $type(NumPredOps=$npo, "
                 "NumSuccOps=$nso, "
-                "NumOuts=$num_out,ID=$id,RouteID=$rid))\n\n";
+                "ID=$id, RouteID=$rid))\n\n";
             helperReplace(_text, "$type", "UnTypStore");
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$rid", 0);
-            helperReplace(_text, "$num_out", this->numDataOutputPort());
+            helperReplace(_text, "$rid", this->getRouteID());
             helperReplace(_text, "$npo", this->numControlInputPort() - 1);
             helperReplace(_text, "$nso", this->numControlOutputPort());
 
@@ -1439,7 +1477,7 @@ std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             if (_id == 0)
-                _text = "$name.io.inData($id)";
+                _text = "$name.io.inData";
             else
                 _text = "$name.io.GepAddr";
             helperReplace(_text, "$name", _name.c_str());
@@ -1507,7 +1545,6 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     }
     return _text;
 }
-
 
 std::string ConstIntNode::printInputEnable(PrintType pt) {
     string _text;

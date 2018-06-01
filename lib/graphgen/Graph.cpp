@@ -591,7 +591,7 @@ void Graph::printScalaFunctionHeader() {
     _final_command.append(_command);
 
     // Print input call parameters
-    _command = "    val in = Flipped(new Decoupled(Call(List(";
+    _command = "    val in = Flipped(Decoupled(new Call(List(";
     //helperReplace(_command, "$<vector_arg>", );
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
@@ -647,7 +647,7 @@ void Graph::printScalaFunctionHeader() {
 
     // Print output (return) parameters
     if (!function_ptr->getReturnType()->isVoidTy()) {
-        _final_command.append("    val out = new CallDecoupled(List(32))\n");
+        _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
     }
 
     _final_command.append(
@@ -684,10 +684,13 @@ void Graph::printScalaHeader(string config_path, string package_name) {
          _it_obj != _root_json["import"].end(); _it_obj++) {
         if (_it_obj->isArray()) {
             outCode << "import " << _it_obj.key().asString() << "._\n";
-            for (auto &elem : *_it_obj) {
-                outCode << "import " << _it_obj.key().asString() << "."
-                        << elem.asString() << "._\n";
-            }
+            //for (auto &elem : *_it_obj) {
+                //outCode << "import " << _it_obj.key().asString() << "."
+                        //<< elem.asString() << "._\n";
+            //}
+        }
+        else if(_it_obj->isString()){
+            outCode << "import " << _it_obj.key().asString() << "._\n";
         }
     }
 }
@@ -868,9 +871,10 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
  * Insert a new Load node
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
+    auto _load_list = getNodeList<LoadNode>(this);
     inst_list.push_back(std::make_unique<LoadNode>(
         NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit()));
+        &I, this->getMemoryUnit(), _load_list.size()));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -882,9 +886,10 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
  * Insert a new Store node
  */
 InstructionNode *Graph::insertStoreNode(StoreInst &I) {
+    auto _store_list = getNodeList<StoreNode>(this);
     inst_list.push_back(std::make_unique<StoreNode>(
         NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit()));
+        &I, this->getMemoryUnit(), _store_list.size()));
     // NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
@@ -1276,6 +1281,19 @@ void Graph::doInitialization() {
                                _child->returnDataInputPortIndex(&*_node)));
         }
     }
+
+    for(auto &_arg : this->getSplitCall()->live_ins()){
+        for(auto &_node : _arg->output_data_range()){
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_arg,
+                               _arg->returnDataOutputPortIndex(&*_node)),
+                std::make_pair(&*_node,
+                               _node->returnDataInputPortIndex(&*_arg)));
+
+        }
+    }
+
 
     for (auto &_node : inst_list) {
         if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {
