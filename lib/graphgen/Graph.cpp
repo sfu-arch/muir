@@ -376,8 +376,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                             << "\n\n";
                     }
 
-                    auto _output_index =
-                        std::distance(_s_node->ins_begin(), _ins_iterator);
+                    //auto _output_index =
+                        //std::distance(_s_node->ins_begin(), _ins_iterator);
 
                     // Finding super node
                     auto ff = std::find_if(_output_node->inputControl_begin(),
@@ -396,8 +396,7 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                         << "  "
                         << _output_node->printInputEnable(PrintType::Scala)
                         << " <> "
-                        << _s_node->printOutputEnable(PrintType::Scala,
-                                                      _output_index)
+                        << _s_node->printOutputEnable(PrintType::Scala,_s_node->returnControlOutputPortIndex(_output_node).getID())
                         << "\n\n";
                 }
                 this->outCode << "\n";
@@ -1284,6 +1283,8 @@ void Graph::doInitialization() {
 
     for(auto &_arg : this->getSplitCall()->live_ins()){
         for(auto &_node : _arg->output_data_range()){
+            if(isa<ArgumentNode>(_node))
+                continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_arg,
@@ -1324,13 +1325,13 @@ void Graph::doInitialization() {
                                    getMemoryUnit())),
                 std::make_pair(getMemoryUnit(),
                                getMemoryUnit()->returnMemoryWriteInputPortIndex(
-                                   _ld_node)));
+                                   _st_node)));
 
             insertEdge(Edge::MemoryWriteTypeEdge,
                        std::make_pair(
                            getMemoryUnit(),
                            getMemoryUnit()->returnMemoryWriteOutputPortIndex(
-                               _ld_node)),
+                               _st_node)),
                        std::make_pair(_st_node,
                                       _st_node->returnMemoryWriteInputPortIndex(
                                           getMemoryUnit())));
