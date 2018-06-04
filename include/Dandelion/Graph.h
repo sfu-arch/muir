@@ -120,9 +120,12 @@ class Graph {
     auto edge_end() { return this->edge_list.cend(); }
     auto edges() { return helpers::make_range(edge_begin(), edge_end()); }
 
-    void pushCallIn(CallInNode *_call_node){call_in_list.push_back(_call_node);}
-    void pushCallOut(CallOutNode *_call_node){call_out_list.push_back(_call_node);}
-
+    void pushCallIn(CallInNode *_call_node) {
+        call_in_list.push_back(_call_node);
+    }
+    void pushCallOut(CallOutNode *_call_node) {
+        call_out_list.push_back(_call_node);
+    }
 
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
@@ -152,13 +155,18 @@ class Graph {
     bool edgeExist(Port _node_src, Port _node_dst);
     void removeEdge(Node *, Node *);
     Edge *findEdge(const Port _src, const Port _dst) const;
-    Edge *findEdge(const Node *_src, const Node * _dst) const;
+    Edge *findEdge(const Node *_src, const Node *_dst) const;
 
     Edge *insertMemoryEdge(Edge::EdgeType, Port src, Port dst);
 
     SplitCallNode *getSplitCall() const { return split_call.get(); }
 
     void setOutputNode(Node *_n) { out_node = _n; }
+
+   public:
+    // Optimization passes
+    void optimizationPasses();
+    void groundStoreNodes();
 
    protected:
     // General print functions with accepting print type

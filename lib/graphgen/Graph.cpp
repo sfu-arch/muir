@@ -376,8 +376,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                             << "\n\n";
                     }
 
-                    //auto _output_index =
-                        //std::distance(_s_node->ins_begin(), _ins_iterator);
+                    // auto _output_index =
+                    // std::distance(_s_node->ins_begin(), _ins_iterator);
 
                     // Finding super node
                     auto ff = std::find_if(_output_node->inputControl_begin(),
@@ -396,7 +396,11 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                         << "  "
                         << _output_node->printInputEnable(PrintType::Scala)
                         << " <> "
-                        << _s_node->printOutputEnable(PrintType::Scala,_s_node->returnControlOutputPortIndex(_output_node).getID())
+                        << _s_node->printOutputEnable(
+                               PrintType::Scala,
+                               _s_node
+                                   ->returnControlOutputPortIndex(_output_node)
+                                   .getID())
                         << "\n\n";
                 }
                 this->outCode << "\n";
@@ -467,6 +471,14 @@ void Graph::printDatadependencies(PrintType _pt) {
                                _data_edge->getSrc().second.getID())
                         << "\n\n";
                 }
+            }
+
+            // Print ground ndoes
+            for (auto _st_node : getNodeList<StoreNode>(this)) {
+                if (_st_node->isGround())
+                    this->outCode << "  "
+                                  << _st_node->printGround(PrintType::Scala)
+                                  << "\n\n";
             }
 
             break;
@@ -571,7 +583,6 @@ void Graph::printScalaInputSpliter() {
  * Print the basicblock definition
  */
 void Graph::printScalaFunctionHeader() {
-
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
         for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
@@ -591,7 +602,7 @@ void Graph::printScalaFunctionHeader() {
 
     // Print input call parameters
     _command = "    val in = Flipped(Decoupled(new Call(List(";
-    //helperReplace(_command, "$<vector_arg>", );
+    // helperReplace(_command, "$<vector_arg>", );
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
         _command = "32,";
@@ -683,12 +694,13 @@ void Graph::printScalaHeader(string config_path, string package_name) {
          _it_obj != _root_json["import"].end(); _it_obj++) {
         if (_it_obj->isArray()) {
             outCode << "import " << _it_obj.key().asString() << "._\n";
-            //for (auto &elem : *_it_obj) {
-                //outCode << "import " << _it_obj.key().asString() << "."
-                        //<< elem.asString() << "._\n";
-            //}
-        }
-        else if(_it_obj->isString()){
+            if (_it_obj->isArray()) {
+                for (auto &elem : *_it_obj) {
+                    outCode << "import " << _it_obj.key().asString() << "."
+                            << elem.asString() << "._\n";
+                }
+            }
+        } else if (_it_obj->isString()) {
             outCode << "import " << _it_obj.key().asString() << "._\n";
         }
     }
@@ -1281,20 +1293,17 @@ void Graph::doInitialization() {
         }
     }
 
-    for(auto &_arg : this->getSplitCall()->live_ins()){
-        for(auto &_node : _arg->output_data_range()){
-            if(isa<ArgumentNode>(_node))
-                continue;
+    for (auto &_arg : this->getSplitCall()->live_ins()) {
+        for (auto &_node : _arg->output_data_range()) {
+            if (isa<ArgumentNode>(_node)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_arg,
                                _arg->returnDataOutputPortIndex(&*_node)),
                 std::make_pair(&*_node,
                                _node->returnDataInputPortIndex(&*_arg)));
-
         }
     }
-
 
     for (auto &_node : inst_list) {
         if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {
@@ -1338,3 +1347,17 @@ void Graph::doInitialization() {
         }
     }
 }
+
+void Graph::groundStoreNodes() {
+    auto _store_nodes = getNodeList<StoreNode>(this);
+    for (auto _st_node : _store_nodes) {
+        if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
+    }
+}
+
+//===----------------------------------------------------------------------===//
+//                          Optmization passes
+//===----------------------------------------------------------------------===//
+//
+
+void Graph::optimizationPasses() { groundStoreNodes(); }

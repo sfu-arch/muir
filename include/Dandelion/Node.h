@@ -244,9 +244,9 @@ class Node {
      * Adding a node to a specific index of control input port
      */
     void addControlInputPortIndex(Node *_n, uint32_t _id) {
-        if(port_control.control_input_port.size() == _id)
+        if (port_control.control_input_port.size() == _id)
             port_control.control_input_port.push_back(_n);
-        else if(port_control.control_input_port.size() < _id){
+        else if (port_control.control_input_port.size() < _id) {
             port_control.control_input_port.resize(_id);
             port_control.control_input_port.push_back(_n);
         }
@@ -261,9 +261,9 @@ class Node {
      * Adding a node to a specific index of control output port
      */
     void addControlOutputPortIndex(Node *_n, uint32_t _id) {
-        if(port_control.control_output_port.size() == _id)
+        if (port_control.control_output_port.size() == _id)
             port_control.control_output_port.push_back(_n);
-        else if(port_control.control_output_port.size() < _id){
+        else if (port_control.control_output_port.size() < _id) {
             port_control.control_output_port.resize(_id);
             port_control.control_output_port.push_back(_n);
         }
@@ -704,8 +704,7 @@ class IcmpNode : public InstructionNode {
 class BranchNode : public InstructionNode {
    public:
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {
-    }
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -839,14 +838,15 @@ class StoreNode : public InstructionNode {
    private:
     MemoryNode *mem_node;
     uint32_t route_id;
+    bool ground;
 
    public:
     StoreNode(NodeInfo _ni, llvm::StoreInst *_ins = nullptr,
               MemoryNode *_mem = nullptr, uint32_t _id = 0)
-        // NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::StoreInstructionTy, _ins),
           mem_node(_mem),
-          route_id(_id) {}
+          route_id(_id),
+          ground(false) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::StoreInstructionTy;
@@ -857,14 +857,22 @@ class StoreNode : public InstructionNode {
 
     auto getRouteID() { return route_id; }
 
+    auto isGround() {
+        if (this->numDataOutputPort() > 0) unsetGround();
+        return ground;
+    }
+    void setGround() { ground = true; }
+    void unsetGround() { ground = true; }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    // virtual std::string printInputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
+
+    std::string printGround(PrintType);
 };
 
 class ReturnNode : public InstructionNode {

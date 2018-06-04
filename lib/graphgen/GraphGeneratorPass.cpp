@@ -612,6 +612,7 @@ void GraphGeneratorPass::init(Function &F) {
     connectingCalldependencies(F);
 
     // Printing the graph
+    dependency_graph->optimizationPasses();
     dependency_graph->printGraph(PrintType::Scala);
 }
 
