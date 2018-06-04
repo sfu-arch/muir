@@ -67,11 +67,11 @@ PortID Node::addWriteMemoryRespPort(Node *const n) {
 }
 
 PortID Node::returnDataOutputPortIndex(Node *_node) {
-    auto ff = std::find_if(this->port_data.data_output_port.begin(), this->port_data.data_output_port.end(),
-                           [&_node](auto &arg) -> bool {
-                               return arg == _node;
-                           });
-    if(ff == this->port_data.data_output_port.end())
+    auto ff =
+        std::find_if(this->port_data.data_output_port.begin(),
+                     this->port_data.data_output_port.end(),
+                     [&_node](auto &arg) -> bool { return arg == _node; });
+    if (ff == this->port_data.data_output_port.end())
         assert(!"Node doesn't exist\n");
 
     return std::distance(this->port_data.data_output_port.begin(),
@@ -80,13 +80,12 @@ PortID Node::returnDataOutputPortIndex(Node *_node) {
 }
 
 PortID Node::returnDataInputPortIndex(Node *_node) {
+    auto ff =
+        std::find_if(this->port_data.data_input_port.begin(),
+                     this->port_data.data_input_port.end(),
+                     [&_node](auto &arg) -> bool { return arg == _node; });
 
-    auto ff = std::find_if(this->port_data.data_input_port.begin(), this->port_data.data_input_port.end(),
-                           [&_node](auto &arg) -> bool {
-                               return arg == _node;
-                           });
-
-    if(ff == this->port_data.data_input_port.end())
+    if (ff == this->port_data.data_input_port.end())
         assert(!"Node doesn't exist\n");
     return std::distance(this->port_data.data_input_port.begin(),
                          find(this->port_data.data_input_port.begin(),
@@ -247,6 +246,11 @@ std::string SuperNode::printDefinition(PrintType pt) {
                     helperReplace(_text, "$type", "BasicBlockNoMaskNode");
                     break;
                 case SuperNodeType::Mask:
+                    _text =
+                        "  val $name = Module(new $type("
+                        "NumInputs = $num_in, "
+                        "NumOuts = "
+                        "$num_out, NumPhi=$num_phi, BID = $bid))\n\n";
                     helperReplace(_text, "$type", "BasicBlockNode");
                     break;
                 case SuperNodeType::LoopHead:
@@ -363,7 +367,7 @@ std::string MemoryNode::printDefinition(PrintType pt) {
     string _text;
     string _name(this->getName());
     switch (pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $reg_type(ID=$id, Size=$size, "
@@ -383,22 +387,33 @@ std::string MemoryNode::printDefinition(PrintType pt) {
             helperReplace(_text, "$reg_type", "UnifiedController");
             helperReplace(_text, "$id", std::to_string(this->getID()));
 
+            auto returnMinimumPort = [](auto _num, uint32_t _base) {
+                if (_num > _base)
+                    return _num;
+                else
+                    return _base;
+            };
+
             // TODO this part can be parametrize using config file
             helperReplace(_text, "$size", MEM_SIZE);
-            helperReplace(_text, "$num_read",
-                          std::to_string(this->numReadDataInputPort()));
-            helperReplace(_text, "$num_write",
-                          std::to_string(this->numWriteDataInputPort()));
-            helperReplace(_text, "$read_num_op",
-                          std::to_string(this->numReadDataInputPort()));
+            helperReplace(
+                _text, "$num_read",
+                returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
+            helperReplace(
+                _text, "$num_write",
+                returnMinimumPort(this->numWriteDataInputPort(), BASE_SIZE));
+            helperReplace(
+                _text, "$read_num_op",
+                returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
             helperReplace(_text, "$read_base_size", BASE_SIZE);
             helperReplace(_text, "$read_num_entries", BASE_SIZE);
-            helperReplace(_text, "$write_num_op",
-                          std::to_string(this->numWriteDataOutputPort()));
+            helperReplace(
+                _text, "$write_num_op",
+                returnMinimumPort(this->numWriteDataOutputPort(), BASE_SIZE));
             helperReplace(_text, "$write_base_size", BASE_SIZE);
             helperReplace(_text, "$write_num_entries", BASE_SIZE);
 
-            break;
+        } break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -1506,7 +1521,6 @@ std::string StoreNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 std::string StoreNode::printGround(PrintType _pt) {
     string _name(this->getName());

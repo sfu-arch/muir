@@ -390,6 +390,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 
                     // Detect Phi instrucctions
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
+                        _bb->setNodeType(SuperNode::Mask);
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
                     }
