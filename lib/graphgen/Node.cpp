@@ -288,8 +288,11 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
                 _text = "$name.io.activate";
             else if (this->getNodeType() == SuperNode::LoopHead && _id == 1)
                 _text = "$name.io.loopBack";
+            else if(this->getNodeType() == SuperNode::Mask)
+                _text = "$name.io.predicateIn($id)";
             else
                 _text = "$name.io.predicateIn";
+
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
