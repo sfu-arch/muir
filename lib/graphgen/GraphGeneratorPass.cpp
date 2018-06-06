@@ -515,29 +515,48 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                     }
                 }
 
+                /**
+                 * The function needs these steps:
+                 * 1) Detect Live-ins
+                 * 2) Insert a new Live-in into loop header
+                 * 3) Update the dependencies
+                 */
                 for (auto *U : I.users()) {
                     if (!definedInRegion(
                             SetVector<BasicBlock *>(L->blocks().begin(),
                                                     L->blocks().end()),
                             U)) {
+
                         auto new_live_out =
                             _loop_node->insertLiveOutArgument(U);
 
-                        auto _src = map_value_node[U];
-                        auto _tar = map_value_node[&I];
+                        auto _src = map_value_node[&I];
+                        auto _tar = map_value_node[U];
 
-                        _src->removeNodeDataOutputNode(_tar);
-                        _tar->removeNodeDataInputNode(_src);
+                        // TODO later we need to get ride of these lines
+                        if (auto call_out = dyn_cast<CallNode>(_tar))
+                            _tar = call_out->getCallOut();
+                        if (auto call_in = dyn_cast<CallNode>(_src))
+                            _src = call_in->getCallIn();
 
-                        auto _src_idx = new_live_out->addDataOutputPort(_tar);
-                        auto _dst_idx = _tar->addDataInputPort(new_live_out);
+                        _src->replaceDataOutputNode(_tar, new_live_out);
+                        _tar->replaceDataInputNode(_src, new_live_out);
+                        new_live_out->addDataInputPort(_src);
 
-                        if (_src->existDataOutput(new_live_out)) {
-                            auto _src_idx =
-                                _src->addDataOutputPort(new_live_out);
-                            auto _dst_idx =
-                                new_live_out->addDataInputPort(_src);
-                        }
+                        new_live_out->addDataOutputPort(_tar);
+
+                        //_src->removeNodeDataOutputNode(_tar);
+                        //_tar->removeNodeDataInputNode(_src);
+
+                        //auto _src_idx = new_live_out->addDataOutputPort(_tar);
+                        //auto _dst_idx = _tar->addDataInputPort(new_live_out);
+
+                        //if (_src->existDataOutput(new_live_out)) {
+                            //auto _src_idx =
+                                //_src->addDataOutputPort(new_live_out);
+                            //auto _dst_idx =
+                                //new_live_out->addDataInputPort(_src);
+                        //}
                     }
                 }
             }

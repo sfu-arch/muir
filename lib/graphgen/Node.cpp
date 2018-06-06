@@ -288,7 +288,7 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
                 _text = "$name.io.activate";
             else if (this->getNodeType() == SuperNode::LoopHead && _id == 1)
                 _text = "$name.io.loopBack";
-            else if(this->getNodeType() == SuperNode::Mask)
+            else if (this->getNodeType() == SuperNode::Mask)
                 _text = "$name.io.predicateIn($id)";
             else
                 _text = "$name.io.predicateIn";
@@ -512,7 +512,8 @@ ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
                            });
     if (ff == live_in.end()) {
         live_in.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_in.size(), _val->getName().str()), this, _val));
+            NodeInfo(live_in.size(), _val->getName().str()),
+            ArgumentNode::LiveIn, this, _val));
 
         ff = std::find_if(live_in.begin(), live_in.end(),
                           [&_val](auto &arg) -> bool {
@@ -530,7 +531,8 @@ ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
                            });
     if (ff == live_out.end()) {
         live_out.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_out.size(), _val->getName().str()), this, _val));
+            NodeInfo(live_out.size(), _val->getName().str()),
+            ArgumentNode::LiveOut, this, _val));
 
         ff = std::find_if(live_out.begin(), live_out.end(),
                           [&_val](auto &arg) -> bool {
@@ -758,13 +760,40 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
-        case PrintType::Scala:
-            std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$call.io.In($id)";
-            helperReplace(_text, "$call", this->parent_call_node->getName());
-            helperReplace(_text, "$id", _idx);
+        case PrintType::Scala: {
+            switch (this->getArgType()) {
+                case ArgumentNode::LiveIn: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.In($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+
+                    break;
+                }
+                case ArgumentNode::LiveOut: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.LiveOut($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+                case ArgumentNode::FunctionArgument: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.liveOut($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+                default:
+                    assert(!"Unrecognized argument node type!");
+                    break;
+            }
 
             break;
+        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -777,21 +806,59 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
-        case PrintType::Scala:
-            std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$call.io.$out.data(\"field$num\")($id)";
-            helperReplace(_text, "$call", this->parent_call_node->getName());
-            helperReplace(_text, "$num",
-                          this->parent_call_node->findLiveInIndex(this));
-            if (this->parent_call_node->getContainerType() ==
-                ContainerNode::LoopNodeTy)
-                helperReplace(_text, "$out", "liveIn");
-            else
-                helperReplace(_text, "$out", "Out");
+        case PrintType::Scala: {
+            switch (this->getArgType()) {
+                case ArgumentNode::LiveIn: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$out.data(\"field$num\")($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        this->parent_call_node->findLiveInIndex(this));
+                    if (this->parent_call_node->getContainerType() ==
+                        ContainerNode::LoopNodeTy)
+                        helperReplace(_text, "$out", "liveIn");
+                    else
+                        helperReplace(_text, "$out", "Out");
 
-            helperReplace(_text, "$id", _idx);
+                    helperReplace(_text, "$id", _idx);
+
+                    break;
+                }
+                case ArgumentNode::LiveOut: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$out($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        this->parent_call_node->findLiveInIndex(this));
+                    helperReplace(_text, "$out", "Out");
+
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+                case ArgumentNode::FunctionArgument: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$out.data(\"field$id\")($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        this->parent_call_node->findLiveInIndex(this));
+                    helperReplace(_text, "$out", "Out");
+
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+                default:
+                    assert(!"Unrecognized type of node\n");
+                    break;
+            }
 
             break;
+        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:

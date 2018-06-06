@@ -389,14 +389,20 @@ class SuperNode : public Node {
 };
 
 class ArgumentNode : public Node {
+   public:
+    enum ArgumentType { LiveIn = 0, LiveOut, FunctionArgument };
+
    private:
+    ArgumentType arg_type;
     ContainerNode *parent_call_node;
     llvm::Value *parent_argument;
 
    public:
-    ArgumentNode(NodeInfo _ni, ContainerNode *_call_node = nullptr,
-                 llvm::Argument *_arg = nullptr)
+    explicit ArgumentNode(NodeInfo _ni, ArgumentType _arg_type,
+                          ContainerNode *_call_node = nullptr,
+                          llvm::Argument *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni),
+          arg_type(_arg_type),
           parent_call_node(_call_node),
           parent_argument(_arg) {}
 
@@ -406,6 +412,8 @@ class ArgumentNode : public Node {
     static bool classof(const Node *T) {
         return T->getType() == Node::FunctionArgTy;
     }
+
+    auto getArgType(){ return arg_type; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
