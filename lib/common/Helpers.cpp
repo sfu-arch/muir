@@ -9,9 +9,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <experimental/iterator>
 #include <cassert>
 #include <cmath>
+#include <experimental/iterator>
 #include <fstream>
 
 #include "Common.h"
@@ -175,9 +175,8 @@ void DFGPrinter::visitFunction(Function &F) {
                                        string ir) -> string {
         stringstream sstr;
         auto eir = escape_quotes(ir);
-        sstr << "        m_" << id << "[label=\"" << label
-             << "\", opcode=\"" << label << "\", color=" << color << ",ir=\""
-             << eir << "\"];\n";
+        sstr << "        m_" << id << "[label=\"" << label << "\", opcode=\""
+             << label << "\", color=" << color << ",ir=\"" << eir << "\"];\n";
         return sstr.str();
     };
 
@@ -190,11 +189,9 @@ void DFGPrinter::visitFunction(Function &F) {
         auto eir = escape_quotes(ir);
 
         if (num_op == 1)
-            branch_label =
-                "\"{" + label + " \\l|{<s0>T}} \"";
+            branch_label = "\"{" + label + " \\l|{<s0>T}} \"";
         else
-            branch_label = "\"{" + label +
-                           " \\l|{<s0>T|<s1>F}} \"";
+            branch_label = "\"{" + label + " \\l|{<s0>T|<s1>F}} \"";
 
         sstr << "        m_" << id
              << "[shape=\"record\", label=" << branch_label << ", opcode=\""
@@ -222,7 +219,9 @@ void DFGPrinter::visitFunction(Function &F) {
             // If this does not exist in the node map
             // then create a new entry for it and save
             // the value of the counter (identifier).
-            auto scalaLabel = cast<MDString>(I.getMetadata("ScalaLabel")->getOperand(0))->getString();
+            auto scalaLabel =
+                cast<MDString>(I.getMetadata("ScalaLabel")->getOperand(0))
+                    ->getString();
 
             if (isa<BranchInst>(&I)) {
                 counter_ins++;
@@ -237,8 +236,8 @@ void DFGPrinter::visitFunction(Function &F) {
 #endif
             } else {
                 counter_ins++;
-                dot << nodeFormat(nodes[&I], scalaLabel.str(),
-                                  "black", rso.str());
+                dot << nodeFormat(nodes[&I], scalaLabel.str(), "black",
+                                  rso.str());
             }
         }
 
@@ -366,7 +365,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                     << " m_" << nodes[&I]
                     << " [color=blue, constraint=false];\n";
             } else if (isa<Constant>(OI)) {
-                if(auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
+                if (auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
                     auto cnt_value = cnt->getSExtValue();
                     if (nodes.count(OI) == 0) {
                         nodes[OI] = cnt->getSExtValue();
@@ -419,8 +418,8 @@ void GEPAddrCalculation::visitSExtInst(Instruction &I) {
     auto DL = I.getModule()->getDataLayout();
 
     auto op = dyn_cast<llvm::CastInst>(&I);
-    errs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n";
-    errs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n";
+    DEBUG(dbgs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n");
+    DEBUG(dbgs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n");
 }
 
 void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
@@ -440,34 +439,13 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
     for (uint32_t c = 0; c < I.getNumOperands(); c++) {
         start_align = end_align;
 
-        // First operand is the pointer the variable
+        // First operand is the pointer to the variable
         if (c == 0) {
             op = I.getOperand(c)->getType()->getPointerElementType();
-            // outs() << *I.getOperand(c)->getType()->getPointerElementType()
-            //<< "\n";
+            DEBUG(dbgs() << *I.getOperand(c)->getType()->getPointerElementType()
+                         << "\n");
+            numByte = DL.getTypeAllocSize(op);
 
-            // Index zero is pointer type
-            // It can be either struct or constant
-            if (op->isStructTy()) {
-                auto struct_op = dyn_cast<llvm::StructType>(op);
-                numByte = DL.getTypeAllocSize(struct_op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isArrayTy()) {
-                auto array_op = dyn_cast<llvm::ArrayType>(op);
-                numByte = DL.getTypeAllocSize(array_op);
-                // outs() << "Size: " << numByte << "\n";
-
-            } else if (op->isFloatTy()) {
-                numByte = DL.getTypeAllocSize(op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isIntegerTy()) {
-                numByte = DL.getTypeAllocSize(op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isPointerTy()) {
-                // TODO Fix the pointer computation
-                numByte = DL.getTypeAllocSize(op);
-                // assert(!"DETECT");
-            }
         } else {
             auto op_type = I.getOperand(c)->getType();
 
@@ -584,8 +562,6 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
                                 assert(!"Not supported type!\n");
                             }
                         }
-                        // outs() << "Alignment start: " << start_align << "\n";
-                        // outs() << "Alignment end  : " << end_align << "\n";
                     } else if (op->isArrayTy()) {
                         auto array_op = dyn_cast<llvm::ArrayType>(op);
                         auto array_size = DL.getTypeAllocSize(array_op);
@@ -604,18 +580,14 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
     if (I.getNumOperands() == 2) {
         auto value = I.getOperand(0)->getType()->getPointerElementType();
         if (value->isIntegerTy()) {
-            common::GepOne tmp_gep = {0 , numByte};
+            common::GepOne tmp_gep = {0, numByte};
             SingleGepIns[&I] = tmp_gep;
         }
     } else if (I.getNumOperands() == 3) {
-        auto value1 = dyn_cast<llvm::ConstantInt>(I.getOperand(0));
-        auto value2 = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
-        if (value1 && value2) {
-            common::GepTwo tmp_gep = {value1->getSExtValue(), numByte,
-                                      value2->getSExtValue(),
-                                      static_cast<int64_t>(start_align)};
-            TwoGepIns[&I] = tmp_gep;
-        }
+        DEBUG(dbgs() << "Final numbyte: " << numByte << "\n");
+        common::GepTwo tmp_gep = {0, numByte, 0,
+                                  static_cast<int64_t>(start_align)};
+        TwoGepIns[&I] = tmp_gep;
     }
 }
 
@@ -688,10 +660,10 @@ void helpers::PDGPrinter(Function &F) {
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                   const std::string &to) {
+                            const std::string &to) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
-    while(true){
+    while (true) {
         size_t start_pos = str.find(from);
         if (start_pos == std::string::npos) break;
         str.replace(start_pos, from.length(), to);
@@ -701,20 +673,23 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                   std::vector<const std::string> &to, const std::string &split) {
+                            std::vector<const std::string> &to,
+                            const std::string &split) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     return _ret;
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                   std::vector<uint32_t> &&to, const std::string &split) {
+                            std::vector<uint32_t> &&to,
+                            const std::string &split) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     std::stringstream test;
-    std::copy(to.begin(), to.end(), std::experimental::make_ostream_joiner(test, split));
+    std::copy(to.begin(), to.end(),
+              std::experimental::make_ostream_joiner(test, split));
 
-    while(true){
+    while (true) {
         size_t start_pos = str.find(from);
         if (start_pos == std::string::npos) break;
         str.replace(start_pos, from.length(), test.str());
@@ -724,18 +699,20 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                   std::list<std::pair<uint32_t, uint32_t>> &to, const std::string &split) {
+                            std::list<std::pair<uint32_t, uint32_t>> &to,
+                            const std::string &split) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
     std::stringstream test;
-    for(auto &node : to){
-        test << "(" << std::to_string(node.first) << ", " << std::to_string(node.second) << ") , ";
+    for (auto &node : to) {
+        test << "(" << std::to_string(node.first) << ", "
+             << std::to_string(node.second) << ") , ";
     }
-    //Remove last three additional characters
-    string _replace_string = test.str().substr(0, test.str().size()-3);
+    // Remove last three additional characters
+    string _replace_string = test.str().substr(0, test.str().size() - 3);
 
-    //replace all the existing substring
-    while(true){
+    // replace all the existing substring
+    while (true) {
         size_t start_pos = str.find(from);
         if (start_pos == std::string::npos) break;
         str.replace(start_pos, from.length(), _replace_string);
@@ -744,12 +721,11 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     return _ret;
 }
 
-
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                   const uint32_t to) {
+                            const uint32_t to) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
-    while(true){
+    while (true) {
         size_t start_pos = str.find(from);
         if (start_pos == std::string::npos) break;
         str.replace(start_pos, from.length(), std::to_string(to));
@@ -757,5 +733,3 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     }
     return _ret;
 }
-
-
