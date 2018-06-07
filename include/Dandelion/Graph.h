@@ -55,6 +55,9 @@ class Graph {
     // Memory units inside each graph
     std::unique_ptr<MemoryNode> memory_unit;
 
+    // Stack allocator
+    std::unique_ptr<StackNode> stack_allocator;
+
     // Loop nodes
     LoopNodeList loop_nodes;
 
@@ -70,6 +73,8 @@ class Graph {
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          stack_allocator(
+              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr),
@@ -79,6 +84,8 @@ class Graph {
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          stack_allocator(
+              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(nullptr),
@@ -89,6 +96,8 @@ class Graph {
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          stack_allocator(
+              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(_fn),
@@ -103,7 +112,8 @@ class Graph {
     void printGraph(PrintType);
 
     bool isEmpty() { return graph_empty; }
-    MemoryNode *getMemoryUnit() const { return memory_unit.get(); }
+    auto getMemoryUnit() const { return memory_unit.get(); }
+    auto getStackAllocator() const { return stack_allocator.get(); }
 
     // InstructionList *getInstructionList();
     auto instList_begin() { return this->inst_list.cbegin(); }
@@ -134,7 +144,8 @@ class Graph {
     InstructionNode *insertIcmpOperatorNode(llvm::ICmpInst &);
     InstructionNode *insertBranchNode(llvm::BranchInst &);
     InstructionNode *insertPhiNode(llvm::PHINode &);
-    InstructionNode *insertAllocaNode(llvm::AllocaInst &);
+    InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
+                                      uint32_t num_byte);
     InstructionNode *insertGepNode(llvm::GetElementPtrInst &);
     InstructionNode *insertLoadNode(llvm::LoadInst &);
     InstructionNode *insertStoreNode(llvm::StoreInst &);
@@ -187,6 +198,7 @@ class Graph {
     void printLoopDataDependencies(PrintType);
     void printOutPort(PrintType);
     void printParallelConnections(PrintType);
+    void printAllocaOffset(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string, std::string);

@@ -169,7 +169,18 @@ void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
-    map_value_node[&I] = this->dependency_graph->insertAllocaNode(I);
+
+    auto alloca_type = I.getAllocatedType();
+    auto DL = I.getModule()->getDataLayout();
+    auto num_byte = DL.getTypeAllocSize(alloca_type);
+    uint32_t size = 1;
+
+    if(alloca_type->isIntegerTy() || alloca_type->isArrayTy()){
+        map_value_node[&I] = this->dependency_graph->insertAllocaNode(I, size, num_byte);
+    }
+    else
+        assert(!"Don't support for this alloca");
+
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
@@ -286,6 +297,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
             } else {
                 // If the operand is constant we have to create a new node
+                if(isa<llvm::AllocaInst>(&*ins_it)) continue;
+
                 ConstIntNode *_const_node = nullptr;
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
                     _const_node = this->dependency_graph->insertConstIntNode(
@@ -358,6 +371,18 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph->getMemoryUnit());
             auto _dst_resp_idx = _st_node->addWriteMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
+        } else if (auto _alloca_node = dyn_cast<AllocaNode>(
+                       this->map_value_node.find(&*ins_it)->second)) {
+            auto _dst_req_idx =
+                this->dependency_graph->getStackAllocator()->addReadMemoryReqPort(
+                    _alloca_node);
+            auto _src_resp_idx =
+                this->dependency_graph->getStackAllocator()->addReadMemoryRespPort(
+                    _alloca_node);
+            auto _src_req_idx = _alloca_node->addReadMemoryReqPort(
+                this->dependency_graph->getStackAllocator());
+            auto _dst_resp_idx = _alloca_node->addReadMemoryRespPort(
+                this->dependency_graph->getStackAllocator());
         }
     }
 }

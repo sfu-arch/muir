@@ -28,6 +28,7 @@ class ContainerNode;
 class InstructionNode;
 class LoopNode;
 class MemoryNode;
+class StackNode;
 class PhiSelectNode;
 class SplitCallNode;
 class ArgumentNode;
@@ -83,6 +84,7 @@ class Node {
         GlobalValueTy,
         ConstIntTy,
         MemoryUnitTy,
+        StackUnitTy,
         ContainerTy,
         UnkonwTy
 
@@ -413,7 +415,7 @@ class ArgumentNode : public Node {
         return T->getType() == Node::FunctionArgTy;
     }
 
-    auto getArgType(){ return arg_type; }
+    auto getArgType() { return arg_type; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -498,6 +500,37 @@ class MemoryNode : public Node {
     virtual std::string printMemReadOutput(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
+};
+
+/**
+ * Memory unit works as a local memory for each graph
+ */
+class StackNode : public Node {
+   public:
+    explicit StackNode(NodeInfo _nf) : Node(Node::StackUnitTy, _nf) {}
+
+    // Restrict access to data input ports
+    virtual PortID addDataInputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    }
+    virtual PortID addDataOutputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    };
+    uint32_t numDataInputPort() = delete;
+    uint32_t numDataOutputPort() = delete;
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::StackUnitTy;
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
+    // virtual std::string printMemWriteInput(PrintType, uint32_t) override;
+    // virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
 /**
@@ -770,9 +803,21 @@ class PhiSelectNode : public InstructionNode {
 };
 
 class AllocaNode : public InstructionNode {
+   private:
+    uint32_t size;
+    uint32_t num_byte;
+    uint32_t route_id;
+
    public:
     AllocaNode(NodeInfo _ni, llvm::AllocaInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins),
+          size(1),
+          num_byte(0) {}
+    AllocaNode(NodeInfo _ni, uint32_t _num_byte, uint32_t _size = 1, uint32_t rid = 0,
+               llvm::AllocaInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins),
+          size(_size),
+          num_byte(_num_byte) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
@@ -780,10 +825,25 @@ class AllocaNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    auto getNumByte() { return num_byte; }
+    void setNumByte(uint32_t _n) { num_byte = _n; }
+
+    auto getSize() { return size; }
+    void setSize(uint32_t _n) { size = _n; }
+
+    auto getRouteID() { return route_id; }
+    void setRouteID(uint32_t _id) { route_id = _id; }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
+
+    std::string printOffset(PrintType);
 };
 
 class GEPNode : public InstructionNode {

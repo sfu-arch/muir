@@ -93,12 +93,12 @@ class GraphGeneratorPass : public llvm::ModulePass,
           dependency_graph(std::make_unique<Graph>(_n_info)),
           code_out(llvm::outs()) {}
 
+    GraphGeneratorPass(NodeInfo _n_info, llvm::raw_ostream &out)
+        : llvm::ModulePass(ID),
+          dependency_graph(std::make_unique<Graph>(_n_info, out)),
+          code_out(out) {}
+
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
-    //virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
-        //AU.addRequired<LoopInfoWrapperPass>();
-        //AU.addRequired<helpers::GEPAddrCalculation>();
-        //AU.setPreservesAll();
-    //}
 
     // virtual bool runOnFunction(llvm::Function &) override;
     virtual bool runOnModule(llvm::Module &m) override;

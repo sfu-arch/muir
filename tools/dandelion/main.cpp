@@ -302,7 +302,7 @@ static void graphGen(Module &m) {
     }
 
     std::error_code errc;
-    // raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
 
     // raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
 
@@ -320,13 +320,23 @@ static void graphGen(Module &m) {
  * Function lists
  */
 static void runGraphGen(Module &M) {
+
+    // Check wether xketch outpufile name has been specified
+    if (outFile.getValue() == "") {
+        errs() << "o command line option must be specified.\n";
+        exit(-1);
+    }
+
+    std::error_code errc;
+    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+
     legacy::PassManager pm;
     //pm.add(new LoopInfoWrapperPass());
     //Usefull passes
     //pm.add(llvm::createCFGSimplificationPass());
     pm.add(llvm::createLoopSimplifyPass());
     pm.add(new helpers::GEPAddrCalculation(XKETCHName));
-    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName)));
+    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName), out));
     pm.add(createVerifierPass());
     pm.run(M);
 }

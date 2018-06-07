@@ -1685,7 +1685,7 @@ std::string GEPNode::printDefinition(PrintType _pt) {
             } else {
                 _text =
                     "  val $name = Module(new $type(NumOuts=$num_out, "
-                    "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n";
+                    "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n\n";
                 helperReplace(_text, "$type", "GepTwoNode");
                 helperReplace(_text, "$nb1", num_byte[0]);
                 helperReplace(_text, "$nb2", num_byte[1]);
@@ -2113,6 +2113,7 @@ std::string SyncNode::printOutputEnable(PrintType pt, uint32_t _id) {
 //===----------------------------------------------------------------------===//
 //                            AllocaNode Class
 //===----------------------------------------------------------------------===//
+//
 std::string AllocaNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -2121,11 +2122,12 @@ std::string AllocaNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(ID = $id"
-                ", RouteID=$r_i, NumOuts=$num_out))\n\n";
+                ", RouteID=$rid, NumOuts=$num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$num_out", this->numDataOutputPort());
             helperReplace(_text, "$type", "AllocaNode");
+            helperReplace(_text, "$rid", this->getRouteID());
 
             break;
         case PrintType::Dot:
@@ -2133,6 +2135,22 @@ std::string AllocaNode::printDefinition(PrintType _pt) {
         default:
             assert(!"Uknown print type!");
     }
+    return _text;
+}
+
+std::string AllocaNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.CmpIO";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
     return _text;
 }
 
@@ -2181,6 +2199,73 @@ std::string AllocaNode::printInputEnable(PrintType _pt, uint32_t _id) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.enable";
             helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string AllocaNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.allocaRespIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string AllocaNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.allocaReqIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string AllocaNode::printOffset(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  $name.io.allocaInputIO.bits.size      := "
+                "$size.U\n"
+                "  $name.io.allocaInputIO.bits.numByte   := "
+                "$num_byte.U\n"
+                "  $name.io.allocaInputIO.bits.predicate := "
+                "true.B\n"
+                "  $name.io.allocaInputIO.bits.valid     := "
+                "true.B\n"
+                "  $name.io.allocaInputIO.valid          := "
+                "true.B\n\n";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_byte", getNumByte());
+            helperReplace(_text, "$size", getSize());
 
             break;
         case PrintType::Dot:
@@ -2357,5 +2442,65 @@ std::string CallInNode::printInputData(PrintType _pt) {
             break;
     }
 
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            StackNode Class
+//===----------------------------------------------------------------------===//
+std::string StackNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "  val StackPointer = Module(new Stack(NumOps = $op))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$op", this->numReadDataInputPort());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string StackNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.InData($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string StackNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.OutData($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
     return _text;
 }

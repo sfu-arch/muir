@@ -97,6 +97,7 @@ void Graph::printGraph(PrintType _pt) {
             printLoopDataDependencies(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
+            printAllocaOffset(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
             printOutPort(PrintType::Scala);
@@ -273,6 +274,7 @@ void Graph::printMemoryModules(PrintType _pt) {
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
             outCode << memory_unit->printDefinition(PrintType::Scala);
+            outCode << stack_allocator->printDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -482,6 +484,24 @@ void Graph::printDatadependencies(PrintType _pt) {
             }
 
             break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+void Graph::printAllocaOffset(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            this->outCode << helperScalaPrintHeader(
+                "Print alloca offset");
+            auto alloca_list = getNodeList<AllocaNode>(this);
+            for(auto _al_node : alloca_list){
+                this->outCode << _al_node->printOffset(_pt) << "\n\n";
+            }
+            break;
+        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -855,9 +875,10 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
 /**
  * Insert a new Alloca node
  */
-InstructionNode *Graph::insertAllocaNode(AllocaInst &I) {
+InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
+                                         uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(), I.getName().str()), num_byte, size, inst_list.size(), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1380,6 +1401,27 @@ void Graph::doInitialization() {
                        std::make_pair(_st_node,
                                       _st_node->returnMemoryWriteInputPortIndex(
                                           getMemoryUnit())));
+        } else if (auto _alloca_node = dyn_cast<AllocaNode>(&*_node)) {
+            // Adding edges
+            insertEdge(
+                Edge::MemoryReadTypeEdge,
+                std::make_pair(_alloca_node,
+                               _alloca_node->returnMemoryReadOutputPortIndex(
+                                   this->getStackAllocator())),
+                std::make_pair(
+                    this->getStackAllocator(),
+                    this->getStackAllocator()->returnMemoryReadInputPortIndex(
+                        _alloca_node)));
+
+            insertEdge(
+                Edge::MemoryReadTypeEdge,
+                std::make_pair(
+                    getStackAllocator(),
+                    getStackAllocator()->returnMemoryReadOutputPortIndex(
+                        _alloca_node)),
+                std::make_pair(_alloca_node,
+                               _alloca_node->returnMemoryReadInputPortIndex(
+                                   this->getStackAllocator())));
         }
     }
 }
