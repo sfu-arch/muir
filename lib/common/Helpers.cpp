@@ -13,6 +13,7 @@
 #include <cmath>
 #include <experimental/iterator>
 #include <fstream>
+#include <iostream>
 
 #include "Common.h"
 
@@ -22,6 +23,7 @@ using helpers::LabelUID;
 using helpers::pdgDump;
 using helpers::DFGPrinter;
 using helpers::GEPAddrCalculation;
+using helpers::GepInformation;
 using helpers::InstCounter;
 
 /**
@@ -316,16 +318,6 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             }
         }
     }
-// else if(isa<llvm::PHINode>(I)){
-// uint32_t op_counter = 0;
-// for(auto OI : Operands){
-// if (isa<Instruction>(OI)){
-// dot << "    "
-//<< "m_" << nodes[OI] << "->"
-//<< "m_" << nodes[&I] << ";\n";
-//}
-//}
-//}
 #ifdef TAPIR
     else if (llvm::isa<llvm::DetachInst>(I) ||
              llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I)) {
@@ -407,6 +399,70 @@ bool DFGPrinter::runOnFunction(Function &F) {
     return false;
 }
 
+// GepInformation Helper class
+namespace helpers {
+
+char GepInformation::ID = 0;
+}
+
+void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
+    assert(I.getNumOperands() <= 3 &&
+           "Gep with more than 2 operand is not supported");
+
+    // Dumping the instruction
+    DEBUG(I.dump());
+
+    // Getting datalayout
+    auto DL = I.getModule()->getDataLayout();
+    uint32_t numByte = 0;
+    uint64_t start_align = 0;
+    uint64_t end_align = 0;
+
+    auto src_type = I.getSourceElementType();
+    if (src_type->isStructTy()) {
+        auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+        std::vector<uint32_t> tmp_align = {0};
+        for (auto _element : src_struct_type->elements()) {
+            tmp_align.push_back(tmp_align.back() +
+                                DL.getTypeAllocSize(_element));
+        }
+
+        // this->GepStruct[&I] = tmp_align;
+        this->GepStruct.insert(
+            std::pair<llvm::Instruction *, std::vector<uint32_t>>(&I,
+                                                                  tmp_align));
+
+        DEBUG(
+            std::copy(tmp_align.begin(), tmp_align.end(),
+                      std::experimental::make_ostream_joiner(std::cout, ", ")));
+        DEBUG(std::cout << "\n");
+        DEBUG(errs() << DL.getTypeAllocSize(src_type) << "\n");
+
+    } else if (src_type->isArrayTy()) {
+        auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+        this->GepArray.insert(
+            std::pair<llvm::Instruction *, common::GepArrayInfo>(
+                &I,
+                common::GepArrayInfo(
+                    DL.getTypeAllocSize(src_array_type->getArrayElementType()),
+                    src_array_type->getNumElements())));
+
+        DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
+        DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
+        DEBUG(
+            errs() << "Num byte: "
+                   << DL.getTypeAllocSize(src_array_type->getArrayElementType())
+                   << "\n");
+    }
+}
+
+bool GepInformation::runOnModule(Module &M) {
+    for (auto &ff : M) {
+        if (ff.getName() == this->function_name) visit(&ff);
+    }
+    return false;
+}
+
 // GEPAddrCalculation Helper class
 namespace helpers {
 
@@ -422,7 +478,7 @@ void GEPAddrCalculation::visitSExtInst(Instruction &I) {
     DEBUG(dbgs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n");
 }
 
-void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
+void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     assert(I.getNumOperands() <= 3 &&
            "Gep with more than 2 operand is not supported");
 
@@ -434,160 +490,22 @@ void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
     uint32_t numByte = 0;
     uint64_t start_align = 0;
     uint64_t end_align = 0;
-    llvm::Type *op;
 
-    for (uint32_t c = 0; c < I.getNumOperands(); c++) {
-        start_align = end_align;
-
-        // First operand is the pointer to the variable
-        if (c == 0) {
-            op = I.getOperand(c)->getType()->getPointerElementType();
-            DEBUG(dbgs() << *I.getOperand(c)->getType()->getPointerElementType()
-                         << "\n");
-            numByte = DL.getTypeAllocSize(op);
-
-        } else {
-            auto op_type = I.getOperand(c)->getType();
-
-            auto value = dyn_cast<llvm::ConstantInt>(I.getOperand(c));
-            if (op_type->isIntegerTy() && value) {
-                // outs() << "Value: " << value->getSExtValue() << "\n";
-
-                if (c == 2) {
-                    if (op->isStructTy()) {
-                        auto struct_op = dyn_cast<llvm::StructType>(op);
-                        for (uint32_t i = 0; i <= value->getSExtValue(); i++) {
-                            uint64_t size = 0;
-
-                            auto operand = struct_op->getStructElementType(i);
-
-                            if (operand->isArrayTy()) {
-                                auto op_array =
-                                    dyn_cast<llvm::ArrayType>(operand);
-                                auto array_size = DL.getTypeAllocSize(operand);
-
-                                size = DL.getTypeAllocSize(operand);
-
-                                auto op_element =
-                                    op_array->getArrayElementType();
-                                while (op_element->isArrayTy()) {
-                                    op_element =
-                                        op_element->getArrayElementType();
-                                }
-
-                                auto elem_size =
-                                    DL.getTypeAllocSize(op_element);
-                                /**
-                                 * If the struct's element is an array we need
-                                 * to:
-                                 * 1. Align the begining element size
-                                 * 2. Compute the array's size for end of the
-                                 * alignment
-                                 */
-                                if (i == 0)
-                                    end_align += array_size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)elem_size) *
-                                        elem_size;
-                                    end_align = start_align + array_size - 1;
-                                }
-
-                            } else if (operand->isStructTy()) {
-                                /**
-                                 * If the struct's element is struct:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-
-                            } else if (operand->isIntegerTy() ||
-                                       operand->isDoubleTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-
-                            } else if (operand->isFloatTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-                            } else if (operand->isPointerTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-                            } else {
-                                errs() << "TYPE: ";
-                                errs() << *operand << "\n";
-                                I.dump();
-                                assert(!"Not supported type!\n");
-                            }
-                        }
-                    } else if (op->isArrayTy()) {
-                        auto array_op = dyn_cast<llvm::ArrayType>(op);
-                        auto array_size = DL.getTypeAllocSize(array_op);
-                        auto array_elem_size =
-                            DL.getTypeAllocSize(array_op->getElementType());
-
-                        start_align = array_elem_size * value->getSExtValue();
-                        // outs() << "Alignment: " << start_align << "\n";
-                    }
-                }
-            }
+    auto src_type = I.getSourceElementType();
+    auto tar_type = I.getResultElementType();
+    src_type->dump();
+    if (src_type->isStructTy()) {
+        auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+        for (auto _element : src_struct_type->elements()) {
+            errs() << "Num byte: " << DL.getTypeAllocSize(_element) << "\n";
+            //_element->dump();
         }
-    }
-
-    // Filling the containers
-    if (I.getNumOperands() == 2) {
-        auto value = I.getOperand(0)->getType()->getPointerElementType();
-        if (value->isIntegerTy()) {
-            common::GepOne tmp_gep = {0, numByte};
-            SingleGepIns[&I] = tmp_gep;
-        }
-    } else if (I.getNumOperands() == 3) {
-        DEBUG(dbgs() << "Final numbyte: " << numByte << "\n");
-        common::GepTwo tmp_gep = {0, numByte, 0,
-                                  static_cast<int64_t>(start_align)};
-        TwoGepIns[&I] = tmp_gep;
+    } else if (src_type->isArrayTy()) {
+        auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+        errs() << src_array_type->getArrayNumElements() << "\n";
+        errs() << "Num byte: "
+               << DL.getTypeAllocSize(src_array_type->getArrayElementType())
+               << "\n";
     }
 }
 

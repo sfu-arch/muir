@@ -16,6 +16,9 @@
 #include "Dandelion/Node.h"
 #include "iterator_range.h"
 
+using common::GepArrayInfo;
+using common::GepStructInfo;
+
 namespace dandelion {
 
 using InstructionList = std::list<std::unique_ptr<InstructionNode>>;
@@ -146,7 +149,9 @@ class Graph {
     InstructionNode *insertPhiNode(llvm::PHINode &);
     InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
-    InstructionNode *insertGepNode(llvm::GetElementPtrInst &);
+    InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
+    InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
+
     InstructionNode *insertLoadNode(llvm::LoadInst &);
     InstructionNode *insertStoreNode(llvm::StoreInst &);
     InstructionNode *insertReturnNode(llvm::ReturnInst &);

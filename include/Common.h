@@ -37,6 +37,22 @@ struct GepTwo {
     int64_t numByte2;
 };
 
+struct GepArrayInfo {
+    uint32_t array_size;
+    uint32_t length;
+
+    GepArrayInfo(uint32_t _size, uint32_t _l) : array_size(_size), length(_l) {}
+    GepArrayInfo(): array_size(0), length(0){}
+};
+
+struct GepStructInfo {
+    std::vector<uint32_t> element_size;
+
+    GepStructInfo(std::vector<uint32_t> _input_elements)
+        : element_size(_input_elements) {}
+    GepStructInfo(){element_size.clear();}
+};
+
 // Functions
 void optimizeModule(llvm::Module *);
 
@@ -173,11 +189,7 @@ class GEPAddrCalculation : public ModulePass,
                            public InstVisitor<GEPAddrCalculation> {
     friend class InstVisitor<GEPAddrCalculation>;
 
-    // void visitFunction(Function &F);
-    // void visitBasicBlock(BasicBlock &BB);
-    // void visitInstruction(Instruction &I);
-
-    void visitGetElementPtrInst(Instruction &I);
+    void visitGetElementPtrInst(llvm::GetElementPtrInst &I);
     void visitSExtInst(Instruction &I);
 
     map<Value *, uint64_t> values;
@@ -201,6 +213,34 @@ class GEPAddrCalculation : public ModulePass,
         values.clear();
         return false;
     };
+
+    bool doFinalization(Module &) override { return true; };
+
+    bool runOnModule(Module &) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
+
+class GepInformation : public ModulePass, public InstVisitor<GepInformation> {
+    friend class InstVisitor<GepInformation>;
+
+    void visitGetElementPtrInst(llvm::GetElementPtrInst &I);
+
+   public:
+    static char ID;
+
+    // Gep containers
+    std::map<llvm::Instruction *, common::GepStructInfo> GepStruct;
+    std::map<llvm::Instruction *, common::GepArrayInfo> GepArray;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    GepInformation(llvm::StringRef FN) : ModulePass(ID), function_name(FN) {}
+
+    bool doInitialization(Module &) override { return false; };
 
     bool doFinalization(Module &) override { return true; };
 

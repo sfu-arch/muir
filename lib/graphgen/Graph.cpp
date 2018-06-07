@@ -494,10 +494,9 @@ void Graph::printDatadependencies(PrintType _pt) {
 void Graph::printAllocaOffset(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala: {
-            this->outCode << helperScalaPrintHeader(
-                "Print alloca offset");
+            this->outCode << helperScalaPrintHeader("Print alloca offset");
             auto alloca_list = getNodeList<AllocaNode>(this);
-            for(auto _al_node : alloca_list){
+            for (auto _al_node : alloca_list) {
                 this->outCode << _al_node->printOffset(_pt) << "\n\n";
             }
             break;
@@ -878,7 +877,8 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
 InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
                                          uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), num_byte, size, inst_list.size(), &I));
+        NodeInfo(inst_list.size(), I.getName().str()), num_byte, size,
+        inst_list.size(), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -889,15 +889,32 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
 /**
  * Insert a new GEP node
  */
-InstructionNode *Graph::insertGepNode(GetElementPtrInst &I) {
-    inst_list.push_back(std::make_unique<GEPNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
+                                      GepArrayInfo _info) {
+    inst_list.push_back(std::make_unique<GepArrayNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), _info, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
     return ff->get();
 }
+
+/**
+ * Insert a new GEP node
+ */
+InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
+                                      GepStructInfo _info) {
+    inst_list.push_back(std::make_unique<GepStructNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), _info, &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
+}
+
+
 
 /**
  * Insert a new Load node

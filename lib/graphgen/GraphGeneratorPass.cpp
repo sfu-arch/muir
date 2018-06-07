@@ -121,7 +121,7 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
  * Set pass dependencies
  */
 void GraphGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<helpers::GEPAddrCalculation>();
+    AU.addRequired<helpers::GepInformation>();
     AU.addRequired<llvm::LoopInfoWrapperPass>();
     AU.setPreservesAll();
 }
@@ -169,36 +169,41 @@ void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
-
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();
     auto num_byte = DL.getTypeAllocSize(alloca_type);
     uint32_t size = 1;
 
-    if(alloca_type->isIntegerTy() || alloca_type->isArrayTy()){
-        map_value_node[&I] = this->dependency_graph->insertAllocaNode(I, size, num_byte);
-    }
-    else
+    if (alloca_type->isIntegerTy() || alloca_type->isArrayTy()) {
+        map_value_node[&I] =
+            this->dependency_graph->insertAllocaNode(I, size, num_byte);
+    } else
         assert(!"Don't support for this alloca");
-
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    map_value_node[&I] = this->dependency_graph->insertGepNode(I);
-    auto node = map_value_node[&I];
-    auto &gep_pass_ctx = getAnalysis<helpers::GEPAddrCalculation>();
+    auto &gep_pass_ctx = getAnalysis<helpers::GepInformation>();
+
+    auto src_type = I.getSourceElementType();
+    if (src_type->isStructTy()) {
+        map_value_node[&I] = this->dependency_graph->insertGepNode(
+            I, gep_pass_ctx.GepStruct[&I]);
+    } else if (src_type->isArrayTy()) {
+        map_value_node[&I] =
+            this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepArray[&I]);
+    }
 
     // Check wether it's gepOne or gepTwo
-    if (I.getNumOperands() == 2)
-        dyn_cast<GEPNode>(node)->addNumByte(
-            gep_pass_ctx.SingleGepIns[&I].numByte);
-    else if (I.getNumOperands() == 3) {
-        dyn_cast<GEPNode>(node)->addNumByte(
-            gep_pass_ctx.TwoGepIns[&I].numByte1);
-        dyn_cast<GEPNode>(node)->addNumByte(
-            gep_pass_ctx.TwoGepIns[&I].numByte2);
-    } else
-        assert(!"Not supported gep node");
+    // if (I.getNumOperands() == 2)
+    // dyn_cast<GEPNode>(node)->addNumByte(
+    // gep_pass_ctx.SingleGepIns[&I].numByte);
+    // else if (I.getNumOperands() == 3) {
+    // dyn_cast<GEPNode>(node)->addNumByte(
+    // gep_pass_ctx.TwoGepIns[&I].numByte1);
+    // dyn_cast<GEPNode>(node)->addNumByte(
+    // gep_pass_ctx.TwoGepIns[&I].numByte2);
+    //} else
+    // assert(!"Not supported gep node");
 
     // errs() << gep_pass_ctx.SingleGepIns[&I].numByte << "\n";
 }
@@ -297,7 +302,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
             } else {
                 // If the operand is constant we have to create a new node
-                if(isa<llvm::AllocaInst>(&*ins_it)) continue;
+                if (isa<llvm::AllocaInst>(&*ins_it)) continue;
 
                 ConstIntNode *_const_node = nullptr;
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
@@ -373,12 +378,10 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph->getMemoryUnit());
         } else if (auto _alloca_node = dyn_cast<AllocaNode>(
                        this->map_value_node.find(&*ins_it)->second)) {
-            auto _dst_req_idx =
-                this->dependency_graph->getStackAllocator()->addReadMemoryReqPort(
-                    _alloca_node);
-            auto _src_resp_idx =
-                this->dependency_graph->getStackAllocator()->addReadMemoryRespPort(
-                    _alloca_node);
+            auto _dst_req_idx = this->dependency_graph->getStackAllocator()
+                                    ->addReadMemoryReqPort(_alloca_node);
+            auto _src_resp_idx = this->dependency_graph->getStackAllocator()
+                                     ->addReadMemoryRespPort(_alloca_node);
             auto _src_req_idx = _alloca_node->addReadMemoryReqPort(
                 this->dependency_graph->getStackAllocator());
             auto _dst_resp_idx = _alloca_node->addReadMemoryRespPort(
@@ -551,7 +554,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                             SetVector<BasicBlock *>(L->blocks().begin(),
                                                     L->blocks().end()),
                             U)) {
-
                         auto new_live_out =
                             _loop_node->insertLiveOutArgument(U);
 
@@ -573,14 +575,15 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                         //_src->removeNodeDataOutputNode(_tar);
                         //_tar->removeNodeDataInputNode(_src);
 
-                        //auto _src_idx = new_live_out->addDataOutputPort(_tar);
-                        //auto _dst_idx = _tar->addDataInputPort(new_live_out);
+                        // auto _src_idx =
+                        // new_live_out->addDataOutputPort(_tar);
+                        // auto _dst_idx = _tar->addDataInputPort(new_live_out);
 
-                        //if (_src->existDataOutput(new_live_out)) {
-                            //auto _src_idx =
-                                //_src->addDataOutputPort(new_live_out);
-                            //auto _dst_idx =
-                                //new_live_out->addDataInputPort(_src);
+                        // if (_src->existDataOutput(new_live_out)) {
+                        // auto _src_idx =
+                        //_src->addDataOutputPort(new_live_out);
+                        // auto _dst_idx =
+                        // new_live_out->addDataInputPort(_src);
                         //}
                     }
                 }
