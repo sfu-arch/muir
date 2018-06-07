@@ -599,7 +599,7 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
 }
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
-                            std::vector<uint32_t> &&to,
+                            std::vector<uint32_t> to,
                             const std::string &split) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
     bool _ret = false;
@@ -615,6 +615,8 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     }
     return _ret;
 }
+
+
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                             std::list<std::pair<uint32_t, uint32_t>> &to,

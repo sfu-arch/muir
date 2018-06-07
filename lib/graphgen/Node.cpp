@@ -773,7 +773,7 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
                 }
                 case ArgumentNode::LiveOut: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.LiveOut($id)";
+                    _text = "$call.io.liveOut($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(_text, "$id", _idx);
@@ -1795,8 +1795,9 @@ std::string GepStructNode::printDefinition(PrintType _pt) {
             if (this->getInstruction()->getNumOperands() == 2) {
                 _text =
                     "  val $name = Module(new $type(NumOuts=$num_out, "
-                    "ID=$id)(numByte1=$nb1))\n\n";
+                    "ID=$id)(numByte=List($<input_vector>)))\n\n";
                 helperReplace(_text, "$type", "GepStructOneNode");
+                helperReplace(_text, "$<input_vector>", gep_info.element_size, ",");
                 //helperReplace(_text, "$nb1", num_byte[0]);
             } else {
                 _text =

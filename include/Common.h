@@ -48,9 +48,11 @@ struct GepArrayInfo {
 struct GepStructInfo {
     std::vector<uint32_t> element_size;
 
+    GepStructInfo(){element_size.clear();}
+
     GepStructInfo(std::vector<uint32_t> _input_elements)
         : element_size(_input_elements) {}
-    GepStructInfo(){element_size.clear();}
+
 };
 
 // Functions
@@ -69,7 +71,7 @@ namespace helpers {
 bool helperReplace(std::string &, const std::string &, const std::string &);
 bool helperReplace(std::string &, const std::string &,
                    std::vector<const std::string> &, const std::string &);
-bool helperReplace(std::string &, const std::string &, std::vector<uint32_t> &&,
+bool helperReplace(std::string &, const std::string &, std::vector<uint32_t>,
                    const std::string &);
 bool helperReplace(std::string &, const std::string &, const uint32_t);
 bool helperReplace(std::string &, const std::string &,
