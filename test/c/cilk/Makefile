@@ -1,15 +1,21 @@
 CC=clang
 XKETCH=../../../build/bin/xketch
-CFLAGS= -DPIR -g -emit-llvm -m32 -S -o -
+CFLAGS= -DPIR -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
+DOT=$(shell ls *.dot)
+SVG=$(DOT:%.dot=%.svg)
+#APALA=~/amoeba/apala-generator/build/bin/xketch
+APALA=/home/amiralis/git/xketch-ap/build/bin/xketch
 
 .PRECIOUS: %.ll
 
 all: $(SCALA)
 
+svg: $(SVG)
+
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -dce -mem2reg -dot-cfg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
@@ -21,4 +27,16 @@ all: $(SCALA)
 	dot -Tsvg $< -o $@
 
 clean:
-	rm -f *.bc *.ll *.dot *.scala *~
+	rm -f *.bc *.ll *.dot *.scala *.svg *~
+
+%.split: %.bc
+	$(APALA) -fn-name=$* $< -o $*
+	llvm-dis final.bc
+	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
+	../../../build/bin/xketch -fn-name=$* $*a.ll -o $*
+	$(eval subfcn = $(shell egrep -o "$*_detach[0-9]*" $*a.ll | sort -u))
+	for fcn in ${subfcn} ; do \
+	   ../../../build/bin/xketch -fn-name=$${fcn} $*a.ll -o $${fcn} ;  \
+	done
+
+
