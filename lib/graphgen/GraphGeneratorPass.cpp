@@ -192,6 +192,9 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         map_value_node[&I] =
             this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepArray[&I]);
     }
+    else
+        map_value_node[&I] =
+            this->dependency_graph->insertGepNode(I, GepArrayInfo());
 
     // Check wether it's gepOne or gepTwo
     // if (I.getNumOperands() == 2)
@@ -210,6 +213,10 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
     map_value_node[&I] = this->dependency_graph->insertLoadNode(I);
+}
+
+void GraphGeneratorPass::visitBitCastInst(llvm::BitCastInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertBitcastNode(I);
 }
 
 void GraphGeneratorPass::visitStoreInst(llvm::StoreInst &I) {
@@ -287,18 +294,62 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
-                auto _src = dyn_cast<BranchNode>(_node_src->second);
+                // std::variant<BranchNode, DetachNode> _src;
                 auto _dst = _node_dest->second;
+                Node *_src = nullptr;
+                if (isa<BranchNode>(_node_src->second)) {
+                    _src = dyn_cast<BranchNode>(_node_src->second);
+                    if (ins_it->getNumOperands() == 3) {
+                        if (c == 1)
+                            dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                        else if (c == 2)
+                            dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
+                    } else
+                        _src->addControlOutputPort(_dst);
 
-                if (ins_it->getNumOperands() == 3) {
-                    if (c == 1)
-                        _src->setFalseBranch(_dst);
-                    else if (c == 2)
-                        _src->setTrueBranch(_dst);
-                } else
-                    _src->addControlOutputPort(_dst);
+                    _dst->addControlInputPort(_src);
 
-                _dst->addControlInputPort(_src);
+                } else if (isa<DetachNode>(_node_src->second)){
+                    _src = dyn_cast<DetachNode>(_node_src->second);
+                    //if (ins_it->getNumOperands() == 3) {
+                        //if (c == 1)
+                            //dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                        //else if (c == 2)
+                            //dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
+                    //} else
+                        _src->addControlOutputPort(_dst);
+
+                    _dst->addControlInputPort(_src);
+
+                } else if (isa<ReattachNode>(_node_src->second)){
+                    _src = dyn_cast<ReattachNode>(_node_src->second);
+                    //if (ins_it->getNumOperands() == 3) {
+                        //if (c == 1)
+                            //dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                        //else if (c == 2)
+                            //dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
+                    //} else
+                        _src->addControlOutputPort(_dst);
+
+                    _dst->addControlInputPort(_src);
+
+                } else if (isa<SyncNode>(_node_src->second)){
+                    _src = dyn_cast<SyncNode>(_node_src->second);
+                    //if (ins_it->getNumOperands() == 3) {
+                        //if (c == 1)
+                            //dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                        //else if (c == 2)
+                            //dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
+                    //} else
+                        _src->addControlOutputPort(_dst);
+
+                    _dst->addControlInputPort(_src);
+
+                }
+                else{
+                    assert(!"Wrong cast of control node!");
+                }
+
 
             } else {
                 // If the operand is constant we have to create a new node
@@ -329,7 +380,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 }
 
                 if (_node_dest == this->map_value_node.end()) {
-                    DEBUG(ins_it->dump());
+                    operand->dump();
+                    ins_it->dump();
                     assert(!"The destination instruction couldn't find!");
                 }
 

@@ -914,6 +914,20 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
     return ff->get();
 }
 
+/**
+ * Insert a new Bitcast node
+ */
+InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
+    inst_list.push_back(std::make_unique<BitcastNode>(
+        NodeInfo(inst_list.size(), I.getName().str()), &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    return ff->get();
+}
+
+
 
 
 /**

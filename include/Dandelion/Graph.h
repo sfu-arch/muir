@@ -144,6 +144,7 @@ class Graph {
     void setFunction(llvm::Function *);
     SuperNode *insertSuperNode(llvm::BasicBlock &);
     InstructionNode *insertBinaryOperatorNode(llvm::BinaryOperator &);
+    InstructionNode *insertBitcastNode(llvm::BitCastInst &);
     InstructionNode *insertIcmpOperatorNode(llvm::ICmpInst &);
     InstructionNode *insertBranchNode(llvm::BranchInst &);
     InstructionNode *insertPhiNode(llvm::PHINode &);

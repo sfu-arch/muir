@@ -60,6 +60,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     void visitFunction(llvm::Function &);
     void visitBasicBlock(llvm::BasicBlock &);
+    void visitBitCastInst(llvm::BitCastInst &);
     void visitInstruction(llvm::Instruction &);
     void visitBinaryOperator(llvm::BinaryOperator &);
     void visitICmpInst(llvm::ICmpInst &);
