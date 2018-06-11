@@ -1,6 +1,6 @@
 CC=clang
-XKETCH=../../build/bin/xketch
-CFLAGS=-g -emit-llvm -m32 -S -o -
+XKETCH=../../build/bin/dandelion
+CFLAGS=-g -fno-vectorize -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
 
@@ -9,7 +9,7 @@ SCALA=$(SOURCES:%.c=%.scala)
 all: $(SCALA)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -disable-loop-vectorization -dce -dot-cfg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
