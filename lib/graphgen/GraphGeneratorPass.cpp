@@ -310,6 +310,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     _dst->addControlInputPort(_src);
 
                 } else if (isa<DetachNode>(_node_src->second)){
+                    //TODO fix the Detachnode connections
+                    //
                     _src = dyn_cast<DetachNode>(_node_src->second);
                     //if (ins_it->getNumOperands() == 3) {
                         //if (c == 1)
@@ -322,6 +324,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     _dst->addControlInputPort(_src);
 
                 } else if (isa<ReattachNode>(_node_src->second)){
+                    //TODO fix the Reattachnode connections
                     _src = dyn_cast<ReattachNode>(_node_src->second);
                     //if (ins_it->getNumOperands() == 3) {
                         //if (c == 1)
@@ -334,6 +337,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     _dst->addControlInputPort(_src);
 
                 } else if (isa<SyncNode>(_node_src->second)){
+                    //TODO fix the Sync node connections
                     _src = dyn_cast<SyncNode>(_node_src->second);
                     //if (ins_it->getNumOperands() == 3) {
                         //if (c == 1)

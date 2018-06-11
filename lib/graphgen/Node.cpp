@@ -2409,7 +2409,7 @@ std::string CallInNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        for (auto &l : _list) _arg_count.push_back(32);
         return _arg_count;
     };
 
@@ -2434,6 +2434,45 @@ std::string CallInNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+
+std::string CallInNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.data(\"field$id\")";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+std::string CallInNode::printOutputEnable(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.enable.ready := true.B";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            CallOutNode Class
 //===----------------------------------------------------------------------===//
@@ -2443,7 +2482,9 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        //for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        //TODO change 32
+        for (auto &l : _list) _arg_count.push_back(32);
         return _arg_count;
     };
 

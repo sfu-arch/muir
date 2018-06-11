@@ -274,7 +274,8 @@ void Graph::printMemoryModules(PrintType _pt) {
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
             outCode << memory_unit->printDefinition(PrintType::Scala);
-            outCode << stack_allocator->printDefinition(PrintType::Scala);
+            if(stack_allocator->numReadDataInputPort() > 0)
+                outCode << stack_allocator->printDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -621,7 +622,6 @@ void Graph::printScalaFunctionHeader() {
 
     // Print input call parameters
     _command = "    val in = Flipped(Decoupled(new Call(List(";
-    // helperReplace(_command, "$<vector_arg>", );
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
         _command = "32,";
@@ -637,37 +637,27 @@ void Graph::printScalaFunctionHeader() {
     for (auto &_ins : this->inst_list) {
         if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
             // Call arguments to subroutine
-            _command = "    val $call_out = new CallDecoupled(List(";
+            _command = "    val $call_out = Decoupled(new Call(List(";
             helperReplace(_command, "$call", _ins->getName());
             _final_command.append(_command);
-            // TODO: Make sure there is no inconsistancy here
-            for (auto &ag : _fc->getInstruction()->getFunction()->args()) {
+            for (auto ag : _fc->getCallOut()->input_data_range()) {
                 _command = "32,";
-                helperReplace(_command, "$index", c++);
                 _final_command.append(_command);
             }
             _final_command.pop_back();
-            _command = "))\n";
+            _command = ")))\n";
             _final_command.append(_command);
+
             // Return values from sub-routine.
             // Only supports a single 32 bit data bundle for now
+            //
+            // TODO : Make the output depedent on the actual code
             _command =
-                "    val $call_in = Flipped(new CallDecoupled(List(32)))\n";
+                "    val $call_in = Flipped(Decoupled(new Call(List(32))))\n";
             helperReplace(_command, "$call", _fc->getName());
             _final_command.append(_command);
         }
     }
-
-    // Print global memory interface
-    // c = 0;
-    // for (uint32_t c = 0; c < this->glob_list.size(); c++) {
-    //_command =
-    //"    val glob_$index = Flipped(Decoupled(new "
-    //"DataBundle))\n";
-    // helperReplace(_command, "$index", static_cast<int>(c++));
-    //_final_command.append(_command);
-    // break;
-    //}
 
     // Print cache memory interface
     _final_command.append(
@@ -927,9 +917,6 @@ InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
     return ff->get();
 }
 
-
-
-
 /**
  * Insert a new Load node
  */
@@ -965,14 +952,13 @@ InstructionNode *Graph::insertStoreNode(StoreInst &I) {
  * Insert a new Call node
  */
 InstructionNode *Graph::insertCallNode(CallInst &I) {
-    if (I.getName().str() == "")
-        inst_list.push_back(std::make_unique<CallNode>(
-            NodeInfo(inst_list.size(),
-                     "call_" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<CallNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    // if (I.getName().str() == "")
+    inst_list.push_back(std::make_unique<CallNode>(
+        NodeInfo(inst_list.size(), "call_" + std::to_string(inst_list.size())),
+        &I));
+    // else
+    // inst_list.push_back(std::make_unique<CallNode>(
+    // NodeInfo(inst_list.size(), I.getName().str()), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1324,6 +1310,9 @@ void Graph::printOutPort(PrintType _pt) {
                     << _c_node->getCallOut()->printOutputData(PrintType::Scala,
                                                               0)
                     << "\n\n";
+                if(_c_node->getCallIn()->numControlOutputPort() == 0)
+                    this->outCode
+                        << "  " << _c_node->getCallIn()->printOutputEnable(PrintType::Scala);
             }
 
             this->outCode << helperScalaPrintHeader(
@@ -1358,14 +1347,15 @@ void Graph::doInitialization() {
     }
 
     for (auto &_node : inst_list) {
-        for (auto &_child : _node->output_data_range()) {
+        Node *_ptr = _node.get();
+        if (isa<CallNode>(_ptr)) _ptr = dyn_cast<CallNode>(_ptr)->getCallIn();
+        for (auto &_child : _ptr->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
-                std::make_pair(&*_node,
-                               _node->returnDataOutputPortIndex(&*_child)),
+                std::make_pair(_ptr, _ptr->returnDataOutputPortIndex(&*_child)),
                 std::make_pair(&*_child,
-                               _child->returnDataInputPortIndex(&*_node)));
+                               _child->returnDataInputPortIndex(_ptr)));
         }
     }
     for (auto &_loop : loop_nodes) {
