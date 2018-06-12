@@ -274,7 +274,7 @@ void Graph::printMemoryModules(PrintType _pt) {
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
             outCode << memory_unit->printDefinition(PrintType::Scala);
-            if(stack_allocator->numReadDataInputPort() > 0)
+            if (stack_allocator->numReadDataInputPort() > 0)
                 outCode << stack_allocator->printDefinition(PrintType::Scala);
             break;
         case PrintType::Dot:
@@ -730,7 +730,10 @@ void Graph::printScalaHeader(string config_path, string package_name) {
  */
 SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     super_node_list.push_back(std::make_unique<SuperNode>(
-        NodeInfo(super_node_list.size(), BB.getName().str()), &BB));
+        NodeInfo(
+            super_node_list.size(),
+            "bb_" + BB.getName().str() + to_string(super_node_list.size())),
+        &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
         [&BB](auto &arg) -> bool { return arg.get()->getBasicBlock() == &BB; });
@@ -743,7 +746,9 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
  */
 InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     inst_list.push_back(std::make_unique<BinaryOperatorNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(),
+                 "binaryOp_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -757,14 +762,11 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertDetachNode(DetachInst &I) {
-    if (I.getName().str() == "")
-        inst_list.push_back(std::make_unique<DetachNode>(
-            NodeInfo(inst_list.size(),
-                     "detach" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<DetachNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<DetachNode>(
+        NodeInfo(
+            inst_list.size(),
+            "detach_" + I.getName().str() + std::to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -778,14 +780,11 @@ InstructionNode *Graph::insertDetachNode(DetachInst &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
-    if (I.getName().str() == "")
-        inst_list.push_back(std::make_unique<ReattachNode>(
-            NodeInfo(inst_list.size(),
-                     "reattach" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<ReattachNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<ReattachNode>(
+        NodeInfo(
+            inst_list.size(),
+            "reattach_" + I.getName().str() + std::to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -799,14 +798,11 @@ InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertSyncNode(SyncInst &I) {
-    if (I.getName() == "")
-        inst_list.push_back(std::make_unique<SyncNode>(
-            NodeInfo(inst_list.size(),
-                     "sync" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<SyncNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<SyncNode>(
+        NodeInfo(
+            inst_list.size(),
+            "sync_" + I.getName().str() + std::to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -833,14 +829,10 @@ InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
  * Insert a new computation Branch
  */
 InstructionNode *Graph::insertBranchNode(BranchInst &I) {
-    if (I.getName().str() == "")
-        inst_list.push_back(std::make_unique<BranchNode>(
-            NodeInfo(inst_list.size(),
-                     "br_" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<BranchNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<BranchNode>(
+        NodeInfo(inst_list.size(),
+                 "br_" + I.getName().str() + std::to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -853,7 +845,9 @@ InstructionNode *Graph::insertBranchNode(BranchInst &I) {
  */
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
     inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(),
+                 "phi_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -867,8 +861,9 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
 InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
                                          uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), num_byte, size,
-        inst_list.size(), &I));
+        NodeInfo(inst_list.size(),
+                 "alloca_" + I.getName().str() + to_string(inst_list.size())),
+        num_byte, size, inst_list.size(), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -882,7 +877,9 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
                                       GepArrayInfo _info) {
     inst_list.push_back(std::make_unique<GepArrayNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), _info, &I));
+        NodeInfo(inst_list.size(),
+                 "Gep_" + I.getName().str() + to_string(inst_list.size())),
+        _info, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -896,7 +893,9 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
                                       GepStructInfo _info) {
     inst_list.push_back(std::make_unique<GepStructNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), _info, &I));
+        NodeInfo(inst_list.size(),
+                 "Gep" + I.getName().str() + to_string(inst_list.size())),
+        _info, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -909,7 +908,9 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
  */
 InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
     inst_list.push_back(std::make_unique<BitcastNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(),
+                 "bitcast_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -979,14 +980,10 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
  * Insert a new Store node
  */
 InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
-    if (I.getName().str() == "")
-        inst_list.push_back(std::make_unique<ReturnNode>(
-            NodeInfo(inst_list.size(),
-                     "ret_" + std::to_string(inst_list.size())),
-            &I));
-    else
-        inst_list.push_back(std::make_unique<ReturnNode>(
-            NodeInfo(inst_list.size(), I.getName().str()), &I));
+    inst_list.push_back(std::make_unique<ReturnNode>(
+        NodeInfo(inst_list.size(),
+                 "ret_" + I.getName().str() + std::to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1310,9 +1307,10 @@ void Graph::printOutPort(PrintType _pt) {
                     << _c_node->getCallOut()->printOutputData(PrintType::Scala,
                                                               0)
                     << "\n\n";
-                if(_c_node->getCallIn()->numControlOutputPort() == 0)
-                    this->outCode
-                        << "  " << _c_node->getCallIn()->printOutputEnable(PrintType::Scala);
+                if (_c_node->getCallIn()->numControlOutputPort() == 0)
+                    this->outCode << "  "
+                                  << _c_node->getCallIn()->printOutputEnable(
+                                         PrintType::Scala);
             }
 
             this->outCode << helperScalaPrintHeader(

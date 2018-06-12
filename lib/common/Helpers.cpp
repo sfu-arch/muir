@@ -453,6 +453,16 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
             errs() << "Num byte: "
                    << DL.getTypeAllocSize(src_array_type->getArrayElementType())
                    << "\n");
+    } else if (src_type->isIntegerTy()) {
+        auto src_integer_type = dyn_cast<llvm::IntegerType>(src_type);
+        this->GepArray.insert(
+            std::pair<llvm::Instruction *, common::GepArrayInfo>(
+                &I, common::GepArrayInfo(DL.getTypeAllocSize(src_integer_type),
+                                         1)));
+
+    } else {
+        src_type->dump();
+        assert(!"GepInformation pass doesn't support this type of input");
     }
 }
 
@@ -615,8 +625,6 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     }
     return _ret;
 }
-
-
 
 bool helpers::helperReplace(std::string &str, const std::string &from,
                             std::list<std::pair<uint32_t, uint32_t>> &to,
