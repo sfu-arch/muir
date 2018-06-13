@@ -188,7 +188,7 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     if (src_type->isStructTy()) {
         map_value_node[&I] = this->dependency_graph->insertGepNode(
             I, gep_pass_ctx.GepStruct[&I]);
-    } else if (src_type->isArrayTy()) {
+    } else if (src_type->isArrayTy() || src_type->isIntegerTy()) {
         map_value_node[&I] =
             this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepArray[&I]);
     }
