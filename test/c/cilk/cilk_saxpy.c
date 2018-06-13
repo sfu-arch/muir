@@ -13,10 +13,11 @@ double timespec_to_ms(struct timespec *ts)
   return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
 }
 
-void saxpy (int n, int a, int x[], int y[]) {
+int cilk_saxpy (int n, int a, int x[], int y[]) {
   cilk_for (int i = 0; i < n; i++) {
     y[i] = a * x[i] + y[i];
   }
+  return 1;
 }
 
 int main (int argc, char *argv[]) {
@@ -51,7 +52,7 @@ int main (int argc, char *argv[]) {
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
 #endif  
   for (int i=0;i<LOOP_SIZE;i++) {
-    saxpy(n, a, x, y);
+    cilk_saxpy(n, a, x, y);
   }
 
 #ifdef TIME

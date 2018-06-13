@@ -1,11 +1,12 @@
 CC=clang
-XKETCH=../../../build/bin/xketch
-CFLAGS= -DPIR -emit-llvm -m32 -fno-vectorize -S -o -
+XKETCH=../../../build/bin/dandelion
+CFLAGS= -DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
 APALA=~/amoeba/apala-generator/build/bin/xketch
+#APALA=/home/amiralis/git/xketch-ap/build/bin/xketch
 
 .PRECIOUS: %.ll
 
@@ -15,7 +16,6 @@ svg: $(SVG)
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o - | opt -dce -mem2reg -dot-cfg -o $@
-	$(CC) -g $(CFLAGS) $< -o - | opt -dce -mem2reg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
@@ -33,15 +33,10 @@ clean:
 	$(APALA) -fn-name=$* $< -o $*
 	llvm-dis final.bc
 	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
-	../../../build/bin/xketch -fn-name=$* $*a.ll -o $*
-	../../../build/bin/xketch -fn-name=$*_detach1 $*a.ll -o $*_detach1
+	$(XKETCH) -fn-name=$* $*a.ll -o $*
+	$(eval subfcn = $(shell egrep -o "$*_detach[0-9]*" $*a.ll | sort -u))
+	for fcn in ${subfcn} ; do \
+	   $(XKETCH) -fn-name=$${fcn} $*a.ll -o $${fcn} ;  \
+	done
 
-# Notes
-# 
-# ~/amoeba/apala-generator/build/bin/xketch -fn-name=cilk_for_test11 cilk_for_test11.bc -o cilk_for_test11
-# llvm-dis final.bc
-# opt final.ll -S -dce -mem2reg -dot-cfg -o cilk_for_test11a.ll
-# May have to add "noinline" to functions in ll file 
-# ../../../build/bin/xketch -fn-name=cilk_for_test11 cilk_for_test11a.ll -o cilk_for_test11
-# ../../../build/bin/xketch -fn-name=cilk_for_test11_detach1 cilk_for_test11a.ll -o cilk_for_test11_detach
-# make svg
+
