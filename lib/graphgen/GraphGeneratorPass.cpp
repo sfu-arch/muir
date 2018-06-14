@@ -196,19 +196,6 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         map_value_node[&I] =
             this->dependency_graph->insertGepNode(I, GepArrayInfo());
 
-    // Check wether it's gepOne or gepTwo
-    // if (I.getNumOperands() == 2)
-    // dyn_cast<GEPNode>(node)->addNumByte(
-    // gep_pass_ctx.SingleGepIns[&I].numByte);
-    // else if (I.getNumOperands() == 3) {
-    // dyn_cast<GEPNode>(node)->addNumByte(
-    // gep_pass_ctx.TwoGepIns[&I].numByte1);
-    // dyn_cast<GEPNode>(node)->addNumByte(
-    // gep_pass_ctx.TwoGepIns[&I].numByte2);
-    //} else
-    // assert(!"Not supported gep node");
-
-    // errs() << gep_pass_ctx.SingleGepIns[&I].numByte << "\n";
 }
 
 void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
@@ -293,6 +280,9 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     &*ins_it);  // it should be Insnode
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
+
+                if(isa<ReattachNode>(_node_src->second))
+                    continue;
 
                 // std::variant<BranchNode, DetachNode> _src;
                 auto _dst = _node_dest->second;
@@ -701,6 +691,18 @@ void GraphGeneratorPass::connectParalleNodes(Function &F) {
 void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     auto call_instructions =
         getNodeList<CallNode>(this->dependency_graph.get());
+    for(auto _call_node : call_instructions){
+        auto _ins = _call_node->getInstruction();
+        auto &_end_ins = _ins->getParent()->back();
+        auto _end_node = map_value_node[&_end_ins];
+        if(isa<ReattachNode>(_end_node) || isa<BranchNode>(_end_node)){
+            _end_node->addDataInputPort(_call_node->getCallIn());
+            _call_node->getCallIn()->addDataOutputPort(_end_node);
+
+            _end_node->addControlInputPort(_call_node->getCallIn());
+            _call_node->getCallIn()->addControlOutputPort(_end_node);
+        }
+    }
 }
 
 /**

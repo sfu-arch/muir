@@ -1797,15 +1797,16 @@ std::string GepStructNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte=List($<input_vector>)))\n\n";
                 helperReplace(_text, "$type", "GepStructOneNode");
-                helperReplace(_text, "$<input_vector>", gep_info.element_size, ",");
-                //helperReplace(_text, "$nb1", num_byte[0]);
+                helperReplace(_text, "$<input_vector>", gep_info.element_size,
+                              ",");
+                // helperReplace(_text, "$nb1", num_byte[0]);
             } else {
                 _text =
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n\n";
                 helperReplace(_text, "$type", "GepArrayTwoNode");
-                //helperReplace(_text, "$nb1", num_byte[0]);
-                //helperReplace(_text, "$nb2", num_byte[1]);
+                // helperReplace(_text, "$nb1", num_byte[0]);
+                // helperReplace(_text, "$nb2", num_byte[1]);
             }
 
             helperReplace(_text, "$name", _name.c_str());
@@ -1897,7 +1898,6 @@ std::string GepStructNode::printInputData(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            LoopNode Class
@@ -2031,8 +2031,8 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumPredOps= "
                 "$num_out, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
-            // helperReplace(_text, "$num_out",
-            // std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "Reattach");
 
@@ -2063,6 +2063,24 @@ std::string ReattachNode::printInputEnable(PrintType _pt) {
     return _text;
 }
 
+std::string ReattachNode::printInputEnable(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -2081,6 +2099,27 @@ std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     }
     return _text;
 }
+
+std::string ReattachNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.predicateIn($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 //                            DeatachNode Class
@@ -2156,7 +2195,16 @@ std::string SyncNode::printDefinition(PrintType _pt) {
                 "NumDec=$num_dec, NumOuts=$num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "Sync");
+            helperReplace(_text, "$type", "SyncTC");
+
+            // TODO add special port for increase and decrease
+            helperReplace(_text, "$num_inc", 1);
+            helperReplace(_text, "$num_dec", 1);
+
+            if(this->numDataOutputPort() == 0)
+                helperReplace(_text, "$num_out", 1);
+            else
+                helperReplace(_text, "$num_out", this->numDataOutputPort());
 
             break;
         case PrintType::Dot:
@@ -2434,7 +2482,6 @@ std::string CallInNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string CallInNode::printOutputData(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -2454,7 +2501,6 @@ std::string CallInNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string CallInNode::printOutputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -2462,6 +2508,25 @@ std::string CallInNode::printOutputEnable(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.Out.enable.ready := true.B";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+std::string CallInNode::printOutputEnable(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.enable";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -2482,8 +2547,8 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        //for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
-        //TODO change 32
+        // for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        // TODO change 32
         for (auto &l : _list) _arg_count.push_back(32);
         return _arg_count;
     };
@@ -2744,6 +2809,3 @@ std::string BitcastNode::printInputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
-
-
-

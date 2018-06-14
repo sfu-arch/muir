@@ -1065,6 +1065,7 @@ class CallInNode : public InstructionNode {
     virtual std::string printInputData(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType) override;
+    virtual std::string printOutputEnable(PrintType, uint32_t) override;
 };
 
 class CallOutNode : public InstructionNode {
@@ -1187,9 +1188,10 @@ class ReattachNode : public InstructionNode {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType) override;
-    // virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class SyncNode : public InstructionNode {
@@ -1234,7 +1236,7 @@ class BitcastNode : public InstructionNode {
     // virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
-    //virtual std::string printOutputData(PrintType) override;
+    // virtual std::string printOutputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 

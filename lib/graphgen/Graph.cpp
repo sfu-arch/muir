@@ -362,10 +362,11 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                     auto _output_node = dyn_cast<Node>(*_ins_iterator);
 
                     if (auto detach = dyn_cast<ReattachNode>(_output_node)) {
-                        this->outCode
-                            << "  "
-                            << _output_node->printInputEnable(PrintType::Scala)
-                            << "\n\n";
+                        if (detach->numControlInputPort() == 0)
+                            this->outCode << "  "
+                                          << _output_node->printInputEnable(
+                                                 PrintType::Scala)
+                                          << "\n\n";
                         continue;
                     }
 
@@ -624,11 +625,14 @@ void Graph::printScalaFunctionHeader() {
     _command = "    val in = Flipped(Decoupled(new Call(List(";
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
-        _command = "32,";
+        if (c == this->getSplitCall()->numLiveIn() - 1)
+            _command = "32";
+        else
+            _command = "32, ";
         helperReplace(_command, "$index", c);
         _final_command.append(_command);
     }
-    _final_command.pop_back();
+    //_final_command.pop_back();
     _command = "))))\n";
     _final_command.append(_command);
 
@@ -641,9 +645,10 @@ void Graph::printScalaFunctionHeader() {
             helperReplace(_command, "$call", _ins->getName());
             _final_command.append(_command);
             for (auto ag : _fc->getCallOut()->input_data_range()) {
-                _command = "32,";
+                _command = "32, ";
                 _final_command.append(_command);
             }
+            _final_command.pop_back();
             _final_command.pop_back();
             _command = ")))\n";
             _final_command.append(_command);
@@ -817,7 +822,9 @@ InstructionNode *Graph::insertSyncNode(SyncInst &I) {
  */
 InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
     inst_list.push_back(std::make_unique<IcmpNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(),
+                 "icmp_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -969,7 +976,7 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
     auto call_out = dyn_cast<CallNode>(ff->get())->getCallOut();
 
     call_in->setParent(this);
-    call_in->setParent(this);
+    call_out->setParent(this);
     this->pushCallIn(call_in);
     this->pushCallOut(call_out);
 
@@ -1311,6 +1318,18 @@ void Graph::printOutPort(PrintType _pt) {
                     this->outCode << "  "
                                   << _c_node->getCallIn()->printOutputEnable(
                                          PrintType::Scala);
+                else {
+                    for (auto _ctrl_node :
+                         _c_node->getCallIn()->output_control_range()) {
+                        this->outCode
+                            << "  "
+                            << _ctrl_node->printInputEnable(PrintType::Scala, 0)
+                            << " <> "
+                            << _c_node->getCallIn()->printOutputEnable(
+                                   PrintType::Scala, 0)
+                            << "\n\n";
+                    }
+                }
             }
 
             this->outCode << helperScalaPrintHeader(
