@@ -19,6 +19,12 @@
 #include <sstream>
 #include <string>
 
+#define WARNING(x)                                             \
+    do {                                                       \
+        std::cout << "\033[1;31m[WARNING] \033[0m"             \
+                  << "\033[1;33m" << x <<" \033[0m" << std::endl; \
+    } while (0)
+
 using namespace std;
 using namespace llvm;
 
@@ -42,17 +48,16 @@ struct GepArrayInfo {
     uint32_t length;
 
     GepArrayInfo(uint32_t _size, uint32_t _l) : array_size(_size), length(_l) {}
-    GepArrayInfo(): array_size(0), length(0){}
+    GepArrayInfo() : array_size(0), length(0) {}
 };
 
 struct GepStructInfo {
     std::vector<uint32_t> element_size;
 
-    GepStructInfo(){element_size.clear();}
+    GepStructInfo() { element_size.clear(); }
 
     GepStructInfo(std::vector<uint32_t> _input_elements)
         : element_size(_input_elements) {}
-
 };
 
 // Functions

@@ -1625,6 +1625,25 @@ std::string StoreNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+
+std::string StoreNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.Out($id)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            ConstantNode Class
 //===----------------------------------------------------------------------===//

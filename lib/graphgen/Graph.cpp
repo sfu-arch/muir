@@ -479,7 +479,7 @@ void Graph::printDatadependencies(PrintType _pt) {
 
             // Print ground ndoes
             for (auto _st_node : getNodeList<StoreNode>(this)) {
-                if (_st_node->isGround())
+                if (_st_node->numDataOutputPort() == 0)
                     this->outCode << "  "
                                   << _st_node->printGround(PrintType::Scala)
                                   << "\n\n";
@@ -669,10 +669,12 @@ void Graph::printScalaFunctionHeader() {
         "    val MemResp = Flipped(Valid(new MemResp))\n"
         "    val MemReq = Decoupled(new MemReq)\n");
 
+    // TODO make sure independent from return type we always need to have an
+    // output
     // Print output (return) parameters
-    if (!function_ptr->getReturnType()->isVoidTy()) {
-        _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
-    }
+    // if (!function_ptr->getReturnType()->isVoidTy()) {
+    _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
+    //}
 
     _final_command.append(
         "  })\n"
@@ -1464,10 +1466,30 @@ void Graph::doInitialization() {
     }
 }
 
+/**
+ * This function iterate over all the store nodes, and ground their output
+ * If the next instruction after store is return the data output is connected 
+ * to the return data input port
+ */
 void Graph::groundStoreNodes() {
     auto _store_nodes = getNodeList<StoreNode>(this);
+    auto _return_nodes = getNodeList<ReturnNode>(this);
+
+    if(_return_nodes.size() > 1)
+        assert(!"A function can not have more than one return node!");
+
     for (auto _st_node : _store_nodes) {
-        if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
+        if(_st_node == _store_nodes.back()){
+            if(auto _return_node = dyn_cast<ReturnNode>(_return_nodes.back())){
+                _st_node->addDataOutputPort(_return_node);
+                _return_node->addDataInputPort(_st_node);
+                _st_node->unsetGround();
+            }
+            else
+                WARNING("Sotre node is not grounded");
+
+        }
+        else if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
     }
 }
 

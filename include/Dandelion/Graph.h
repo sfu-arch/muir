@@ -68,7 +68,7 @@ class Graph {
     Node *out_node;
 
     // Keep track of nodes and values
-    std::map<llvm::Value *, Node *> map_value_node;
+    //std::map<llvm::Value *, Node *> map_value_node;
 
    public:
     explicit Graph(NodeInfo _n_info)
