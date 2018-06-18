@@ -18,27 +18,40 @@
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
-int foo(int n);// {
-//  return n;
-//}
+#define LOOP_SIZE 100000
+#define TIME
 
-int fib(int n)
+double timespec_to_ms(struct timespec *ts)
+{
+  return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
+}
+
+void fib_continue(int *x, int *y, int **r) {
+  **r = *x + *y;
+}
+
+void fib(int n, int *r)
 {
   int x,y;
-  if (n < 2)
-    return n;
-  cilk_spawn { x = fib(n-1);}
-  y = fib(n-2);
+  int *r_ptr = r;
+  if (n < 2) {
+    *r = n;
+    return;
+  } 
+  cilk_spawn fib(n-1,&x);
+  cilk_spawn fib(n-2,&y);
   cilk_sync;
-  return x + y;
+  fib_continue(&x,&y, &r_ptr);
+  return;
 }
+
 
 int main(int argc, char *argv[])
 {
   // Fibonacci number to be calculated.  39 is big enough to take a
   // reasonable amount of time
-  int n = 39;
-
+  int n = 15;
+  int result;
   // If we've got a parameter, assume it's the number of workers to be used
   if (argc > 1)
     {
@@ -50,19 +63,27 @@ int main(int argc, char *argv[])
         }
 
       // Set the number of workers to be used
-      //__cilkrts_set_param("nworkers", argv[1]);
+#ifdef TIME      
+      __cilkrts_set_param("nworkers", argv[1]);
+#endif
     }
 
   // Time how long it takes to calculate the nth Fibonacci number
-  clock_t start = clock();
-  int result = fib(n);
-  clock_t end = clock();
+#ifdef TIME
+  struct timespec start_time, end_time;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+#endif  
+  for (int i=0;i<LOOP_SIZE;i++) {
+    fib(n,&result);
+  }
+#ifdef TIME
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+  double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
+  float time_ns = time_ms / LOOP_SIZE * 1000000;
+  printf("Calculated in %.3f ns using %d workers.\n",
+  	 time_ns, __cilkrts_get_nworkers());
+#endif
 
-  // Display our results
-  double duration = (double)(end - start) / CLOCKS_PER_SEC;
   printf("Fibonacci number #%d is %d.\n", n, result);
-  //  printf("Calculated in %.3f seconds using %d workers.\n",
-  //	 duration, __cilkrts_get_nworkers());
-
   return 0;
 }
