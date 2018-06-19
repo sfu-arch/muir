@@ -73,6 +73,10 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void visitReturnInst(llvm::ReturnInst &);
     void visitCallInst(llvm::CallInst &);
 
+
+    void visitFAdd(llvm::BinaryOperator &);
+    void visitFCmp(llvm::FCmpInst &);
+
     void fillBasicBlockDependencies(llvm::Function &);
     void fillLoopDependencies(llvm::LoopInfo &);
     void findDataPort(llvm::Function &);

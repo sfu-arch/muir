@@ -168,6 +168,13 @@ void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
     map_value_node[&I] = this->dependency_graph->insertPhiNode(I);
 }
 
+void GraphGeneratorPass::visitFAdd(llvm::BinaryOperator &I){
+    map_value_node[&I] = this->dependency_graph->insertFaddNode(I);
+}
+
+void GraphGeneratorPass::visitFCmp(llvm::FCmpInst &I){
+    map_value_node[&I] = this->dependency_graph->insertFcmpNode(I);
+}
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();
@@ -349,7 +356,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 // If the operand is constant we have to create a new node
                 if (isa<llvm::AllocaInst>(&*ins_it)) continue;
 
-                ConstIntNode *_const_node = nullptr;
+                Node *_const_node = nullptr;
                 if (auto const_value = dyn_cast<llvm::ConstantInt>(operand)) {
                     _const_node = this->dependency_graph->insertConstIntNode(
                         *const_value);
@@ -361,7 +368,19 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         ->addControlOutputPort(_const_node);
                     dyn_cast<SuperNode>(
                         this->map_value_node[ins_it->getParent()])
-                        ->addconstIntNode(_const_node);
+                        ->addconstIntNode(dyn_cast<ConstIntNode>(_const_node));
+                }
+                else if (auto const_value = dyn_cast<llvm::ConstantFP>(operand)) {
+                    _const_node = this->dependency_graph->insertConstFPNode(*const_value);
+                    map_value_node[operand] = _const_node;
+
+                    _const_node->addControlInputPort(
+                        this->map_value_node[ins_it->getParent()]);
+                    this->map_value_node[ins_it->getParent()]
+                        ->addControlOutputPort(_const_node);
+                    dyn_cast<SuperNode>(
+                        this->map_value_node[ins_it->getParent()])
+                        ->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
                 }
 
                 auto _node_src = this->map_value_node.find(operand);

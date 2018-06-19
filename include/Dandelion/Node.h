@@ -39,6 +39,7 @@ class CallNode;
 class CallInNode;
 class CallOutNode;
 class ConstIntNode;
+class ConstFPNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 
@@ -86,6 +87,7 @@ class Node {
         FunctionArgTy,
         GlobalValueTy,
         ConstIntTy,
+        ConstFPTy,
         MemoryUnitTy,
         StackUnitTy,
         ContainerTy,
@@ -340,7 +342,8 @@ class SuperNode : public Node {
    public:
     // List of the instructions
     using PhiNodeList = std::list<PhiSelectNode *>;
-    using ConstNodeList = std::list<ConstIntNode *>;
+    using ConstIntNodeList = std::list<ConstIntNode *>;
+    using CosntFPNodeList= std::list<ConstFPNode *>;
     enum SuperNodeType { Mask, NoMask, LoopHead };
 
    private:
@@ -348,7 +351,8 @@ class SuperNode : public Node {
 
     std::list<InstructionNode *> instruction_list;
     PhiNodeList phi_list;
-    ConstNodeList const_list;
+    ConstIntNodeList const_int_list;
+    CosntFPNodeList const_fp_list;
 
     SuperNodeType type;
 
@@ -367,6 +371,7 @@ class SuperNode : public Node {
     void addInstruction(InstructionNode *);
     void addPhiInstruction(PhiSelectNode *);
     void addconstIntNode(ConstIntNode *);
+    void addconstFPNode(ConstFPNode *);
 
     bool hasPhi() { return !phi_list.empty(); }
     uint32_t getNumPhi() const { return phi_list.size(); }
@@ -379,9 +384,9 @@ class SuperNode : public Node {
     auto ins_end() const { return this->instruction_list.end(); }
     auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
 
-    auto const_begin() const { return this->const_list.begin(); }
-    auto const_end() const { return this->const_list.end(); }
-    auto consts() { return helpers::make_range(const_begin(), const_end()); }
+    auto const_int_begin() const { return this->const_int_list.begin(); }
+    auto const_int_end() const { return this->const_int_list.end(); }
+    auto cints() { return helpers::make_range(const_int_begin(), const_int_end()); }
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
@@ -668,6 +673,16 @@ class InstructionNode : public Node {
         BitCastInstructionTy,
         TruncInstructionTy,
         SelectInstructionTy,
+
+        //Floating point operations
+        
+        FaddInstructionTy,
+        FsubInstructionTy,
+        FmulInstructionTy,
+        FdivInstructionTy,
+        FremInstructionTy,
+        FcmpInstructionTy,
+
 #ifdef TAPIR
         DetachInstructionTy,
         ReattachInstructionTy,
@@ -728,6 +743,26 @@ class BinaryOperatorNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
+
+class FaddOperatorNode: public InstructionNode {
+   public:
+    FaddOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::FaddInstructionTy, _ins) {}
+
+    // Overloading isa<>, dyn_cast from llvm
+    static bool classof(const InstructionNode *I) {
+        return I->getOpCode() == InstType::FaddInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
 class IcmpNode : public InstructionNode {
    public:
     IcmpNode(NodeInfo _ni, llvm::ICmpInst *_ins = nullptr)
@@ -745,6 +780,25 @@ class IcmpNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
+
+class FcmpNode : public InstructionNode {
+   public:
+    FcmpNode(NodeInfo _ni, llvm::FCmpInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::FcmpInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *I) {
+        return I->getOpCode() == InstType::FcmpInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
 
 class BranchNode : public InstructionNode {
    public:
@@ -1127,6 +1181,32 @@ class ConstIntNode : public Node {
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
 };
+
+class ConstFPNode : public Node {
+   private:
+    llvm::ConstantFP *parent_const_fp;
+    float value;
+
+   public:
+    ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
+        : Node(Node::ConstIntTy, _ni), parent_const_fp(_cfp) {
+        value = parent_const_fp->getValueAPF().convertToFloat();
+    }
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::ConstFPTy;
+    }
+
+    uint32_t getValue() { return value; }
+
+    llvm::ConstantInt *getConstantParent();
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType) override;
+};
+
+
 
 /**
  * SplitCall node

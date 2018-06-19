@@ -252,7 +252,7 @@ void Graph::printConstants(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             this->outCode << helperScalaPrintHeader("Printing constants nodes");
-            for (auto &const_node : this->const_list) {
+            for (auto &const_node : this->const_int_list) {
                 // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 const_node->getConstantParent()->print(this->outCode);
@@ -344,7 +344,7 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> enable instruction");
             for (auto &_s_node : super_node_list) {
-                for (auto &_const_iterator : _s_node->consts()) {
+                for (auto &_const_iterator : _s_node->cints()) {
                     this->outCode
                         << "  "
                         << _const_iterator->printInputEnable(PrintType::Scala)
@@ -765,6 +765,43 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     return ff->get();
 }
 
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<BinaryOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
+    inst_list.push_back(std::make_unique<FcmpNode>(
+        NodeInfo(inst_list.size(),
+                 "FPCMP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+
 /**
  * Insert a new computation instruction
  */
@@ -1097,13 +1134,28 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
  * Insert a new const node
  */
 ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
-    const_list.push_back(std::make_unique<ConstIntNode>(
-        NodeInfo(const_list.size(),
-                 "const" + std::to_string(const_list.size())),
+    const_int_list.push_back(std::make_unique<ConstIntNode>(
+        NodeInfo(const_int_list.size(),
+                 "const" + std::to_string(const_int_list.size())),
         &C));
 
-    return const_list.back().get();
+    return const_int_list.back().get();
 }
+
+
+/**
+ * Insert a new const node
+ */
+
+ConstFPNode *Graph::insertConstFPNode(ConstantFP &C) {
+    const_fp_list.push_back(std::make_unique<ConstFPNode>(
+        NodeInfo(const_fp_list.size(),
+                 "const" + std::to_string(const_fp_list.size())),
+        &C));
+
+    return const_fp_list.back().get();
+}
+
 
 LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
     auto _node_p = _ln.get();
@@ -1353,7 +1405,7 @@ void Graph::doInitialization() {
     // Filling the data dependencies
     //
 
-    for (auto &_node : const_list) {
+    for (auto &_node : const_int_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
             this->insertEdge(
