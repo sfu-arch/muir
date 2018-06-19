@@ -6,12 +6,12 @@
 
 #define CHUNKSIZE (2)
 #define N (CHUNKSIZE * 16)
-#define QSIZE (5)
+#define QSIZE (3)
 #define FREE (-1)
 #define EOT (-10) //end-of-tasks
 
-#define LOOP_SIZE 1000
-//#define TIME
+#define LOOP_SIZE 1000000
+#define TIME
 
 volatile int q[1<<QSIZE];
 
@@ -39,8 +39,8 @@ void S4 (int x[], int y[]) {
     
     while (1) { //q[rptr] != EOT) {
 
-        while (q[rptr] == FREE) {}
-	if (q[rptr] == EOT) {
+      while (q[rptr] == FREE) {}
+      if (q[rptr] == EOT) {
 	  break;
 	} else {
 	  pos = q[rptr];
@@ -48,11 +48,11 @@ void S4 (int x[], int y[]) {
 	  y[pos + 1] = x[pos + 1];
 
 	  q[rptr] = FREE;
-	  rptr = (rptr + 1) & ((1<<QSIZE)-1);
+	  rptr = (rptr + 1) % ((1<<QSIZE)-1);
 	}
 	//print(y);
 
-    } //while not end-of-tasks
+	} //while not end-of-tasks
 
 }//S4
 
@@ -105,7 +105,7 @@ void dedup (int x[], int y[]) {
       if(q[wptr] == FREE) {
             cilk_spawn S2 (x, pos, wptr);
             pos += CHUNKSIZE;
-            wptr = (wptr+1) & ((1<<QSIZE)-1);
+            wptr = (wptr+1) % ((1<<QSIZE)-1);
       }
 
     }//while not end of buffer
@@ -136,6 +136,7 @@ int main (int argc, char *argv[]) {
     a[N] = 0;
     */
     // If we've got a parameter, assume it's the number of workers to be used
+    printf("%d %d\n", 1<<QSIZE, (1<<QSIZE)-1);
     if (argc > 1)
       {
 	// Values less than 1, or parameters that aren't numbers aren't allowed
@@ -151,19 +152,19 @@ int main (int argc, char *argv[]) {
 	#endif
       }
 
-    for (int i = 0; i < (1<<QSIZE)-1; i++) {
+    for (int i = 0; i < (1<<QSIZE); i++) {
             q[i] = FREE;
     }
 
     print (a);
 #ifdef TIME
   struct timespec start_time, end_time;
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
   for (int i=0;i<LOOP_SIZE;i++) 
     dedup (a, out);
 #ifdef TIME
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
   float time_ns = time_ms / LOOP_SIZE * 1000000;
   printf("Calculated in %.3f ns using %d workers.\n",

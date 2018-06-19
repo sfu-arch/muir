@@ -4,38 +4,31 @@
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
-#define LOOP_SIZE 1000000
+#define LOOP_SIZE 200000
 #define TIME
+#define N 1000
 
 double timespec_to_ms(struct timespec *ts)
 {
   return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
 }
 
-
-int cilk_for_test06(int a[][5], int b[][5], int c[][5]) {
-  cilk_for (int i = 0; i < 5; ++i) {
-    cilk_for (int j = 0; j < 5; ++j) {
-      c[i][j]=a[i][j]+b[i][j];
-    }
+void saxpy (int n, int a, int x[], int y[]) {
+  cilk_for (int i = 0; i < n; i++) {
+    y[i] = a * x[i] + y[i];
   }
-
-  return 1;
 }
 
-int main(int argc, char *argv[]) {
-  int i,j;
-  int a[5][5] = {{ 1, 2, 3, 4, 5},
-		 {11,12,13,14,15},
-		 {21,22,23,24,25},
-		 {31,32,33,34,35},
-		 {41,42,43,44,45}};
-  int b[5][5] = {{ 1, 2, 3, 4, 5},
-		 {11,12,13,14,15},
-		 {21,22,23,24,25},
-		 {31,32,33,34,35},
-		 {41,42,43,44,45}};
-  int c[5][5] = {0};
+int main (int argc, char *argv[]) {
+  int n = N;
+  int a = 5;
+  int x[N];
+  int y[N];
+  for (int i=0;i<N;i++){
+    x[i] = rand() % 10;
+    y[i] = rand() % 10;
+  }
+
   // If we've got a parameter, assume it's the number of workers to be used
   if (argc > 1)
     {
@@ -52,14 +45,13 @@ int main(int argc, char *argv[]) {
 #endif
     }
 
-  // Time how long it takes
+  // Time how long it takes to calculate the nth Fibonacci number
 #ifdef TIME
   struct timespec start_time, end_time;
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
-
   for (int i=0;i<LOOP_SIZE;i++) {
-    cilk_for_test06(a,b,c);
+    saxpy(n, a, x, y);
   }
 
 #ifdef TIME
@@ -69,12 +61,9 @@ int main(int argc, char *argv[]) {
   printf("Calculated in %.3f ns using %d workers.\n",
   	 time_ns, __cilkrts_get_nworkers());
 #endif
-  
-  for(i=0;i<5;i++) {
-    for(j=0;j<5;j++) {
-      printf("%d ", c[i][j]);
-    }
-    printf("\n");
-  }
 
+  //  for (int i=0;i<n;i++) {
+  //    printf("%d\n", y[i]);
+  //  }
+  return 0;
 }
