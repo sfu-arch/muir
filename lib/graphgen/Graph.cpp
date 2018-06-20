@@ -259,6 +259,15 @@ void Graph::printConstants(PrintType _pt) {
                 this->outCode << "\n";
                 this->outCode << const_node->printDefinition(PrintType::Scala);
             }
+
+            for (auto &const_node : this->const_fp_list) {
+                // ins_node->getInstruction()->dump();
+                this->outCode << "  //";
+                const_node->getConstantParent()->print(this->outCode);
+                this->outCode << "\n";
+                this->outCode << const_node->printDefinition(PrintType::Scala);
+            }
+
             break;
         default:
             assert(!"We don't support the other types right now");
@@ -770,7 +779,25 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
-    inst_list.push_back(std::make_unique<BinaryOperatorNode>(
+    inst_list.push_back(std::make_unique<FaddOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<FdiveOperatorNode>(
         NodeInfo(inst_list.size(),
                  "FP_" + I.getName().str() + to_string(inst_list.size())),
         &I));
@@ -1406,6 +1433,19 @@ void Graph::doInitialization() {
     //
 
     for (auto &_node : const_int_list) {
+        for (auto &_child : _node->output_data_range()) {
+            if (isa<ArgumentNode>(&*_child)) continue;
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_node,
+                               _node->returnDataOutputPortIndex(&*_child)),
+                std::make_pair(&*_child,
+                               _child->returnDataInputPortIndex(&*_node)));
+        }
+    }
+
+
+    for (auto &_node : const_fp_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
             this->insertEdge(

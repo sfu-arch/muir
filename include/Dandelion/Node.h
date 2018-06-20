@@ -19,6 +19,7 @@
 #define LOOPCONTROL 2
 
 using namespace llvm;
+using common::FloatingPointIEEE754;
 using common::GepArrayInfo;
 using common::GepStructInfo;
 
@@ -679,7 +680,7 @@ class InstructionNode : public Node {
         FaddInstructionTy,
         FsubInstructionTy,
         FmulInstructionTy,
-        FdivInstructionTy,
+        FdiveInstructionTy,
         FremInstructionTy,
         FcmpInstructionTy,
 
@@ -752,6 +753,26 @@ class FaddOperatorNode: public InstructionNode {
     // Overloading isa<>, dyn_cast from llvm
     static bool classof(const InstructionNode *I) {
         return I->getOpCode() == InstType::FaddInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+
+class FdiveOperatorNode: public InstructionNode {
+   public:
+    FdiveOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins) {}
+
+    // Overloading isa<>, dyn_cast from llvm
+    static bool classof(const InstructionNode *I) {
+        return I->getOpCode() == InstType::FdiveInstructionTy;
     }
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
@@ -1185,12 +1206,12 @@ class ConstIntNode : public Node {
 class ConstFPNode : public Node {
    private:
     llvm::ConstantFP *parent_const_fp;
-    float value;
+    FloatingPointIEEE754 value;
 
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
         : Node(Node::ConstIntTy, _ni), parent_const_fp(_cfp) {
-        value = parent_const_fp->getValueAPF().convertToFloat();
+        value.f = parent_const_fp->getValueAPF().convertToFloat();
     }
 
     // Define classof function so that we can use dyn_cast function
@@ -1198,9 +1219,11 @@ class ConstFPNode : public Node {
         return T->getType() == Node::ConstFPTy;
     }
 
-    uint32_t getValue() { return value; }
+    float getValue() { return value.f; }
+    unsigned int getBits() { return value.bits; }
+    FloatingPointIEEE754 getFloatIEEE(){ return value; }
 
-    llvm::ConstantInt *getConstantParent();
+    llvm::ConstantFP *getConstantParent();
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
