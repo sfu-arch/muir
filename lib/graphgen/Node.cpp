@@ -1048,12 +1048,13 @@ std::string FdiveOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\", $route_id)(t = s))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "FPComputeNode");
+            helperReplace(_text, "$route_id", 0);
+            helperReplace(_text, "$type", "FDDivdSqrtNode");
             helperReplace(_text, "$opcode", this->getOpCodeName());
 
             break;
