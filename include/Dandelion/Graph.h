@@ -63,6 +63,9 @@ class Graph {
     // Stack allocator
     std::unique_ptr<StackNode> stack_allocator;
 
+    // Floating point unit
+    std::unique_ptr<FloatingPointNode> floating_point_unit;
+
     // Loop nodes
     LoopNodeList loop_nodes;
 
@@ -80,6 +83,8 @@ class Graph {
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          floating_point_unit(
+              std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           graph_empty(false),
           outCode(llvm::outs()),
           function_ptr(nullptr),
@@ -91,6 +96,8 @@ class Graph {
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          floating_point_unit(
+              std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(nullptr),
@@ -103,6 +110,8 @@ class Graph {
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          floating_point_unit(
+              std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           graph_empty(false),
           outCode(_output),
           function_ptr(_fn),
@@ -119,6 +128,7 @@ class Graph {
     bool isEmpty() { return graph_empty; }
     auto getMemoryUnit() const { return memory_unit.get(); }
     auto getStackAllocator() const { return stack_allocator.get(); }
+    auto getFPUNode() const {return floating_point_unit.get();}
 
     // InstructionList *getInstructionList();
     auto instList_begin() { return this->inst_list.cbegin(); }
@@ -134,6 +144,10 @@ class Graph {
     auto edge_begin() { return this->edge_list.cbegin(); }
     auto edge_end() { return this->edge_list.cend(); }
     auto edges() { return helpers::make_range(edge_begin(), edge_end()); }
+
+    auto loop_begin() { return this->loop_nodes.cbegin(); }
+    auto loop_end() { return this->loop_nodes.cend(); }
+    auto loops() { return helpers::make_range(loop_begin(), loop_end()); }
 
     void pushCallIn(CallInNode *_call_node) {
         call_in_list.push_back(_call_node);
@@ -198,11 +212,12 @@ class Graph {
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printConstants(PrintType);
-    void printMemoryModules(PrintType);
+    void printSharedModules(PrintType);
     void printBasickBlockPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);
     void printPhiNodesConnections(PrintType);
     void printMemInsConnections(PrintType _pt);
+    void printSharedConnections(PrintType _pt);
     void printDatadependencies(PrintType);
     void printClosingclass(PrintType);
     void printLoopEndingDependencies(PrintType _pt);

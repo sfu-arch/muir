@@ -44,17 +44,6 @@ union FloatingPointIEEE754 {
     FloatingPointIEEE754():f(0){}
 };
 
-//std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number){
-
-    //auto sign = std::bitset<1>(_number.raw.sign);
-    //auto exponent = std::bitset<8>(_number.raw.exponent);
-    //auto mantissa = std::bitset<23>(_number.raw.mantissa);
-
-    //std::stringstream _output;
-    //_output << "0x" << std::hex << _number.bits;
-    //return _output.str();
-//}
-
 // Structures
 struct GepOne {
     int64_t index;

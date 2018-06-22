@@ -91,6 +91,7 @@ class Node {
         ConstFPTy,
         MemoryUnitTy,
         StackUnitTy,
+        FloatingPointTy,
         ContainerTy,
         UnkonwTy
 
@@ -389,6 +390,10 @@ class SuperNode : public Node {
     auto const_int_end() const { return this->const_int_list.end(); }
     auto cints() { return helpers::make_range(const_int_begin(), const_int_end()); }
 
+    auto const_fp_begin() const { return this->const_fp_list.begin(); }
+    auto const_fp_end() const { return this->const_fp_list.end(); }
+    auto cfps() { return helpers::make_range(const_fp_begin(), const_fp_end()); }
+
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
 
@@ -411,7 +416,7 @@ class ArgumentNode : public Node {
    public:
     explicit ArgumentNode(NodeInfo _ni, ArgumentType _arg_type,
                           ContainerNode *_call_node = nullptr,
-                          llvm::Argument *_arg = nullptr)
+                          llvm::Value *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni),
           arg_type(_arg_type),
           parent_call_node(_call_node),
@@ -478,6 +483,9 @@ class ContainerNode : public Node {
     auto live_outs() {
         return helpers::make_range(live_out_begin(), live_out_end());
     }
+
+    Node *findLiveIn(llvm::Value *);
+    Node *findLiveOut(llvm::Value *);
 };
 
 /**
@@ -541,6 +549,38 @@ class StackNode : public Node {
     // virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     // virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
+
+
+/**
+ * Memory unit works as a local memory for each graph
+ */
+class FloatingPointNode: public Node {
+   public:
+    explicit FloatingPointNode(NodeInfo _nf) : Node(Node::StackUnitTy, _nf) {}
+
+    // Restrict access to data input ports
+    virtual PortID addDataInputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    }
+    virtual PortID addDataOutputPort(Node *) override {
+        assert(!"You are not supposed to call this function!");
+        return PortID();
+    };
+    uint32_t numDataInputPort() = delete;
+    uint32_t numDataOutputPort() = delete;
+
+    // Define classof function so that we can use dyn_cast function
+    static bool classof(const Node *T) {
+        return T->getType() == Node::FloatingPointTy;
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
+};
+
+
 
 /**
  * LoopNode contains all the instructions and useful information about the loops
@@ -782,6 +822,8 @@ class FdiveOperatorNode: public InstructionNode {
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printMemReadInput(PrintType, uint32_t) override;
+    virtual std::string printMemReadOutput(PrintType, uint32_t) override;
 };
 
 class IcmpNode : public InstructionNode {
@@ -1210,7 +1252,7 @@ class ConstFPNode : public Node {
 
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
-        : Node(Node::ConstIntTy, _ni), parent_const_fp(_cfp) {
+        : Node(Node::ConstFPTy, _ni), parent_const_fp(_cfp) {
         value.f = parent_const_fp->getValueAPF().convertToFloat();
     }
 

@@ -84,7 +84,7 @@ void Graph::printGraph(PrintType _pt) {
             doInitialization();
 
             printScalaFunctionHeader();
-            printMemoryModules(PrintType::Scala);
+            printSharedModules(PrintType::Scala);
             printScalaInputSpliter();
             printLoopHeader(PrintType::Scala);
             printBasicBlocks(PrintType::Scala);
@@ -99,6 +99,7 @@ void Graph::printGraph(PrintType _pt) {
             printPhiNodesConnections(PrintType::Scala);
             printAllocaOffset(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
+            printSharedConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
             printOutPort(PrintType::Scala);
             printClosingclass(PrintType::Scala);
@@ -277,7 +278,7 @@ void Graph::printConstants(PrintType _pt) {
 /**
  * Print memory modules definition
  */
-void Graph::printMemoryModules(PrintType _pt) {
+void Graph::printSharedModules(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
@@ -285,6 +286,9 @@ void Graph::printMemoryModules(PrintType _pt) {
             outCode << memory_unit->printDefinition(PrintType::Scala);
             if (stack_allocator->numReadDataInputPort() > 0)
                 outCode << stack_allocator->printDefinition(PrintType::Scala);
+            if (floating_point_unit->numReadDataInputPort() > 0)
+                outCode << floating_point_unit->printDefinition(
+                    PrintType::Scala);
             break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
@@ -353,6 +357,19 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> enable instruction");
             for (auto &_s_node : super_node_list) {
+                for (auto &_const_iterator : _s_node->cfps()) {
+                    this->outCode
+                        << "  "
+                        << _const_iterator->printInputEnable(PrintType::Scala)
+                        << " <> "
+                        << _s_node->printOutputEnable(
+                               PrintType::Scala,
+                               _s_node
+                                   ->returnControlOutputPortIndex(
+                                       &*_const_iterator)
+                                   .getID())
+                        << "\n\n";
+                }
                 for (auto &_const_iterator : _s_node->cints()) {
                     this->outCode
                         << "  "
@@ -509,6 +526,49 @@ void Graph::printAllocaOffset(PrintType _pt) {
             auto alloca_list = getNodeList<AllocaNode>(this);
             for (auto _al_node : alloca_list) {
                 this->outCode << _al_node->printOffset(_pt) << "\n\n";
+            }
+            break;
+        }
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+void Graph::printSharedConnections(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            this->outCode << helperScalaPrintHeader("Print shared connections");
+            auto fdiv_list = getNodeList<FdiveOperatorNode>(this);
+            for (auto _fd_node : fdiv_list) {
+                this->outCode
+                    << "  "
+                    << this->getFPUNode()->printMemReadInput(
+                           PrintType::Scala,
+                           this->getFPUNode()
+                               ->returnMemoryReadInputPortIndex(_fd_node)
+                               .getID())
+                    << " <> "
+                    << _fd_node->printMemReadOutput(
+                           PrintType::Scala,
+                           _fd_node
+                               ->returnMemoryReadOutputPortIndex(
+                                   this->getFPUNode())
+                               .getID())
+                    << "\n  "
+                    << _fd_node->printMemReadInput(
+                           PrintType::Scala,
+                           _fd_node
+                               ->returnMemoryReadInputPortIndex(
+                                   this->getFPUNode())
+                               .getID())
+                    << " <> "
+                    << this->getFPUNode()->printMemReadOutput(
+                           PrintType::Scala,
+                           this->getFPUNode()
+                               ->returnMemoryReadOutputPortIndex(_fd_node)
+                               .getID());
             }
             break;
         }
@@ -774,7 +834,6 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     return ff->get();
 }
 
-
 /**
  * Insert a new computation instruction
  */
@@ -791,7 +850,6 @@ InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
 
     return ff->get();
 }
-
 
 /**
  * Insert a new computation instruction
@@ -826,8 +884,6 @@ InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
 
     return ff->get();
 }
-
-
 
 /**
  * Insert a new computation instruction
@@ -1169,7 +1225,6 @@ ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
     return const_int_list.back().get();
 }
 
-
 /**
  * Insert a new const node
  */
@@ -1182,7 +1237,6 @@ ConstFPNode *Graph::insertConstFPNode(ConstantFP &C) {
 
     return const_fp_list.back().get();
 }
-
 
 LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
     auto _node_p = _ln.get();
@@ -1444,7 +1498,6 @@ void Graph::doInitialization() {
         }
     }
 
-
     for (auto &_node : const_fp_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
@@ -1560,28 +1613,28 @@ void Graph::doInitialization() {
 
 /**
  * This function iterate over all the store nodes, and ground their output
- * If the next instruction after store is return the data output is connected 
+ * If the next instruction after store is return the data output is connected
  * to the return data input port
  */
 void Graph::groundStoreNodes() {
     auto _store_nodes = getNodeList<StoreNode>(this);
     auto _return_nodes = getNodeList<ReturnNode>(this);
 
-    if(_return_nodes.size() > 1)
+    if (_return_nodes.size() > 1)
         assert(!"A function can not have more than one return node!");
 
     for (auto _st_node : _store_nodes) {
-        if(_st_node == _store_nodes.back()){
-            if(auto _return_node = dyn_cast<ReturnNode>(_return_nodes.back())){
+        if (_st_node == _store_nodes.back()) {
+            if (auto _return_node =
+                    dyn_cast<ReturnNode>(_return_nodes.back())) {
                 _st_node->addDataOutputPort(_return_node);
                 _return_node->addDataInputPort(_st_node);
                 _st_node->unsetGround();
-            }
-            else
+            } else
                 WARNING("Sotre node is not grounded");
 
-        }
-        else if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
+        } else if (_st_node->numDataOutputPort() == 0)
+            _st_node->setGround();
     }
 }
 

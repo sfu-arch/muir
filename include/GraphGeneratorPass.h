@@ -22,6 +22,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <queue>
 
 using namespace dandelion;
 
@@ -43,6 +44,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
    private:
     std::map<llvm::Value *, Node *> map_value_node;
+    std::map<llvm::Loop *, LoopNode *> loop_value_node;
 
     // Loop Info
     llvm::LoopInfo *LI;
@@ -79,6 +81,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     void fillBasicBlockDependencies(llvm::Function &);
     void fillLoopDependencies(llvm::LoopInfo &);
+    void updateLoopDependencies(llvm::LoopInfo &loop_info);
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);

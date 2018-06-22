@@ -18,15 +18,13 @@ using namespace llvm;
 using namespace dandelion;
 using namespace helpers;
 
-
-std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number){
-
+std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number) {
     auto sign = std::bitset<1>(_number.raw.sign);
     auto exponent = std::bitset<8>(_number.raw.exponent);
     auto mantissa = std::bitset<23>(_number.raw.mantissa);
 
     std::stringstream _output;
-    _output << "0x" << std::hex << _number.bits << ".U";
+    _output << "0x" << std::hex << _number.bits;
     return _output.str();
 }
 
@@ -521,6 +519,28 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 //                            ContainerNode Class
 //===----------------------------------------------------------------------===//
 
+Node *ContainerNode::findLiveIn(llvm::Value *_val) {
+    auto ff = std::find_if(live_in.begin(), live_in.end(),
+                           [&_val](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == _val;
+                           });
+    if(ff == live_in.end())
+        assert(!"Couldn't find the live-in");
+
+    return ff->get();
+}
+
+Node *ContainerNode::findLiveOut(llvm::Value *_val) {
+    auto ff = std::find_if(live_out.begin(), live_out.end(),
+                           [&_val](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == _val;
+                           });
+
+    if(ff == live_out.end())
+        assert(!"Couldn't find the live-in");
+    return ff->get();
+}
+
 ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
     auto ff = std::find_if(live_in.begin(), live_in.end(),
                            [&_val](auto &arg) -> bool {
@@ -961,7 +981,7 @@ std::string FaddOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(t = S))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1048,13 +1068,14 @@ std::string FdiveOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\", $route_id)(t = s))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\", $route_id)(t = "
+                "S))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$route_id", 0);
-            helperReplace(_text, "$type", "FDDivdSqrtNode");
+            helperReplace(_text, "$type", "FPDivSqrtNode");
             helperReplace(_text, "$opcode", this->getOpCodeName());
 
             break;
@@ -1110,10 +1131,49 @@ std::string FdiveOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             if (_idx == 0)
-                _text = "$name.io.LeftIO";
+                _text = "$name.io.a";
             else
-                _text = "$name.io.RightIO";
+                _text = "$name.io.b";
             helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FdiveOperatorNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.FUResp";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FdiveOperatorNode::printMemReadOutput(PrintType _pt,
+                                                  uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.FUReq";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
 
             break;
         case PrintType::Dot:
@@ -1234,8 +1294,8 @@ std::string ConstFPNode::printDefinition(PrintType _pt) {
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "ConstNode");
-            helperReplace(_text, "$val", printFloatingPointIEEE754(
-                                             this->getFloatIEEE()));
+            helperReplace(_text, "$val",
+                          printFloatingPointIEEE754(this->getFloatIEEE()));
 
             break;
         case PrintType::Dot:
@@ -3073,6 +3133,69 @@ std::string StackNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
 }
 
 std::string StackNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.OutData($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            FloatingPointNode Class
+//===----------------------------------------------------------------------===//
+std::string FloatingPointNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val SharedFPU = Module(new SharedFPU(NumOps = $op, "
+                "PipeDepth = 32)(t = S))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$op", this->numReadDataInputPort());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FloatingPointNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.InData($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FloatingPointNode::printMemReadOutput(PrintType _pt,
+                                                  uint32_t _idx) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
