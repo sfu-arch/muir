@@ -7,8 +7,8 @@
 #define CHUNKSIZE (2)
 #define N (CHUNKSIZE * 16)
 #define QSIZE (3)
-#define FREE (-1)
-#define EOT (-10) //end-of-tasks
+#define FREE (999)
+#define EOT (9999) //end-of-tasks
 
 #define LOOP_SIZE 1000000
 #define TIME
@@ -31,7 +31,7 @@ void print (int x[]) {
 
 }//print
 
-void S4 (int x[], int y[]) {
+void dedup_S4 (int x[], int y[]) {
 
 
     int rptr = 0;
@@ -54,10 +54,10 @@ void S4 (int x[], int y[]) {
 
 	} //while not end-of-tasks
 
-}//S4
+}//dedup_S4
 
 
-void S3 (int chunk[], int pos, int wptr) {
+void dedup_S3 (int chunk[], int pos, int wptr) {
 
     //compress with RLE
     chunk[1] = 2;
@@ -65,10 +65,10 @@ void S3 (int chunk[], int pos, int wptr) {
     //enqueue task of writing out
     q[wptr] = pos;
 
-}//S3
+}//dedup_S3
 
 
-void S2 (int x[], int pos, int wptr) {
+void dedup_S2 (int x[], int pos, int wptr) {
 
     int* chunk = &x[pos];
     int is_dup;
@@ -80,13 +80,13 @@ void S2 (int x[], int pos, int wptr) {
       is_dup = 0;
 
     if (is_dup)
-      cilk_spawn S3 (chunk, pos, wptr);
+      cilk_spawn dedup_S3 (chunk, pos, wptr);
     else {
       q[wptr] = pos;
       
     }
 
-}//S2
+}//dedup_S2
 
 
 
@@ -98,12 +98,12 @@ void dedup (int x[], int y[]) {
     int wptr = 0;
 
 
-    cilk_spawn S4 (x, y);
+    cilk_spawn dedup_S4 (x, y);
 
     while (x[pos] != 0) {
             
       if(q[wptr] == FREE) {
-            cilk_spawn S2 (x, pos, wptr);
+            cilk_spawn dedup_S2 (x, pos, wptr);
             pos += CHUNKSIZE;
             wptr = (wptr+1) % ((1<<QSIZE)-1);
       }

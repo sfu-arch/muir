@@ -28,7 +28,7 @@ void vector_scale(
   }
 }
 
-#define TEST_SIZE 1000
+#define TEST_SIZE 100
 #define SEED 4
 
 int main(int argc, char *argv[]) {
