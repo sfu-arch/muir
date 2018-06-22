@@ -34,20 +34,14 @@ void dedup_S4 (int x[], int y[], volatile int q[]) {
 
     unsigned rptr = 0;
     unsigned pos = 0;
-    
-    while (q[rptr] != EOT) {
-
-      while (q[rptr] == FREE) {}
-      if (q[rptr] != EOT) {
-	  pos = q[rptr];
+    while ((pos = q[rptr]) != EOT) {
+      if (pos != FREE) {
 	  y[pos] = x[pos];
 	  y[pos + 1] = x[pos + 1];
 
 	  q[rptr] = FREE;
 	  rptr = (rptr + 1) % ((1<<QSIZE)-1);
       }
-      //print(y);
-
     } //while not end-of-tasks
 
 }//dedup_S4
@@ -75,13 +69,12 @@ void dedup_S2 (int x[], int pos, int wptr, volatile int q[]) {
     else
       is_dup = 0;
 
-    if (is_dup)
+    if (is_dup) {
       cilk_spawn dedup_S3 (chunk, pos, wptr, q);
-    else {
+    } else {
       q[wptr] = pos;
-      
     }
-
+    
 }//dedup_S2
 
 
@@ -99,8 +92,8 @@ void dedup (int x[], int y[], volatile int q[]) {
             
       if(q[wptr] == FREE) {
 	cilk_spawn dedup_S2 (x, pos, wptr, q);
-            pos += CHUNKSIZE;
-            wptr = (wptr+1) % ((1<<QSIZE)-1);
+	pos += CHUNKSIZE;
+	wptr = (wptr+1) % ((1<<QSIZE)-1);
       }
 
     }//while not end of buffer
@@ -155,8 +148,9 @@ int main (int argc, char *argv[]) {
   struct timespec start_time, end_time;
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
-  for (int i=0;i<LOOP_SIZE;i++) 
+  for (int i=0;i<LOOP_SIZE;i++) {
     dedup (a, out, q);
+  }
 #ifdef TIME
   clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
