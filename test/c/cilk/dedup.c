@@ -35,22 +35,20 @@ void dedup_S4 (int x[], int y[], volatile int q[]) {
     unsigned rptr = 0;
     unsigned pos = 0;
     
-    while (1) { //q[rptr] != EOT) {
+    while (q[rptr] != EOT) {
 
       while (q[rptr] == FREE) {}
-      if (q[rptr] == EOT) {
-	  break;
-	} else {
+      if (q[rptr] != EOT) {
 	  pos = q[rptr];
 	  y[pos] = x[pos];
 	  y[pos + 1] = x[pos + 1];
 
 	  q[rptr] = FREE;
 	  rptr = (rptr + 1) % ((1<<QSIZE)-1);
-	}
-	//print(y);
+      }
+      //print(y);
 
-	} //while not end-of-tasks
+    } //while not end-of-tasks
 
 }//dedup_S4
 
