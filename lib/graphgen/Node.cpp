@@ -18,6 +18,18 @@ using namespace llvm;
 using namespace dandelion;
 using namespace helpers;
 
+
+std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number){
+
+    auto sign = std::bitset<1>(_number.raw.sign);
+    auto exponent = std::bitset<8>(_number.raw.exponent);
+    auto mantissa = std::bitset<23>(_number.raw.mantissa);
+
+    std::stringstream _output;
+    _output << "0x" << std::hex << _number.bits << ".U";
+    return _output.str();
+}
+
 //===----------------------------------------------------------------------===//
 //                            Node Class
 //===----------------------------------------------------------------------===//
@@ -228,7 +240,11 @@ void SuperNode::addPhiInstruction(PhiSelectNode *node) {
 }
 
 void SuperNode::addconstIntNode(ConstIntNode *node) {
-    this->const_list.push_back(node);
+    this->const_int_list.push_back(node);
+}
+
+void SuperNode::addconstFPNode(ConstFPNode *node) {
+    this->const_fp_list.push_back(node);
 }
 
 std::string SuperNode::printDefinition(PrintType pt) {
@@ -728,34 +744,6 @@ std::string ArgumentNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-//===----------------------------------------------------------------------===//
-//                            CosntNode Class
-//===----------------------------------------------------------------------===//
-std::string ConstIntNode::printDefinition(PrintType _pt) {
-    string _text;
-    string _name(this->getName());
-    switch (_pt) {
-        case PrintType::Scala:
-            std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type(value = $val"
-                ", NumOuts = $num_out, ID = $id))\n\n";
-            helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$num_out",
-                          std::to_string(this->numDataOutputPort()));
-            helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ConstNode");
-            helperReplace(_text, "$val", this->getValue());
-
-            break;
-        case PrintType::Dot:
-            assert(!"Dot file format is not supported!");
-        default:
-            assert(!"Uknown print type!");
-    }
-    return _text;
-}
-
 std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
@@ -950,6 +938,339 @@ std::string BinaryOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
                 _text = "$name.io.LeftIO";
             else
                 _text = "$name.io.RightIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            FloatAddNode Class
+//===----------------------------------------------------------------------===//
+
+std::string FaddOperatorNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumOuts = "
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "FPComputeNode");
+            helperReplace(_text, "$opcode", this->getOpCodeName());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FaddOperatorNode::printInputEnable(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FaddOperatorNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FaddOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if (_idx == 0)
+                _text = "$name.io.LeftIO";
+            else
+                _text = "$name.io.RightIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            FloatDiveNode Class
+//===----------------------------------------------------------------------===//
+
+std::string FdiveOperatorNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumOuts = "
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "FPComputeNode");
+            helperReplace(_text, "$opcode", this->getOpCodeName());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FdiveOperatorNode::printInputEnable(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FdiveOperatorNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FdiveOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if (_idx == 0)
+                _text = "$name.io.LeftIO";
+            else
+                _text = "$name.io.RightIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            FCMPNode Class
+//===----------------------------------------------------------------------===//
+
+std::string FcmpNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(NumOuts = "
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "FPCompareNode");
+            helperReplace(_text, "$opcode",
+                          llvm::ICmpInst::getPredicateName(
+                              dyn_cast<llvm::FCmpInst>(this->getInstruction())
+                                  ->getPredicate()));
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FcmpNode::printInputEnable(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FcmpNode::printInputData(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if (_idx == 0)
+                _text = "$name.io.LeftIO";
+            else
+                _text = "$name.io.RightIO";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string FcmpNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+//===----------------------------------------------------------------------===//
+//                            ConstantFPNode Class
+//===----------------------------------------------------------------------===//
+
+ConstantFP *ConstFPNode::getConstantParent() { return this->parent_const_fp; }
+
+std::string ConstFPNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(value = $val"
+                ", NumOuts = $num_out, ID = $id))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "ConstNode");
+            helperReplace(_text, "$val", printFloatingPointIEEE754(
+                                             this->getFloatIEEE()));
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ConstFPNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ConstFPNode::printInputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -1625,9 +1946,52 @@ std::string StoreNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
+std::string StoreNode::printOutputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.Out($id)";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
 //===----------------------------------------------------------------------===//
 //                            ConstantNode Class
 //===----------------------------------------------------------------------===//
+
+std::string ConstIntNode::printDefinition(PrintType _pt) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text =
+                "  val $name = Module(new $type(value = $val"
+                ", NumOuts = $num_out, ID = $id))\n\n";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$type", "ConstNode");
+            helperReplace(_text, "$val", this->getValue());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
 
 std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     string _text;
@@ -1797,15 +2161,16 @@ std::string GepStructNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte=List($<input_vector>)))\n\n";
                 helperReplace(_text, "$type", "GepStructOneNode");
-                helperReplace(_text, "$<input_vector>", gep_info.element_size, ",");
-                //helperReplace(_text, "$nb1", num_byte[0]);
+                helperReplace(_text, "$<input_vector>", gep_info.element_size,
+                              ",");
+                // helperReplace(_text, "$nb1", num_byte[0]);
             } else {
                 _text =
                     "  val $name = Module(new $type(NumOuts=$num_out, "
                     "ID=$id)(numByte1=$nb1, numByte2=$nb2))\n\n";
                 helperReplace(_text, "$type", "GepArrayTwoNode");
-                //helperReplace(_text, "$nb1", num_byte[0]);
-                //helperReplace(_text, "$nb2", num_byte[1]);
+                // helperReplace(_text, "$nb1", num_byte[0]);
+                // helperReplace(_text, "$nb2", num_byte[1]);
             }
 
             helperReplace(_text, "$name", _name.c_str());
@@ -1897,7 +2262,6 @@ std::string GepStructNode::printInputData(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            LoopNode Class
@@ -2031,8 +2395,8 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumPredOps= "
                 "$num_out, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
-            // helperReplace(_text, "$num_out",
-            // std::to_string(this->numDataOutputPort()));
+            helperReplace(_text, "$num_out",
+                          std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "Reattach");
 
@@ -2063,6 +2427,24 @@ std::string ReattachNode::printInputEnable(PrintType _pt) {
     return _text;
 }
 
+std::string ReattachNode::printInputEnable(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.enable";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
 std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -2070,6 +2452,25 @@ std::string ReattachNode::printOutputEnable(PrintType _pt, uint32_t _id) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.Out($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ReattachNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.predicateIn($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -2156,7 +2557,16 @@ std::string SyncNode::printDefinition(PrintType _pt) {
                 "NumDec=$num_dec, NumOuts=$num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "Sync");
+            helperReplace(_text, "$type", "SyncTC");
+
+            // TODO add special port for increase and decrease
+            helperReplace(_text, "$num_inc", 1);
+            helperReplace(_text, "$num_dec", 1);
+
+            if (this->numDataOutputPort() == 0)
+                helperReplace(_text, "$num_out", 1);
+            else
+                helperReplace(_text, "$num_out", this->numDataOutputPort());
 
             break;
         case PrintType::Dot:
@@ -2434,7 +2844,6 @@ std::string CallInNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-
 std::string CallInNode::printOutputData(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());
@@ -2454,7 +2863,6 @@ std::string CallInNode::printOutputData(PrintType _pt, uint32_t _id) {
     return _text;
 }
 
-
 std::string CallInNode::printOutputEnable(PrintType _pt) {
     string _text;
     string _name(this->getName());
@@ -2462,6 +2870,24 @@ std::string CallInNode::printOutputEnable(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.Out.enable.ready := true.B";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string CallInNode::printOutputEnable(PrintType _pt, uint32_t _id) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.Out.enable";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
@@ -2482,8 +2908,8 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
 
     auto make_argument_port = [](const auto &_list) {
         std::vector<uint32_t> _arg_count;
-        //for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
-        //TODO change 32
+        // for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
+        // TODO change 32
         for (auto &l : _list) _arg_count.push_back(32);
         return _arg_count;
     };
@@ -2744,6 +3170,3 @@ std::string BitcastNode::printInputData(PrintType _pt, uint32_t _idx) {
     }
     return _text;
 }
-
-
-

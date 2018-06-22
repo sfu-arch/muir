@@ -6,11 +6,8 @@
             "testers",
             "iotesters"
         ],
-        "org.scalatest":[
-            "FlatSpec",
-            "Matchers"
-        ],
 
+        "org.scalatest":"_",
         "muxes":"_",
         "config":"_",
         "control":"_",

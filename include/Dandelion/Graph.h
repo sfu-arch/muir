@@ -26,6 +26,7 @@ using ArgumentList = std::list<std::unique_ptr<ArgumentNode>>;
 using BasicBlockList = std::list<std::unique_ptr<SuperNode>>;
 using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<std::unique_ptr<ConstIntNode>>;
+using ConstFPList = std::list<std::unique_ptr<ConstFPNode>>;
 using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
 using EdgeList = std::list<std::unique_ptr<Edge>>;
 using Port = std::pair<Node *, PortID>;
@@ -40,7 +41,8 @@ class Graph {
     ArgumentList arg_list;
     BasicBlockList super_node_list;
     GlobalValueList glob_list;
-    ConstIntList const_list;
+    ConstIntList const_int_list;
+    ConstFPList const_fp_list;
 
     std::list<CallInNode *> call_in_list;
     std::list<CallOutNode *> call_out_list;
@@ -68,7 +70,7 @@ class Graph {
     Node *out_node;
 
     // Keep track of nodes and values
-    std::map<llvm::Value *, Node *> map_value_node;
+    //std::map<llvm::Value *, Node *> map_value_node;
 
    public:
     explicit Graph(NodeInfo _n_info)
@@ -163,6 +165,11 @@ class Graph {
     ArgumentNode *insertFunctionArgument(llvm::Argument &);
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
+
+    InstructionNode *insertFaddNode(llvm::BinaryOperator &);
+    InstructionNode *insertFdiveNode(llvm::BinaryOperator &);
+    InstructionNode *insertFcmpNode(llvm::FCmpInst &);
+    ConstFPNode *insertConstFPNode(llvm::ConstantFP &);
 
     LoopNode *insertLoopNode(std::unique_ptr<LoopNode>);
 

@@ -19,10 +19,41 @@
 #include <sstream>
 #include <string>
 
+#define WARNING(x)                                             \
+    do {                                                       \
+        std::cout << "\033[1;31m[WARNING] \033[0m"             \
+                  << "\033[1;33m" << x <<" \033[0m" << std::endl; \
+    } while (0)
+
 using namespace std;
 using namespace llvm;
 
 namespace common {
+
+union FloatingPointIEEE754 {
+    struct ieee754{
+        ieee754():mantissa(0), exponent(0), sign(0){}
+        unsigned int mantissa: 23;
+        unsigned int exponent: 8;
+        unsigned int sign: 1;
+    };
+    ieee754 raw;
+    unsigned int bits;
+    float f;
+
+    FloatingPointIEEE754():f(0){}
+};
+
+//std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number){
+
+    //auto sign = std::bitset<1>(_number.raw.sign);
+    //auto exponent = std::bitset<8>(_number.raw.exponent);
+    //auto mantissa = std::bitset<23>(_number.raw.mantissa);
+
+    //std::stringstream _output;
+    //_output << "0x" << std::hex << _number.bits;
+    //return _output.str();
+//}
 
 // Structures
 struct GepOne {
@@ -42,17 +73,16 @@ struct GepArrayInfo {
     uint32_t length;
 
     GepArrayInfo(uint32_t _size, uint32_t _l) : array_size(_size), length(_l) {}
-    GepArrayInfo(): array_size(0), length(0){}
+    GepArrayInfo() : array_size(0), length(0) {}
 };
 
 struct GepStructInfo {
     std::vector<uint32_t> element_size;
 
-    GepStructInfo(){element_size.clear();}
+    GepStructInfo() { element_size.clear(); }
 
     GepStructInfo(std::vector<uint32_t> _input_elements)
         : element_size(_input_elements) {}
-
 };
 
 // Functions

@@ -252,13 +252,22 @@ void Graph::printConstants(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             this->outCode << helperScalaPrintHeader("Printing constants nodes");
-            for (auto &const_node : this->const_list) {
+            for (auto &const_node : this->const_int_list) {
                 // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 const_node->getConstantParent()->print(this->outCode);
                 this->outCode << "\n";
                 this->outCode << const_node->printDefinition(PrintType::Scala);
             }
+
+            for (auto &const_node : this->const_fp_list) {
+                // ins_node->getInstruction()->dump();
+                this->outCode << "  //";
+                const_node->getConstantParent()->print(this->outCode);
+                this->outCode << "\n";
+                this->outCode << const_node->printDefinition(PrintType::Scala);
+            }
+
             break;
         default:
             assert(!"We don't support the other types right now");
@@ -344,7 +353,7 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> enable instruction");
             for (auto &_s_node : super_node_list) {
-                for (auto &_const_iterator : _s_node->consts()) {
+                for (auto &_const_iterator : _s_node->cints()) {
                     this->outCode
                         << "  "
                         << _const_iterator->printInputEnable(PrintType::Scala)
@@ -362,10 +371,11 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                     auto _output_node = dyn_cast<Node>(*_ins_iterator);
 
                     if (auto detach = dyn_cast<ReattachNode>(_output_node)) {
-                        this->outCode
-                            << "  "
-                            << _output_node->printInputEnable(PrintType::Scala)
-                            << "\n\n";
+                        if (detach->numControlInputPort() == 0)
+                            this->outCode << "  "
+                                          << _output_node->printInputEnable(
+                                                 PrintType::Scala)
+                                          << "\n\n";
                         continue;
                     }
 
@@ -478,7 +488,7 @@ void Graph::printDatadependencies(PrintType _pt) {
 
             // Print ground ndoes
             for (auto _st_node : getNodeList<StoreNode>(this)) {
-                if (_st_node->isGround())
+                if (_st_node->numDataOutputPort() == 0)
                     this->outCode << "  "
                                   << _st_node->printGround(PrintType::Scala)
                                   << "\n\n";
@@ -624,11 +634,14 @@ void Graph::printScalaFunctionHeader() {
     _command = "    val in = Flipped(Decoupled(new Call(List(";
     _final_command.append((_command));
     for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
-        _command = "32,";
+        if (c == this->getSplitCall()->numLiveIn() - 1)
+            _command = "32";
+        else
+            _command = "32, ";
         helperReplace(_command, "$index", c);
         _final_command.append(_command);
     }
-    _final_command.pop_back();
+    //_final_command.pop_back();
     _command = "))))\n";
     _final_command.append(_command);
 
@@ -641,9 +654,10 @@ void Graph::printScalaFunctionHeader() {
             helperReplace(_command, "$call", _ins->getName());
             _final_command.append(_command);
             for (auto ag : _fc->getCallOut()->input_data_range()) {
-                _command = "32,";
+                _command = "32, ";
                 _final_command.append(_command);
             }
+            _final_command.pop_back();
             _final_command.pop_back();
             _command = ")))\n";
             _final_command.append(_command);
@@ -664,10 +678,12 @@ void Graph::printScalaFunctionHeader() {
         "    val MemResp = Flipped(Valid(new MemResp))\n"
         "    val MemReq = Decoupled(new MemReq)\n");
 
+    // TODO make sure independent from return type we always need to have an
+    // output
     // Print output (return) parameters
-    if (!function_ptr->getReturnType()->isVoidTy()) {
-        _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
-    }
+    // if (!function_ptr->getReturnType()->isVoidTy()) {
+    _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
+    //}
 
     _final_command.append(
         "  })\n"
@@ -758,6 +774,61 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
     return ff->get();
 }
 
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<FaddOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<FdiveOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
+    inst_list.push_back(std::make_unique<FcmpNode>(
+        NodeInfo(inst_list.size(),
+                 "FPCMP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+
 /**
  * Insert a new computation instruction
  */
@@ -817,7 +888,9 @@ InstructionNode *Graph::insertSyncNode(SyncInst &I) {
  */
 InstructionNode *Graph::insertIcmpOperatorNode(ICmpInst &I) {
     inst_list.push_back(std::make_unique<IcmpNode>(
-        NodeInfo(inst_list.size(), I.getName().str()), &I));
+        NodeInfo(inst_list.size(),
+                 "icmp_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -969,7 +1042,7 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
     auto call_out = dyn_cast<CallNode>(ff->get())->getCallOut();
 
     call_in->setParent(this);
-    call_in->setParent(this);
+    call_out->setParent(this);
     this->pushCallIn(call_in);
     this->pushCallOut(call_out);
 
@@ -1088,13 +1161,28 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
  * Insert a new const node
  */
 ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
-    const_list.push_back(std::make_unique<ConstIntNode>(
-        NodeInfo(const_list.size(),
-                 "const" + std::to_string(const_list.size())),
+    const_int_list.push_back(std::make_unique<ConstIntNode>(
+        NodeInfo(const_int_list.size(),
+                 "const" + std::to_string(const_int_list.size())),
         &C));
 
-    return const_list.back().get();
+    return const_int_list.back().get();
 }
+
+
+/**
+ * Insert a new const node
+ */
+
+ConstFPNode *Graph::insertConstFPNode(ConstantFP &C) {
+    const_fp_list.push_back(std::make_unique<ConstFPNode>(
+        NodeInfo(const_fp_list.size(),
+                 "const" + std::to_string(const_fp_list.size())),
+        &C));
+
+    return const_fp_list.back().get();
+}
+
 
 LoopNode *Graph::insertLoopNode(std::unique_ptr<LoopNode> _ln) {
     auto _node_p = _ln.get();
@@ -1311,6 +1399,18 @@ void Graph::printOutPort(PrintType _pt) {
                     this->outCode << "  "
                                   << _c_node->getCallIn()->printOutputEnable(
                                          PrintType::Scala);
+                else {
+                    for (auto _ctrl_node :
+                         _c_node->getCallIn()->output_control_range()) {
+                        this->outCode
+                            << "  "
+                            << _ctrl_node->printInputEnable(PrintType::Scala, 0)
+                            << " <> "
+                            << _c_node->getCallIn()->printOutputEnable(
+                                   PrintType::Scala, 0)
+                            << "\n\n";
+                    }
+                }
             }
 
             this->outCode << helperScalaPrintHeader(
@@ -1332,7 +1432,20 @@ void Graph::doInitialization() {
     // Filling the data dependencies
     //
 
-    for (auto &_node : const_list) {
+    for (auto &_node : const_int_list) {
+        for (auto &_child : _node->output_data_range()) {
+            if (isa<ArgumentNode>(&*_child)) continue;
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_node,
+                               _node->returnDataOutputPortIndex(&*_child)),
+                std::make_pair(&*_child,
+                               _child->returnDataInputPortIndex(&*_node)));
+        }
+    }
+
+
+    for (auto &_node : const_fp_list) {
         for (auto &_child : _node->output_data_range()) {
             if (isa<ArgumentNode>(&*_child)) continue;
             this->insertEdge(
@@ -1445,10 +1558,30 @@ void Graph::doInitialization() {
     }
 }
 
+/**
+ * This function iterate over all the store nodes, and ground their output
+ * If the next instruction after store is return the data output is connected 
+ * to the return data input port
+ */
 void Graph::groundStoreNodes() {
     auto _store_nodes = getNodeList<StoreNode>(this);
+    auto _return_nodes = getNodeList<ReturnNode>(this);
+
+    if(_return_nodes.size() > 1)
+        assert(!"A function can not have more than one return node!");
+
     for (auto _st_node : _store_nodes) {
-        if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
+        if(_st_node == _store_nodes.back()){
+            if(auto _return_node = dyn_cast<ReturnNode>(_return_nodes.back())){
+                _st_node->addDataOutputPort(_return_node);
+                _return_node->addDataInputPort(_st_node);
+                _st_node->unsetGround();
+            }
+            else
+                WARNING("Sotre node is not grounded");
+
+        }
+        else if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
     }
 }
 
