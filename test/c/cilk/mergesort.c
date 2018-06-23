@@ -115,13 +115,13 @@ int main(int argc, char *argv[])
     }
 
 #ifdef TIME
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
 
     mergesort(B, 0, n, A);   // sort data from B[] into A[]
 
 #ifdef TIME
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
     time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
     time_ns[l] = time_ms * 1000000;
     //    printf("%f\n", time_ns[l]);
