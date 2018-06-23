@@ -80,7 +80,10 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void visitFCmp(llvm::FCmpInst &);
 
     void fillBasicBlockDependencies(llvm::Function &);
+
+    [[deprecated("This function doesn't support nested for loops. Instead use updateLoopDependencies function")]]
     void fillLoopDependencies(llvm::LoopInfo &);
+
     void updateLoopDependencies(llvm::LoopInfo &loop_info);
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);

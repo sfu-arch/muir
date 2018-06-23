@@ -1311,6 +1311,8 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
             DEBUG(dbgs() << "\t Printing Control signals:\n");
             this->outCode << helperScalaPrintHeader("Ending instructions");
             for (auto &_l_node : loop_nodes) {
+                if (!_l_node->isOuterLoop()) continue;
+
                 for (auto &_ending_ins : _l_node->endings()) {
                     for (auto &_cn_dependencies :
                          _ending_ins->output_control_range()) {

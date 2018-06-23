@@ -240,7 +240,6 @@ void UpdateInnerLiveOutConnections(
     std::map<llvm::Value *, Node *> map_value_node) {
     for (auto B : _loop->blocks()) {
         for (auto &I : *B) {
-
             auto _loop_node = loop_value_node[_loop];
             auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
 
@@ -258,7 +257,7 @@ void UpdateInnerLiveOutConnections(
                     auto new_live_out = _loop_node->insertLiveOutArgument(U);
 
                     auto _src = map_value_node[&I];
-                    //auto _tar = map_value_node[U];
+                    // auto _tar = map_value_node[U];
                     auto _tar = _parent_loop_node->findLiveOut(U);
 
                     // TODO later we need to get ride of these lines
@@ -702,9 +701,10 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
     for (auto &L : getLoops(loop_info)) {
-        // for (auto &L : getOuterLoops(loop_info)) {
+        LoopNode *_parent = nullptr;
+        if (L->getParentLoop()) _parent = loop_value_node[L->getParentLoop()];
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)),
+            NodeInfo(c, "Loop_" + std::to_string(c)), _parent,
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
             dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]));
@@ -832,9 +832,8 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
     for (auto &L : getLoops(loop_info)) {
-        // for (auto &L : getOuterLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)),
+            NodeInfo(c, "Loop_" + std::to_string(c)), nullptr,
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
             dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]));
@@ -891,7 +890,41 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         c++;
     }
 
-    // for (auto &L : getOuterLoops(loop_info)) {
+    for (auto &L : getLoops(loop_info)) {
+        auto _loop_node = loop_value_node[L];
+
+        // Filling loop containers
+        for (auto B : L->blocks()) {
+            if (!B->empty()) {
+                _loop_node->pushSuperNode(
+                    dyn_cast<SuperNode>(map_value_node[B]));
+                for (auto &I : *B) {
+                    _loop_node->pushInstructionNode(
+                        dyn_cast<InstructionNode>(map_value_node[&I]));
+                }
+            }
+        }
+    }
+
+    for (auto &L : getOuterLoops(loop_info)) {
+        auto _loop_node = loop_value_node[L];
+        _loop_node->setOuterLoop();
+
+        // This function should be called after filling the containers always
+        _loop_node->setEndingInstructions();
+
+        for (auto _en_instruction : _loop_node->endings()) {
+            auto _en = _en_instruction->getInstruction();
+            auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
+                                                ->getParent()
+                                                ->getInstList()
+                                                .back()];
+
+            _en_instruction->addControlOutputPort(_br_ins);
+            _br_ins->addControlInputPort(_en_instruction);
+        }
+    }
+
     for (auto &L : getOuterLoops(loop_info)) {
         // At this stage we know that outer loop dominante all other loops
         // therefore each live-in for subLoops is a live-in for the outer
@@ -913,38 +946,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             UpdateInnerLiveInConnections(_sub_loop, loop_value_node,
                                          map_value_node);
             UpdateInnerLiveOutConnections(_sub_loop, loop_value_node,
-                                         map_value_node);
+                                          map_value_node);
 
             for (auto _tmp_sub : _sub_loop->getSubLoopsVector()) {
                 _loop_queue.push(_tmp_sub);
             }
         }
     }
-
-    //// Filling the containers
-    // for (auto B : L->blocks()) {
-    // if (!B->empty()) {
-    //_loop_node->pushSuperNode(
-    // dyn_cast<SuperNode>(map_value_node[B]));
-    // for (auto &I : *B) {
-    //_loop_node->pushInstructionNode(
-    // dyn_cast<InstructionNode>(map_value_node[&I]));
-    //}
-    //}
-    //}
-    //_loop_node->setEndingInstructions();
-
-    // for (auto _en_instruction : _loop_node->endings()) {
-    // auto _en = _en_instruction->getInstruction();
-    // auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
-    //->getParent()
-    //->getInstList()
-    //.back()];
-
-    //_en_instruction->addControlOutputPort(_br_ins);
-    //_br_ins->addControlInputPort(_en_instruction);
-    //}
-    //}
 }
 
 void GraphGeneratorPass::connectOutToReturn(Function &F) {

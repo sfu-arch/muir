@@ -345,7 +345,7 @@ class SuperNode : public Node {
     // List of the instructions
     using PhiNodeList = std::list<PhiSelectNode *>;
     using ConstIntNodeList = std::list<ConstIntNode *>;
-    using CosntFPNodeList= std::list<ConstFPNode *>;
+    using CosntFPNodeList = std::list<ConstFPNode *>;
     enum SuperNodeType { Mask, NoMask, LoopHead };
 
    private:
@@ -388,11 +388,15 @@ class SuperNode : public Node {
 
     auto const_int_begin() const { return this->const_int_list.begin(); }
     auto const_int_end() const { return this->const_int_list.end(); }
-    auto cints() { return helpers::make_range(const_int_begin(), const_int_end()); }
+    auto cints() {
+        return helpers::make_range(const_int_begin(), const_int_end());
+    }
 
     auto const_fp_begin() const { return this->const_fp_list.begin(); }
     auto const_fp_end() const { return this->const_fp_list.end(); }
-    auto cfps() { return helpers::make_range(const_fp_begin(), const_fp_end()); }
+    auto cfps() {
+        return helpers::make_range(const_fp_begin(), const_fp_end());
+    }
 
     const SuperNodeType getNodeType() { return type; }
     void setNodeType(SuperNodeType _t) { this->type = _t; }
@@ -550,11 +554,10 @@ class StackNode : public Node {
     // virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
-
 /**
  * Memory unit works as a local memory for each graph
  */
-class FloatingPointNode: public Node {
+class FloatingPointNode : public Node {
    public:
     explicit FloatingPointNode(NodeInfo _nf) : Node(Node::StackUnitTy, _nf) {}
 
@@ -580,13 +583,12 @@ class FloatingPointNode: public Node {
     virtual std::string printMemReadOutput(PrintType, uint32_t) override;
 };
 
-
-
 /**
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public ContainerNode {
    private:
+    LoopNode *parent_loop;
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
     std::list<InstructionNode *> ending_instructions;
@@ -595,21 +597,30 @@ class LoopNode : public ContainerNode {
     SuperNode *latch_node;
     SuperNode *exit_node;
 
+    bool outer_loop;
+
     // Restrict the access to these two functions
     using Node::addControlInputPort;
     using Node::addControlOutputPort;
 
    public:
-    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode = nullptr,
-                      SuperNode *_lnode = nullptr, SuperNode *_ex = nullptr)
+    explicit LoopNode(NodeInfo _nf, LoopNode *_p_l = nullptr,
+                      SuperNode *_hnode = nullptr, SuperNode *_lnode = nullptr,
+                      SuperNode *_ex = nullptr)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
+          parent_loop(_p_l),
           head_node(_hnode),
           exit_node(_ex),
-          latch_node(_lnode) {
+          latch_node(_lnode),
+          outer_loop(false) {
         // Set the size of control input prot to at least two
         resizeControlInputPort(LOOPCONTROL);
         resizeControlOutputPort(LOOPCONTROL);
     }
+
+    auto getParentLoopNode() { return parent_loop; }
+    void setOuterLoop(){outer_loop = true;}
+    bool isOuterLoop() {return outer_loop;}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -715,8 +726,8 @@ class InstructionNode : public Node {
         TruncInstructionTy,
         SelectInstructionTy,
 
-        //Floating point operations
-        
+        // Floating point operations
+
         FaddInstructionTy,
         FsubInstructionTy,
         FmulInstructionTy,
@@ -784,8 +795,7 @@ class BinaryOperatorNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
-
-class FaddOperatorNode: public InstructionNode {
+class FaddOperatorNode : public InstructionNode {
    public:
     FaddOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::FaddInstructionTy, _ins) {}
@@ -804,8 +814,7 @@ class FaddOperatorNode: public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
-
-class FdiveOperatorNode: public InstructionNode {
+class FdiveOperatorNode : public InstructionNode {
    public:
     FdiveOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins) {}
@@ -861,7 +870,6 @@ class FcmpNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
-
 
 class BranchNode : public InstructionNode {
    public:
@@ -1263,15 +1271,13 @@ class ConstFPNode : public Node {
 
     float getValue() { return value.f; }
     unsigned int getBits() { return value.bits; }
-    FloatingPointIEEE754 getFloatIEEE(){ return value; }
+    FloatingPointIEEE754 getFloatIEEE() { return value; }
 
     llvm::ConstantFP *getConstantParent();
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
 };
-
-
 
 /**
  * SplitCall node
