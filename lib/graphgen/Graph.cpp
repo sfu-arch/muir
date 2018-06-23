@@ -1376,6 +1376,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 for (auto &_live_in : _l_node->live_ins()) {
                     for (auto &_data_out : _live_in->output_data_range()) {
+                        if (isa<ArgumentNode>(_data_out)) continue;
                         this->outCode
                             << "  "
                             << _data_out->printInputData(

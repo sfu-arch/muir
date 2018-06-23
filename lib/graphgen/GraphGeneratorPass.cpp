@@ -155,6 +155,43 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
     }
 }
 
+void UpdateLiveOutConnections(Loop *_loop, LoopNode *_loop_node,
+                              std::map<llvm::Value *, Node *> map_value_node) {
+    for (auto B : _loop->blocks()) {
+        for (auto &I : *B) {
+            /**
+             * The function needs these steps:
+             * 1) Detect Live-outs
+             * 2) Insert a new Live-outs into loop header
+             * 3) Update the dependencies
+             */
+            for (auto *U : I.users()) {
+                if (!definedInRegion(
+                        SetVector<BasicBlock *>(_loop->blocks().begin(),
+                                                _loop->blocks().end()),
+                        U)) {
+                    auto new_live_out = _loop_node->insertLiveOutArgument(U);
+
+                    auto _src = map_value_node[&I];
+                    auto _tar = map_value_node[U];
+
+                    // TODO later we need to get ride of these lines
+                    if (auto call_out = dyn_cast<CallNode>(_tar))
+                        _tar = call_out->getCallOut();
+                    if (auto call_in = dyn_cast<CallNode>(_src))
+                        _src = call_in->getCallIn();
+
+                    _src->replaceDataOutputNode(_tar, new_live_out);
+                    _tar->replaceDataInputNode(_src, new_live_out);
+                    new_live_out->addDataInputPort(_src);
+
+                    new_live_out->addDataOutputPort(_tar);
+                }
+            }
+        }
+    }
+}
+
 void UpdateInnerLiveInConnections(
     Loop *_loop, std::map<llvm::Loop *, LoopNode *> loop_value_node,
     std::map<llvm::Value *, Node *> map_value_node) {
@@ -192,6 +229,49 @@ void UpdateInnerLiveInConnections(
                     }
 
                     new_live_in->addDataOutputPort(_tar);
+                }
+            }
+        }
+    }
+}
+
+void UpdateInnerLiveOutConnections(
+    Loop *_loop, std::map<llvm::Loop *, LoopNode *> loop_value_node,
+    std::map<llvm::Value *, Node *> map_value_node) {
+    for (auto B : _loop->blocks()) {
+        for (auto &I : *B) {
+
+            auto _loop_node = loop_value_node[_loop];
+            auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
+
+            /**
+             * The function needs these steps:
+             * 1) Detect Live-outs
+             * 2) Insert a new Live-outs into loop header
+             * 3) Update the dependencies
+             */
+            for (auto *U : I.users()) {
+                if (!definedInRegion(
+                        SetVector<BasicBlock *>(_loop->blocks().begin(),
+                                                _loop->blocks().end()),
+                        U)) {
+                    auto new_live_out = _loop_node->insertLiveOutArgument(U);
+
+                    auto _src = map_value_node[&I];
+                    //auto _tar = map_value_node[U];
+                    auto _tar = _parent_loop_node->findLiveOut(U);
+
+                    // TODO later we need to get ride of these lines
+                    if (auto call_out = dyn_cast<CallNode>(_tar))
+                        _tar = call_out->getCallOut();
+                    if (auto call_in = dyn_cast<CallNode>(_src))
+                        _src = call_in->getCallIn();
+
+                    _src->replaceDataOutputNode(_tar, new_live_out);
+                    _tar->replaceDataInputNode(_src, new_live_out);
+                    new_live_out->addDataInputPort(_src);
+
+                    new_live_out->addDataOutputPort(_tar);
                 }
             }
         }
@@ -683,7 +763,6 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
          */
         for (auto B : L->blocks()) {
             UpdateLiveInConnections(L, _loop_node, map_value_node);
-
             for (auto &I : *B) {
                 /**
                  * The function needs these steps:
@@ -821,11 +900,11 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         // connections.
         auto _loop_node = loop_value_node[&*L];
         UpdateLiveInConnections(L, _loop_node, map_value_node);
+        UpdateLiveOutConnections(L, _loop_node, map_value_node);
 
         std::queue<Loop *> _loop_queue;
 
-        for(auto _l : L->getSubLoopsVector())
-            _loop_queue.push(_l);
+        for (auto _l : L->getSubLoopsVector()) _loop_queue.push(_l);
 
         while (!_loop_queue.empty()) {
             auto _sub_loop = _loop_queue.front();
@@ -833,48 +912,14 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
             UpdateInnerLiveInConnections(_sub_loop, loop_value_node,
                                          map_value_node);
+            UpdateInnerLiveOutConnections(_sub_loop, loop_value_node,
+                                         map_value_node);
 
-            for(auto _tmp_sub : _sub_loop->getSubLoopsVector()){
+            for (auto _tmp_sub : _sub_loop->getSubLoopsVector()) {
                 _loop_queue.push(_tmp_sub);
             }
         }
     }
-
-    /**
-     * The function needs these steps:
-     * 1) Detect Live-outs
-     * 2) Insert a new Live-outs into loop header
-     * 3) Update the dependencies
-     */
-    // for (auto *U : I.users()) {
-    // if (!definedInRegion(
-    // SetVector<BasicBlock *>(L->blocks().begin(),
-    // L->blocks().end()),
-    // U)) {
-    // auto new_live_out =
-    //_loop_node->insertLiveOutArgument(U);
-
-    // auto _src = map_value_node[&I];
-    // auto _tar = map_value_node[U];
-
-    //// TODO later we need to get ride of these lines
-    // if (auto call_out = dyn_cast<CallNode>(_tar))
-    //_tar = call_out->getCallOut();
-    // if (auto call_in = dyn_cast<CallNode>(_src))
-    //_src = call_in->getCallIn();
-
-    //_src->replaceDataOutputNode(_tar, new_live_out);
-    //_tar->replaceDataInputNode(_src, new_live_out);
-    // new_live_out->addDataInputPort(_src);
-
-    // new_live_out->addDataOutputPort(_tar);
-    //}
-    //}
-    //}
-    //}
-
-    //// Increament the counter
-    // c++;
 
     //// Filling the containers
     // for (auto B : L->blocks()) {

@@ -30,6 +30,10 @@ using namespace llvm;
 
 namespace common {
 
+
+/**
+ * Implimentaiton of FloatingPointIEEE754
+ */
 union FloatingPointIEEE754 {
     struct ieee754{
         ieee754():mantissa(0), exponent(0), sign(0){}
@@ -291,6 +295,32 @@ class InstCounter : public llvm::ModulePass {
         AU.setPreservesAll();
     }
 };
+
+class CallInstSpliter: public ModulePass, public InstVisitor<CallInstSpliter> {
+    friend class InstVisitor<CallInstSpliter>;
+    private:
+
+    llvm::SmallVector<llvm::CallInst *, 10> call_container;
+   public:
+    static char ID;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    CallInstSpliter() : llvm::ModulePass(ID), function_name("") {}
+    CallInstSpliter(llvm::StringRef fn) : llvm::ModulePass(ID), function_name(fn) {}
+
+    bool doInitialization(llvm::Module &) override;
+    bool doFinalization(llvm::Module &) override;
+    bool runOnModule(llvm::Module &) override;
+
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+
+    void visitCallInst(llvm::CallInst &Inst);
+};
+
 }
 
 #endif

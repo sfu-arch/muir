@@ -337,6 +337,7 @@ static void runGraphGen(Module &M) {
     pm.add(llvm::createLoopSimplifyPass());
     //pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add(new helpers::GepInformation(XKETCHName));
+    pm.add(new helpers::CallInstSpliter(XKETCHName));
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName), out));
     pm.add(createVerifierPass());
     pm.run(M);
