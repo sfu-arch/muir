@@ -331,13 +331,14 @@ static void runGraphGen(Module &M) {
     raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
-    //pm.add(new LoopInfoWrapperPass());
     //Usefull passes
     //pm.add(llvm::createCFGSimplificationPass());
-    pm.add(llvm::createLoopSimplifyPass());
     //pm.add(new helpers::GEPAddrCalculation(XKETCHName));
+    pm.add((llvm::createStripDeadDebugInfoPass()));
+    pm.add(llvm::createLoopSimplifyPass());
     pm.add(new helpers::GepInformation(XKETCHName));
-    pm.add(new helpers::CallInstSpliter(XKETCHName));
+    pm.add(new LoopInfoWrapperPass());
+    //pm.add(new helpers::CallInstSpliter(XKETCHName));
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName), out));
     pm.add(createVerifierPass());
     pm.run(M);

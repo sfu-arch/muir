@@ -687,6 +687,7 @@ bool CallInstSpliter::runOnModule(Module &M) {
                     _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
             }
         }
+        ff.dump();
     }
     return true;
 }

@@ -209,8 +209,11 @@ void UpdateInnerLiveInConnections(
 
                     auto new_live_in = _loop_node->insertLiveInArgument(_value);
 
-                    // auto _src = map_value_node[_value];
-                    auto _src = _parent_loop_node->findLiveIn(_value);
+                    Node *_src = nullptr;
+                    if(_parent_loop_node->findLiveIn(_value) == nullptr)
+                        _src = map_value_node[_value];
+                    else
+                        _src = _parent_loop_node->findLiveIn(_value);
                     auto _tar = map_value_node[&I];
 
                     // TODO later we need to get ride of these lines
@@ -257,8 +260,14 @@ void UpdateInnerLiveOutConnections(
                     auto new_live_out = _loop_node->insertLiveOutArgument(U);
 
                     auto _src = map_value_node[&I];
-                    // auto _tar = map_value_node[U];
-                    auto _tar = _parent_loop_node->findLiveOut(U);
+                    auto _tar = map_value_node[U];
+
+                    //auto _tar = _parent_loop_node->findLiveOut(U);
+                    //Node * _tar = nullptr;
+                    //if(_parent_loop_node->findLiveOut(U) == nullptr)
+                        //_tar = map_value_node[U];
+                    //else
+                        //_tar = _parent_loop_node->findLiveOut(U);
 
                     // TODO later we need to get ride of these lines
                     if (auto call_out = dyn_cast<CallNode>(_tar))
@@ -269,7 +278,6 @@ void UpdateInnerLiveOutConnections(
                     _src->replaceDataOutputNode(_tar, new_live_out);
                     _tar->replaceDataInputNode(_src, new_live_out);
                     new_live_out->addDataInputPort(_src);
-
                     new_live_out->addDataOutputPort(_tar);
                 }
             }

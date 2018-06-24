@@ -524,8 +524,12 @@ Node *ContainerNode::findLiveIn(llvm::Value *_val) {
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
                            });
-    if(ff == live_in.end())
-        assert(!"Couldn't find the live-in");
+    if(ff == live_in.end()){
+        _val->dump();
+        WARNING(!"Couldn't find the live-in");
+        return nullptr;
+        //assert(!"Couldn't find the live-in");
+    }
 
     return ff->get();
 }
@@ -536,8 +540,10 @@ Node *ContainerNode::findLiveOut(llvm::Value *_val) {
                                return arg.get()->getArgumentValue() == _val;
                            });
 
-    if(ff == live_out.end())
-        assert(!"Couldn't find the live-in");
+    if(ff == live_out.end()){
+        WARNING(!"Couldn't find the live-in");
+        return nullptr;
+    }
     return ff->get();
 }
 
