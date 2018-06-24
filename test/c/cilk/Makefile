@@ -5,8 +5,8 @@ SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
-APALA=~/amoeba/apala-generator/build/bin/xketch
-#APALA=/home/amiralis/git/xketch-ap/build/bin/xketch
+#APALA=~/amoeba/apala-generator/build/bin/xketch
+APALA=/home/amiralis/git/xketch-ap/build/bin/xketch
 
 .PRECIOUS: %.ll
 

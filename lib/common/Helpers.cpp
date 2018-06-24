@@ -675,19 +675,23 @@ bool CallInstSpliter::doInitialization(Module &M) { return false; }
 
 bool CallInstSpliter::doFinalization(Module &M) { return false; }
 
-
 bool CallInstSpliter::runOnModule(Module &M) {
     for (auto &ff : M) {
         if (ff.getName() == this->function_name) visit(&ff);
-        for(auto &_call : this->call_container){
+        for (auto &_call : this->call_container) {
             auto _bb = _call->getParent();
-            _bb->splitBasicBlock(_call, "bb_contine");
+            if (_call != &_bb->back() &&
+                !(isa<llvm::BranchInst>(_call->getNextNode()) ||
+                 isa<llvm::ReattachInst>(_call->getNextNode()))) {
+                auto _new_bb =
+                    _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
+            }
         }
     }
     return true;
 }
 
-void CallInstSpliter::visitCallInst(CallInst &I){
+void CallInstSpliter::visitCallInst(CallInst &I) {
     if (I.getCalledFunction()->isDeclaration()) return;
     this->call_container.push_back(&I);
 }
