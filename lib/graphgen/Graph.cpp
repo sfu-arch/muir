@@ -1627,16 +1627,16 @@ void Graph::groundStoreNodes() {
         assert(!"A function can not have more than one return node!");
 
     for (auto _st_node : _store_nodes) {
-        if (_st_node == _store_nodes.back()) {
-            if (auto _return_node =
-                    dyn_cast<ReturnNode>(_return_nodes.back())) {
-                _st_node->addDataOutputPort(_return_node);
-                _return_node->addDataInputPort(_st_node);
-                _st_node->unsetGround();
-            } else
-                WARNING("Sotre node is not grounded");
+        //if (_st_node == _store_nodes.back()) {
+            //if (auto _return_node =
+                    //dyn_cast<ReturnNode>(_return_nodes.back())) {
+                //_st_node->addDataOutputPort(_return_node);
+                //_return_node->addDataInputPort(_st_node);
+                //_st_node->unsetGround();
+            //} else
+                //WARNING("Sotre node is not grounded");
 
-        } else if (_st_node->numDataOutputPort() == 0)
+        //} else if (_st_node->numDataOutputPort() == 0)
             _st_node->setGround();
     }
 }
