@@ -164,6 +164,7 @@ class Graph {
     InstructionNode *insertIcmpOperatorNode(llvm::ICmpInst &);
     InstructionNode *insertBranchNode(llvm::BranchInst &);
     InstructionNode *insertPhiNode(llvm::PHINode &);
+    InstructionNode *insertSelectNode(llvm::SelectInst &);
     InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
     InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);

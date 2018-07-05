@@ -663,6 +663,20 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     return _ret;
 }
 
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            const int to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), std::to_string(to));
+        _ret = true;
+    }
+    return _ret;
+}
+
 namespace helpers {
 // LabelUID Helper Class
 char CallInstSpliter::ID = 0;

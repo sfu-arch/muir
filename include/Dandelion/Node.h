@@ -34,6 +34,7 @@ class LoopNode;
 class MemoryNode;
 class StackNode;
 class PhiSelectNode;
+class SelectNode;
 class SplitCallNode;
 class ArgumentNode;
 class CallNode;
@@ -619,8 +620,8 @@ class LoopNode : public ContainerNode {
     }
 
     auto getParentLoopNode() { return parent_loop; }
-    void setOuterLoop(){outer_loop = true;}
-    bool isOuterLoop() {return outer_loop;}
+    void setOuterLoop() { outer_loop = true; }
+    bool isOuterLoop() { return outer_loop; }
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -902,6 +903,32 @@ class BranchNode : public InstructionNode {
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+class SelectNode : public InstructionNode {
+   private:
+    SuperNode *mask_node;
+
+   public:
+    SelectNode(NodeInfo _ni, llvm::SelectInst *_ins = nullptr,
+               SuperNode *_parent = nullptr)
+        : InstructionNode(_ni, InstType::SelectInstructionTy, _ins) {}
+
+    SuperNode *getMaskNode() const { return mask_node; }
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::SelectInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    void setParentNode(SuperNode *_parent) { this->mask_node = _parent; }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class PhiSelectNode : public InstructionNode {
@@ -1232,7 +1259,8 @@ class GlobalValueNode : public Node {
 class ConstIntNode : public Node {
    private:
     llvm::ConstantInt *parent_const_int;
-    uint32_t value;
+    //uint32_t value;
+    int value;
 
    public:
     ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
@@ -1245,7 +1273,8 @@ class ConstIntNode : public Node {
         return T->getType() == Node::ConstIntTy;
     }
 
-    uint32_t getValue() { return value; }
+    //uint32_t getValue() { return value; }
+    int getValue() { return value; }
 
     llvm::ConstantInt *getConstantParent();
     virtual std::string printDefinition(PrintType) override;

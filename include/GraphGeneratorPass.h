@@ -68,6 +68,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void visitICmpInst(llvm::ICmpInst &);
     void visitBranchInst(llvm::BranchInst &);
     void visitPHINode(llvm::PHINode &);
+    void visitSelectInst(llvm::SelectInst &);
     void visitAllocaInst(llvm::AllocaInst &);
     void visitGetElementPtrInst(llvm::GetElementPtrInst &);
     void visitLoadInst(llvm::LoadInst &);

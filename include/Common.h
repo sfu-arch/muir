@@ -97,6 +97,7 @@ bool helperReplace(std::string &, const std::string &,
 bool helperReplace(std::string &, const std::string &, std::vector<uint32_t>,
                    const std::string &);
 bool helperReplace(std::string &, const std::string &, const uint32_t);
+bool helperReplace(std::string &, const std::string &, const int);
 bool helperReplace(std::string &, const std::string &,
                    std::vector<const uint32_t> &);
 bool helperReplace(std::string &, const std::string &,
