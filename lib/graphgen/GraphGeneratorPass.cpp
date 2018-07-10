@@ -53,6 +53,15 @@ void inline findAllLoops(Loop *L, SetVector<Loop *> &Loops) {
   Loops.insert(L);
 }
 
+uint32_t returnNumPred(BasicBlock *BB) {
+  uint32_t c = 0;
+  for (auto _bb_it : llvm::predecessors(BB)) {
+    if (BB != _bb_it)
+      c++;
+  }
+  return c;
+}
+
 /**
  * definedInCaller - Return true if the specified value is defined in the
  * function being code extracted, but not in the region being extracted. These
@@ -360,8 +369,8 @@ void GraphGeneratorPass::visitPHINode(llvm::PHINode &I) {
   map_value_node[&I] = this->dependency_graph->insertPhiNode(I);
 }
 
-void GraphGeneratorPass::visitSelectInst(llvm::SelectInst &I){
-    map_value_node[&I] = this->dependency_graph->insertSelectNode(I);
+void GraphGeneratorPass::visitSelectInst(llvm::SelectInst &I) {
+  map_value_node[&I] = this->dependency_graph->insertSelectNode(I);
 }
 
 void GraphGeneratorPass::visitFCmp(llvm::FCmpInst &I) {
@@ -672,6 +681,11 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
       auto _dst_idx =
           _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
     }
+    if (returnNumPred(&BB) > 1) {
+      auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
+      _bb->setNodeType(SuperNode::Mask);
+    }
+
     if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
       for (auto &I : BB) {
         // Iterate over the basicblock's instructions
@@ -683,7 +697,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 
           // Detect Phi instrucctions
           if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
-            _bb->setNodeType(SuperNode::Mask);
+            //_bb->setNodeType(SuperNode::Mask);
             _bb->addPhiInstruction(_phi_ins);
             _phi_ins->setParentNode(_bb);
           }

@@ -12,7 +12,7 @@ double timespec_to_ms(struct timespec *ts)
   return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
 }
 
-void vector_scale(
+int vector_scale(
     int* a, 
     int* c, 
     int scale, // 24.8 bit fixed point
@@ -26,6 +26,7 @@ void vector_scale(
       if (c[i] > 255) c[i] = 255;
     }
   }
+  return 1;
 }
 
 #define TEST_SIZE 100
