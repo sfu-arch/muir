@@ -202,7 +202,7 @@ void DFGPrinter::visitFunction(Function &F) {
         return sstr.str();
     };
 
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         nodes[&ag] = counter_arg;
 
         dot << "    arg_" << counter_arg << "[label=\"ARG(" << counter_arg
@@ -411,7 +411,7 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
            "Gep with more than 2 operand is not supported");
 
     // Dumping the instruction
-    DEBUG(I.dump());
+    DEBUG(I.print(errs(), true));
 
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
@@ -462,7 +462,7 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
                                          1)));
 
     } else {
-        src_type->dump();
+        DEBUG(src_type->print(errs(), true));
         assert(!"GepInformation pass doesn't support this type of input");
     }
 }
@@ -494,7 +494,7 @@ void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
            "Gep with more than 2 operand is not supported");
 
     // Dumping the instruction
-    DEBUG(I.dump());
+    DEBUG(I.print(errs(), true));
 
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
@@ -504,12 +504,11 @@ void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 
     auto src_type = I.getSourceElementType();
     auto tar_type = I.getResultElementType();
-    src_type->dump();
+    DEBUG(src_type->print(errs(), true));
     if (src_type->isStructTy()) {
         auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
         for (auto _element : src_struct_type->elements()) {
             errs() << "Num byte: " << DL.getTypeAllocSize(_element) << "\n";
-            //_element->dump();
         }
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
@@ -701,7 +700,6 @@ bool CallInstSpliter::runOnModule(Module &M) {
                     _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
             }
         }
-        ff.dump();
     }
     return true;
 }

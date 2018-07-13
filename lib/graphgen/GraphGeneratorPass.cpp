@@ -341,7 +341,7 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
   else if (auto _sync_ins = dyn_cast<llvm::SyncInst>(&Ins))
     map_value_node[&Ins] = this->dependency_graph->insertSyncNode(*_sync_ins);
   else {
-    Ins.dump();
+    Ins.print(errs(), true);
     assert(!"Instruction is not supported");
   }
 }
@@ -385,8 +385,17 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
   if (alloca_type->isIntegerTy() || alloca_type->isArrayTy()) {
     map_value_node[&I] =
         this->dependency_graph->insertAllocaNode(I, size, num_byte);
-  } else
+  } else if (alloca_type->isPointerTy()) {
+
+    map_value_node[&I] =
+        this->dependency_graph->insertAllocaNode(I, size, num_byte);
+    I.print(errs(), true);
+    errs() << "Alloca is pointer\n";
+    //assert(!"Don't support for this alloca");
+  } else {
+    I.print(errs(), true);
     assert(!"Don't support for this alloca");
+  }
 }
 
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
@@ -582,14 +591,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         auto _node_dest = this->map_value_node.find(&*ins_it);
 
         if (_node_src == this->map_value_node.end()) {
-          operand->dump();
-          ins_it->dump();
+          DEBUG(operand->print(errs(), true));
+          DEBUG(ins_it->print(errs(), true));
           assert(!"The destination instruction couldn't find!");
         }
 
         if (_node_dest == this->map_value_node.end()) {
-          operand->dump();
-          ins_it->dump();
+          DEBUG(operand->print(errs(), true));
+          DEBUG(ins_it->print(errs(), true));
           assert(!"The destination instruction couldn't find!");
         }
 

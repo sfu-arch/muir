@@ -27,7 +27,7 @@ namespace codegen {
 char DataflowGeneratorPass::ID = 0;
 
 RegisterPass<DataflowGeneratorPass> X("codegen", "Generating chisel code");
-}
+}  // namespace codegen
 
 extern bool isTargetFunction(const Function &f,
                              const cl::list<std::string> &FunctionList);
@@ -227,7 +227,7 @@ InstructionType InstructionTypeNode(Instruction &ins) {
 #endif
     // Default case
     // TODO: Other type of instructions are note supported for now!
-    ins.dump();
+    ins.print(errs(), true);
 
     assert(!"ERROR: Uknown node type");
     return TNULL;
@@ -348,7 +348,7 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
  */
 void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
     uint32_t c = 0;
-    for (auto &f_arg : F.getArgumentList()) {
+    for (auto &f_arg : F.args()) {
         function_argument.push_back(&f_arg);
         ArgInfo temp_arg = {"field" + to_string(c), static_cast<uint32_t>(c)};
         argument_info[&f_arg] = temp_arg;
@@ -493,7 +493,6 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                            i++) {
                           bb_branch[branch_ins->getSuccessor(i)].push_back(ins);
                       }
-
                   });
 
     // XXX NOTE:
@@ -564,7 +563,6 @@ void DataflowGeneratorPass::PrintHelperObject(llvm::Function &F) {
                            i++) {
                           bb_detach[detach_ins->getSuccessor(i)].push_back(ins);
                       }
-
                   });
     for (auto bb_to_detach : bb_detach) {
         final_command = "";
@@ -765,7 +763,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     command = "    val in = Flipped(new CallDecoupled(List(";
     final_command.append(ins_template.render(command));
     uint32_t c = 0;
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         command = "32,";
         ins_template.set("index", static_cast<int>(c++));
         final_command.append(ins_template.render(command));
@@ -782,7 +780,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         command = "    val {{call}}_out = new CallDecoupled(List(";
         ins_template.set("call", instruction_info[fc].name);
         final_command.append(ins_template.render(command));
-        for (auto &ag : fc->getFunction()->getArgumentList()) {
+        for (auto &ag : fc->getFunction()->args()) {
             command = "32,";
             ins_template.set("index", static_cast<int>(c++));
             final_command.append(ins_template.render(command));
@@ -1128,7 +1126,7 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
             static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte2));
 
     } else {
-        DEBUG(Ins.dump());
+        DEBUG(Ins.print(errs(), true));
 
         // Printing each instruction
         string init_test = "\n  //";
@@ -2132,7 +2130,6 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
 
     auto find_right_value_type = [&ins](uint32_t c,
                                         llvm::Loop *loop) -> RightSide {
-
         if (loop)
             return RightSide::ConLoop;
         else if (dyn_cast<llvm::Instruction>(ins.getOperand(c)))
@@ -2148,15 +2145,13 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
         else if (dyn_cast<llvm::Argument>(ins.getOperand(c)))
             return RightSide::ConFunctionArg;
         else {
-            ins.dump();
-            ins.getOperand(c)->dump();
+            DEBUG(ins.print(errs(), true));
+            DEBUG(ins.getOperand(c)->print(errs(), true));
             assert(!"Unrecognized operand type");
         }
-
     };
 
     auto operand_name = [this, &ins](uint32_t c) -> string {
-
         if (auto op = dyn_cast<llvm::Instruction>(ins.getOperand(c)))
             return this->instruction_info[op].name;
         else if (auto op = dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
@@ -2173,7 +2168,6 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
             return this->argument_info[op].name;
         else
             assert(!"Unrecognized operand type");
-
     };
 
     // For each operand we have to figure out if the connection is
@@ -2185,9 +2179,9 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
 
         Loop *target_loop = nullptr;
         /**
-                 * Check if the edge in LoopEdges
-                 * This edge count is the loop header
-                 */
+         * Check if the edge in LoopEdges
+         * This edge count is the loop header
+         */
         auto loop_edge = std::find_if(
             LoopEdges.begin(), LoopEdges.end(),
             [&operand, &ins](const pair<Value *, Value *> &edge) {
@@ -2300,7 +2294,6 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
         }
 
         return lua_right.render(command);
-
     };
 
     // First we iterate over function's operands
@@ -2330,11 +2323,11 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
             case InstructionType::TBinaryOperator:
             case InstructionType::TICmpInst:
                 if (c == 0)
-                    command = 
+                    command =
                         "  //Connecting left input of {{ins_name}}\n"
                         "  {{ins_name}}.io.LeftIO <> {{right_side}}";
                 else if (c == 1)
-                    command = 
+                    command =
                         "  //Connecting Right input of {{ins_name}}\n"
                         "  {{ins_name}}.io.RightIO <> {{right_side}}";
                 else
@@ -2344,7 +2337,7 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
 
             case InstructionType::TCBranchInst:
                 if (c == 0)
-                    command = 
+                    command =
                         "  //Connecting comparision input of {{ins_name}}\n"
                         "  {{ins_name}}.io.CmpIO <> {{right_side}}";
                 else
@@ -2354,15 +2347,15 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
 
             case InstructionType::TGEP:
                 if (c == 0)
-                    command = 
+                    command =
                         "  //Connecting base address of {{ins_name}}\n"
                         "  {{ins_name}}.io.baseAddress <> {{right_side}}";
                 else if (c == 1)
-                    command = 
+                    command =
                         "  //Connecting idx1 input of {{ins_nam}}\n"
                         "  {{ins_name}}.io.idx1 <> {{right_side}}";
                 else if (c == 2)
-                    command = 
+                    command =
                         "  //Connecting idx2 input of {{ins_name}}\n"
                         "  {{ins_name}}.io.idx2 <> {{right_side}}";
                 else
@@ -2370,14 +2363,14 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
                 break;
 
             default:
-                ins.dump();
-                ins.getOperand(c)->dump();
+                DEBUG(ins.print(errs(), true));
+                DEBUG(ins.getOperand(c)->print(errs(), true));
                 assert(!"UKNOWN INSTRUCTION TYPE!");
                 break;
         }
         ins_template.set("ins_name", instruction_info[&ins].name);
         ins_template.set("right_side", right_string);
-        //Setting left side of the connection command_left =
+        // Setting left side of the connection command_left =
         errs() << ins_template.render(command) << "\n";
     }
 }
@@ -2818,7 +2811,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                  instruction_info[operand_ins].name);
 
             } else {
-                ins.dump();
+                DEBUG(ins.print(errs(), true));
                 assert(!"Wrong load input");
             }
 
@@ -3426,7 +3419,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 // TODO add Cilk support
 #endif
         } else {
-            ins.dump();
+            DEBUG(ins.print(errs(), true));
             assert(!"The instruction is not supported in the dataflow connection phase");
         }
     }
@@ -3969,7 +3962,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
 
     command = "  *    in = Flipped(new CallDecoupled(List(...)))\n";
     final_command.append(ins_template.render(command));
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         command =
             "  poke(c.io.in.data(\"field{{index}}\").bits.data, 0.U)\n"
             "  poke(c.io.in.data(\"field{{index}}\").bits.predicate, false.B)\n"

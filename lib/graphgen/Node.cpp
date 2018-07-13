@@ -513,7 +513,7 @@ Node *ContainerNode::findLiveIn(llvm::Value *_val) {
         return arg.get()->getArgumentValue() == _val;
       });
   if (ff == live_in.end()) {
-    _val->dump();
+    DEBUG(_val->print(errs(), true));
     WARNING(!"Couldn't find the live-in");
     return nullptr;
     // assert(!"Couldn't find the live-in");
