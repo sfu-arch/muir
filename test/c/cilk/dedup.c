@@ -6,7 +6,7 @@
 
 #define CHUNKSIZE (2)
 #define N (CHUNKSIZE * 16)
-#define QSIZE (3)
+#define QSIZE (7)
 #define FREE (999)
 #define EOT (9999) //end-of-tasks
 
@@ -61,20 +61,13 @@ void dedup_S3 (int chunk[], int pos, int wptr, volatile int q[]) {
 void dedup_S2 (int x[], int pos, int wptr, volatile int q[]) {
 
     int* chunk = &x[pos];
-    int is_dup;
 
-    //check for duplicates
-    if (chunk[0] == chunk[1])
-      is_dup = 1;
-    else
-      is_dup = 0;
-
-    if (is_dup) {
+    if (chunk[0] == chunk[1]) {
       cilk_spawn dedup_S3 (chunk, pos, wptr, q);
     } else {
       q[wptr] = pos;
     }
-    
+    cilk_sync;
 }//dedup_S2
 
 

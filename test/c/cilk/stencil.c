@@ -14,8 +14,7 @@ double timespec_to_ms(struct timespec *ts)
 }
 
 #define NROWS (4)
-#define NCOLS \
-    (4)  // NCOLS must be power of 2 to avoid use of MOD operator (unsupported)
+#define NCOLS (4)  // NCOLS must be power of 2 to avoid use of MOD operator (unsupported)
 #define NBRROWS (1)
 #define NBRCOLS (1)
 #define NWORKERS (4)
@@ -119,9 +118,9 @@ int main(int argc, char *argv[]) {
   for (int i=0;i<LOOP_SIZE;i++) {
     for (int i = 0; i < NSTEPS; i++) {
       //        if (i % 2)
-            stencil(buf1, buf0);
+      // stencil(buf1, buf0);
 	    //        else
-	    //            stencil(buf0, buf1);
+         stencil(buf0, buf1);
     }
   }
   #ifdef TIME
