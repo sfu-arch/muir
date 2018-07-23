@@ -1524,12 +1524,13 @@ std::string SelectNode::printInputData(PrintType _pt, uint32_t _id) {
     std::replace(_name.begin(), _name.end(), '.', '_');
     if (_id == 0)
       _text = "$name.io.Select";
-    else if(_id == 1)
+    else if (_id == 1)
       _text = "$name.io.InData1";
-    else if(_id == 2)
+    else if (_id == 2)
       _text = "$name.io.InData2";
     else
-        assert(!"Select nod can not have more than three inputs! (select, input1, input2)");
+      assert(!"Select nod can not have more than three inputs! (select, "
+              "input1, input2)");
 
     helperReplace(_text, "$name", _name.c_str());
     helperReplace(_text, "$id", _id);
@@ -1561,7 +1562,6 @@ std::string SelectNode::printOutputData(PrintType _pt, uint32_t _id) {
   }
   return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            PhiSelectNode Class
@@ -1677,7 +1677,7 @@ std::string ReturnNode::printDefinition(PrintType _pt) {
     std::replace(_name.begin(), _name.end(), '.', '_');
     _text = "  val $name = Module(new $type(retTypes=List($<input_list>), "
             "ID = $id))\n\n";
-    helperReplace(_text, "$type", "RetNode");
+    helperReplace(_text, "$type", "RetNode2");
     helperReplace(_text, "$name", _name.c_str());
     helperReplace(_text, "$id", this->getID());
     helperReplace(_text, "$<input_list>",
@@ -1698,7 +1698,7 @@ std::string ReturnNode::printInputEnable(PrintType _pt) {
   switch (_pt) {
   case PrintType::Scala:
     std::replace(_name.begin(), _name.end(), '.', '_');
-    _text = "$name.io.enable";
+    _text = "$name.io.In.enable";
     helperReplace(_text, "$name", _name.c_str());
 
     break;
@@ -2392,8 +2392,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
     std::vector<uint32_t> _arg_count;
     for (auto &l : _list)
       _arg_count.push_back(l->numDataOutputPort());
-    if (_arg_count.size() == 0)
-      _arg_count.push_back(0);
+    // if (_arg_count.size() == 0)
+    //_arg_count.push_back(0);
     return _arg_count;
   };
 
@@ -2917,8 +2917,10 @@ std::string CallInNode::printDefinition(PrintType _pt) {
 
   auto make_argument_port = [](const auto &_list) {
     std::vector<uint32_t> _arg_count;
-    for (auto &l : _list)
+    for (auto &l : _list){
       _arg_count.push_back(32);
+      errs() << "AMIRALI\n";
+    }
     return _arg_count;
   };
 
@@ -2931,7 +2933,7 @@ std::string CallInNode::printDefinition(PrintType _pt) {
     helperReplace(_text, "$id", this->getID());
     helperReplace(_text, "$type", "CallInNode");
     helperReplace(_text, "$<output_vector>",
-                  make_argument_port(this->output_data_range()), ",");
+                  make_argument_port(this->input_data_range()), ",");
 
     break;
   case PrintType::Dot:
@@ -3008,8 +3010,9 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
     std::vector<uint32_t> _arg_count;
     // for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
     // TODO change 32
-    for (auto &l : _list)
+    for (auto &l : _list) {
       _arg_count.push_back(32);
+    }
     return _arg_count;
   };
 

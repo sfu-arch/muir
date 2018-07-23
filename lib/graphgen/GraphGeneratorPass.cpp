@@ -690,7 +690,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
       auto _dst_idx =
           _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
     }
-    if (returnNumPred(&BB) > 1) {
+    //if (returnNumPred(&BB) > 1) {
+    if(dyn_cast<SuperNode>(this->map_value_node[&BB])->numControlInputPort() > 1){
       auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
       _bb->setNodeType(SuperNode::Mask);
     }

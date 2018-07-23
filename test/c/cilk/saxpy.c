@@ -13,10 +13,12 @@ double timespec_to_ms(struct timespec *ts)
   return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
 }
 
-void saxpy (int n, int a, int x[], int y[]) {
+int saxpy (int n, int a, int x[], int y[]) {
   cilk_for (int i = 0; i < n; i++) {
     y[i] = a * x[i] + y[i];
   }
+
+  return 1;
 }
 
 int main (int argc, char *argv[]) {
