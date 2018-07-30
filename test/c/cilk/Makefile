@@ -27,7 +27,7 @@ svg: $(SVG)
 	dot -Tsvg $< -o $@
 
 clean:
-	rm -f *.bc *.ll *.dot *.scala *.svg *~
+	-rm -f *.bc *.ll *.dot *.scala *.svg *~ *.json
 
 %.split: %.bc
 	$(APALA) -fn-name=$* $< -o $*
