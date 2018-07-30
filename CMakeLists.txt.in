@@ -24,7 +24,6 @@ ExternalProject_Add(
 
 ExternalProject_Add_Step(
     LuaCppTemplater CopyToBin
-  #COMMAND ${CMAKE_COMMAND} -E copy_directory ${GLOBAL_OUTPUT_PATH}/humblelogging/bin ${GLOBAL_OUTPUT_PATH}
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${GLOBAL_OUTPUT_PATH}/luacpptemplater/lib ${GLOBAL_OUTPUT_PATH}
   DEPENDEES install
 )

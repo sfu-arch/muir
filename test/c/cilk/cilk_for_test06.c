@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   // Time how long it takes
 #ifdef TIME
   struct timespec start_time, end_time;
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
 
   for (int i=0;i<LOOP_SIZE;i++) {
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef TIME
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
   float time_ns = time_ms / LOOP_SIZE * 1000000;
   printf("Calculated in %.3f ns using %d workers.\n",

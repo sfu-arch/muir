@@ -12,7 +12,7 @@ double timespec_to_ms(struct timespec *ts)
   return ts->tv_sec*1000.0 + ts->tv_nsec/1000000.0;
 }
 
-void vector_scale(
+int vector_scale(
     int* a, 
     int* c, 
     int scale, // 24.8 bit fixed point
@@ -26,9 +26,10 @@ void vector_scale(
       if (c[i] > 255) c[i] = 255;
     }
   }
+  return 1;
 }
 
-#define TEST_SIZE 1000
+#define TEST_SIZE 100
 #define SEED 4
 
 int main(int argc, char *argv[]) {
@@ -62,14 +63,14 @@ int main(int argc, char *argv[]) {
   // Time how long it takes to calculate the nth Fibonacci number
 #ifdef TIME
   struct timespec start_time, end_time;
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
   for (int i=0;i<LOOP_SIZE;i++) {
     // Run the component
     vector_scale(A, C, 32, TEST_SIZE);
   }
 #ifdef TIME
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
   float time_ns = time_ms / LOOP_SIZE * 1000000;
   printf("Calculated in %.3f ns using %d workers.\n",

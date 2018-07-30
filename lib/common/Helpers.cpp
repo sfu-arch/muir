@@ -11,7 +11,9 @@
 
 #include <cassert>
 #include <cmath>
+#include <experimental/iterator>
 #include <fstream>
+#include <iostream>
 
 #include "Common.h"
 
@@ -21,7 +23,9 @@ using helpers::LabelUID;
 using helpers::pdgDump;
 using helpers::DFGPrinter;
 using helpers::GEPAddrCalculation;
+using helpers::GepInformation;
 using helpers::InstCounter;
+using helpers::CallInstSpliter;
 
 /**
  * Helper classes
@@ -174,9 +178,8 @@ void DFGPrinter::visitFunction(Function &F) {
                                        string ir) -> string {
         stringstream sstr;
         auto eir = escape_quotes(ir);
-        sstr << "        m_" << id << "[label=\"" << label
-             << "\", opcode=\"" << label << "\", color=" << color << ",ir=\""
-             << eir << "\"];\n";
+        sstr << "        m_" << id << "[label=\"" << label << "\", opcode=\""
+             << label << "\", color=" << color << ",ir=\"" << eir << "\"];\n";
         return sstr.str();
     };
 
@@ -189,11 +192,9 @@ void DFGPrinter::visitFunction(Function &F) {
         auto eir = escape_quotes(ir);
 
         if (num_op == 1)
-            branch_label =
-                "\"{" + label + " \\l|{<s0>T}} \"";
+            branch_label = "\"{" + label + " \\l|{<s0>T}} \"";
         else
-            branch_label = "\"{" + label +
-                           " \\l|{<s0>T|<s1>F}} \"";
+            branch_label = "\"{" + label + " \\l|{<s0>T|<s1>F}} \"";
 
         sstr << "        m_" << id
              << "[shape=\"record\", label=" << branch_label << ", opcode=\""
@@ -201,7 +202,7 @@ void DFGPrinter::visitFunction(Function &F) {
         return sstr.str();
     };
 
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         nodes[&ag] = counter_arg;
 
         dot << "    arg_" << counter_arg << "[label=\"ARG(" << counter_arg
@@ -221,7 +222,9 @@ void DFGPrinter::visitFunction(Function &F) {
             // If this does not exist in the node map
             // then create a new entry for it and save
             // the value of the counter (identifier).
-            auto scalaLabel = cast<MDString>(I.getMetadata("ScalaLabel")->getOperand(0))->getString();
+            auto scalaLabel =
+                cast<MDString>(I.getMetadata("ScalaLabel")->getOperand(0))
+                    ->getString();
 
             if (isa<BranchInst>(&I)) {
                 counter_ins++;
@@ -236,8 +239,8 @@ void DFGPrinter::visitFunction(Function &F) {
 #endif
             } else {
                 counter_ins++;
-                dot << nodeFormat(nodes[&I], scalaLabel.str(),
-                                  "black", rso.str());
+                dot << nodeFormat(nodes[&I], scalaLabel.str(), "black",
+                                  rso.str());
             }
         }
 
@@ -316,16 +319,6 @@ void DFGPrinter::visitInstruction(Instruction &I) {
             }
         }
     }
-// else if(isa<llvm::PHINode>(I)){
-// uint32_t op_counter = 0;
-// for(auto OI : Operands){
-// if (isa<Instruction>(OI)){
-// dot << "    "
-//<< "m_" << nodes[OI] << "->"
-//<< "m_" << nodes[&I] << ";\n";
-//}
-//}
-//}
 #ifdef TAPIR
     else if (llvm::isa<llvm::DetachInst>(I) ||
              llvm::isa<llvm::ReattachInst>(I) || llvm::isa<llvm::SyncInst>(I)) {
@@ -365,7 +358,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                     << " m_" << nodes[&I]
                     << " [color=blue, constraint=false];\n";
             } else if (isa<Constant>(OI)) {
-                if(auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
+                if (auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
                     auto cnt_value = cnt->getSExtValue();
                     if (nodes.count(OI) == 0) {
                         nodes[OI] = cnt->getSExtValue();
@@ -407,6 +400,80 @@ bool DFGPrinter::runOnFunction(Function &F) {
     return false;
 }
 
+// GepInformation Helper class
+namespace helpers {
+
+char GepInformation::ID = 0;
+}
+
+void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
+    assert(I.getNumOperands() <= 3 &&
+           "Gep with more than 2 operand is not supported");
+
+    // Dumping the instruction
+    DEBUG(I.print(errs(), true));
+
+    // Getting datalayout
+    auto DL = I.getModule()->getDataLayout();
+    uint32_t numByte = 0;
+    uint64_t start_align = 0;
+    uint64_t end_align = 0;
+
+    auto src_type = I.getSourceElementType();
+    if (src_type->isStructTy()) {
+        auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+        std::vector<uint32_t> tmp_align = {0};
+        for (auto _element : src_struct_type->elements()) {
+            tmp_align.push_back(tmp_align.back() +
+                                DL.getTypeAllocSize(_element));
+        }
+
+        // this->GepStruct[&I] = tmp_align;
+        this->GepStruct.insert(
+            std::pair<llvm::Instruction *, std::vector<uint32_t>>(&I,
+                                                                  tmp_align));
+
+        DEBUG(
+            std::copy(tmp_align.begin(), tmp_align.end(),
+                      std::experimental::make_ostream_joiner(std::cout, ", ")));
+        DEBUG(std::cout << "\n");
+        DEBUG(errs() << DL.getTypeAllocSize(src_type) << "\n");
+
+    } else if (src_type->isArrayTy()) {
+        auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+        this->GepArray.insert(
+            std::pair<llvm::Instruction *, common::GepArrayInfo>(
+                &I,
+                common::GepArrayInfo(
+                    DL.getTypeAllocSize(src_array_type->getArrayElementType()),
+                    src_array_type->getNumElements())));
+
+        DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
+        DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
+        DEBUG(
+            errs() << "Num byte: "
+                   << DL.getTypeAllocSize(src_array_type->getArrayElementType())
+                   << "\n");
+    } else if (src_type->isIntegerTy()) {
+        auto src_integer_type = dyn_cast<llvm::IntegerType>(src_type);
+        this->GepArray.insert(
+            std::pair<llvm::Instruction *, common::GepArrayInfo>(
+                &I, common::GepArrayInfo(DL.getTypeAllocSize(src_integer_type),
+                                         1)));
+
+    } else {
+        DEBUG(src_type->print(errs(), true));
+        assert(!"GepInformation pass doesn't support this type of input");
+    }
+}
+
+bool GepInformation::runOnModule(Module &M) {
+    for (auto &ff : M) {
+        if (ff.getName() == this->function_name) visit(&ff);
+    }
+    return false;
+}
+
 // GEPAddrCalculation Helper class
 namespace helpers {
 
@@ -418,204 +485,37 @@ void GEPAddrCalculation::visitSExtInst(Instruction &I) {
     auto DL = I.getModule()->getDataLayout();
 
     auto op = dyn_cast<llvm::CastInst>(&I);
-    errs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n";
-    errs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n";
+    DEBUG(dbgs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n");
+    DEBUG(dbgs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n");
 }
 
-void GEPAddrCalculation::visitGetElementPtrInst(Instruction &I) {
+void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     assert(I.getNumOperands() <= 3 &&
            "Gep with more than 2 operand is not supported");
 
     // Dumping the instruction
-    DEBUG(I.dump());
+    DEBUG(I.print(errs(), true));
 
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
     uint32_t numByte = 0;
     uint64_t start_align = 0;
     uint64_t end_align = 0;
-    llvm::Type *op;
 
-    for (uint32_t c = 0; c < I.getNumOperands(); c++) {
-        start_align = end_align;
-
-        // First operand is the pointer the variable
-        if (c == 0) {
-            op = I.getOperand(c)->getType()->getPointerElementType();
-            // outs() << *I.getOperand(c)->getType()->getPointerElementType()
-            //<< "\n";
-
-            // Index zero is pointer type
-            // It can be either struct or constant
-            if (op->isStructTy()) {
-                auto struct_op = dyn_cast<llvm::StructType>(op);
-                numByte = DL.getTypeAllocSize(struct_op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isArrayTy()) {
-                auto array_op = dyn_cast<llvm::ArrayType>(op);
-                numByte = DL.getTypeAllocSize(array_op);
-                // outs() << "Size: " << numByte << "\n";
-
-            } else if (op->isFloatTy()) {
-                numByte = DL.getTypeAllocSize(op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isIntegerTy()) {
-                numByte = DL.getTypeAllocSize(op);
-                // outs() << "Size: " << numByte << "\n";
-            } else if (op->isPointerTy()) {
-                // TODO Fix the pointer computation
-                numByte = DL.getTypeAllocSize(op);
-                // assert(!"DETECT");
-            }
-        } else {
-            auto op_type = I.getOperand(c)->getType();
-
-            auto value = dyn_cast<llvm::ConstantInt>(I.getOperand(c));
-            if (op_type->isIntegerTy() && value) {
-                // outs() << "Value: " << value->getSExtValue() << "\n";
-
-                if (c == 2) {
-                    if (op->isStructTy()) {
-                        auto struct_op = dyn_cast<llvm::StructType>(op);
-                        for (uint32_t i = 0; i <= value->getSExtValue(); i++) {
-                            uint64_t size = 0;
-
-                            auto operand = struct_op->getStructElementType(i);
-
-                            if (operand->isArrayTy()) {
-                                auto op_array =
-                                    dyn_cast<llvm::ArrayType>(operand);
-                                auto array_size = DL.getTypeAllocSize(operand);
-
-                                size = DL.getTypeAllocSize(operand);
-
-                                auto op_element =
-                                    op_array->getArrayElementType();
-                                while (op_element->isArrayTy()) {
-                                    op_element =
-                                        op_element->getArrayElementType();
-                                }
-
-                                auto elem_size =
-                                    DL.getTypeAllocSize(op_element);
-                                /**
-                                 * If the struct's element is an array we need
-                                 * to:
-                                 * 1. Align the begining element size
-                                 * 2. Compute the array's size for end of the
-                                 * alignment
-                                 */
-                                if (i == 0)
-                                    end_align += array_size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)elem_size) *
-                                        elem_size;
-                                    end_align = start_align + array_size - 1;
-                                }
-
-                            } else if (operand->isStructTy()) {
-                                /**
-                                 * If the struct's element is struct:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-
-                            } else if (operand->isIntegerTy() ||
-                                       operand->isDoubleTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-
-                            } else if (operand->isFloatTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-                            } else if (operand->isPointerTy()) {
-                                /**
-                                 * If the struct's element is scala we only need
-                                 * to:
-                                 * 1. Align the begining with itself
-                                 * 2. Compute the size
-                                 */
-                                size = DL.getTypeAllocSize(operand);
-                                if (i == 0)
-                                    end_align += size - 1;
-                                else {
-                                    start_align =
-                                        (int)ceil((float)(end_align + 1) /
-                                                  (float)size) *
-                                        size;
-                                    end_align = start_align + size - 1;
-                                }
-                            } else {
-                                errs() << "TYPE: ";
-                                errs() << *operand << "\n";
-                                I.dump();
-                                assert(!"Not supported type!\n");
-                            }
-                        }
-                        // outs() << "Alignment start: " << start_align << "\n";
-                        // outs() << "Alignment end  : " << end_align << "\n";
-                    } else if (op->isArrayTy()) {
-                        auto array_op = dyn_cast<llvm::ArrayType>(op);
-                        auto array_size = DL.getTypeAllocSize(array_op);
-                        auto array_elem_size =
-                            DL.getTypeAllocSize(array_op->getElementType());
-
-                        start_align = array_elem_size * value->getSExtValue();
-                        // outs() << "Alignment: " << start_align << "\n";
-                    }
-                }
-            }
+    auto src_type = I.getSourceElementType();
+    auto tar_type = I.getResultElementType();
+    DEBUG(src_type->print(errs(), true));
+    if (src_type->isStructTy()) {
+        auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+        for (auto _element : src_struct_type->elements()) {
+            errs() << "Num byte: " << DL.getTypeAllocSize(_element) << "\n";
         }
-    }
-
-    // Filling the containers
-    if (I.getNumOperands() == 2) {
-        auto value_int = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
-        auto value_fp = dyn_cast<llvm::ConstantFP>(I.getOperand(1));
-        if (value_int) {
-            common::GepOne tmp_gep = {value_int->getSExtValue(), numByte};
-            SingleGepIns[&I] = tmp_gep;
-        }
-    } else if (I.getNumOperands() == 3) {
-        auto value1 = dyn_cast<llvm::ConstantInt>(I.getOperand(1));
-        auto value2 = dyn_cast<llvm::ConstantInt>(I.getOperand(2));
-        if (value1 && value2) {
-            common::GepTwo tmp_gep = {value1->getSExtValue(), numByte,
-                                      value2->getSExtValue(),
-                                      static_cast<int64_t>(start_align)};
-            TwoGepIns[&I] = tmp_gep;
-        }
+    } else if (src_type->isArrayTy()) {
+        auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+        errs() << src_array_type->getArrayNumElements() << "\n";
+        errs() << "Num byte: "
+               << DL.getTypeAllocSize(src_array_type->getArrayElementType())
+               << "\n";
     }
 }
 
@@ -685,4 +585,126 @@ void helpers::PDGPrinter(Function &F) {
     FPM.doInitialization();
     FPM.run(F);
     FPM.doFinalization();
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            const std::string &to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), to);
+        _ret = true;
+    }
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            std::vector<const std::string> &to,
+                            const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            std::vector<uint32_t> to,
+                            const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    std::stringstream test;
+    std::copy(to.begin(), to.end(),
+              std::experimental::make_ostream_joiner(test, split));
+
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), test.str());
+        _ret = true;
+    }
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            std::list<std::pair<uint32_t, uint32_t>> &to,
+                            const std::string &split) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    std::stringstream test;
+    for (auto &node : to) {
+        test << "(" << std::to_string(node.first) << ", "
+             << std::to_string(node.second) << ") , ";
+    }
+    // Remove last three additional characters
+    string _replace_string = test.str().substr(0, test.str().size() - 3);
+
+    // replace all the existing substring
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), _replace_string);
+        _ret = true;
+    }
+    return _ret;
+}
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            const uint32_t to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), std::to_string(to));
+        _ret = true;
+    }
+    return _ret;
+}
+
+
+bool helpers::helperReplace(std::string &str, const std::string &from,
+                            const int to) {
+    assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
+    bool _ret = false;
+    while (true) {
+        size_t start_pos = str.find(from);
+        if (start_pos == std::string::npos) break;
+        str.replace(start_pos, from.length(), std::to_string(to));
+        _ret = true;
+    }
+    return _ret;
+}
+
+namespace helpers {
+// LabelUID Helper Class
+char CallInstSpliter::ID = 0;
+
+RegisterPass<CallInstSpliter> W(
+    "CallInstSpliter", "Spliting basic blocks after each call function");
+}
+
+bool CallInstSpliter::doInitialization(Module &M) { return false; }
+
+bool CallInstSpliter::doFinalization(Module &M) { return false; }
+
+bool CallInstSpliter::runOnModule(Module &M) {
+    for (auto &ff : M) {
+        if (ff.getName() == this->function_name) visit(&ff);
+        for (auto &_call : this->call_container) {
+            auto _bb = _call->getParent();
+            if (_call != &_bb->back() &&
+                !(isa<llvm::BranchInst>(_call->getNextNode()) ||
+                 isa<llvm::ReattachInst>(_call->getNextNode()))) {
+                auto _new_bb =
+                    _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
+            }
+        }
+    }
+    return true;
+}
+
+void CallInstSpliter::visitCallInst(CallInst &I) {
+    if (I.getCalledFunction()->isDeclaration()) return;
+    this->call_container.push_back(&I);
 }

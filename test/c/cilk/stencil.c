@@ -14,8 +14,7 @@ double timespec_to_ms(struct timespec *ts)
 }
 
 #define NROWS (4)
-#define NCOLS \
-    (4)  // NCOLS must be power of 2 to avoid use of MOD operator (unsupported)
+#define NCOLS (4)  // NCOLS must be power of 2 to avoid use of MOD operator (unsupported)
 #define NBRROWS (1)
 #define NBRCOLS (1)
 #define NWORKERS (4)
@@ -114,18 +113,18 @@ int main(int argc, char *argv[]) {
   // Time how long it takes to calculate the nth Fibonacci number
 #ifdef TIME
   struct timespec start_time, end_time;
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_time);
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif  
   for (int i=0;i<LOOP_SIZE;i++) {
     for (int i = 0; i < NSTEPS; i++) {
       //        if (i % 2)
-            stencil(buf1, buf0);
+      // stencil(buf1, buf0);
 	    //        else
-	    //            stencil(buf0, buf1);
+         stencil(buf0, buf1);
     }
   }
   #ifdef TIME
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
   float time_ns = time_ms / LOOP_SIZE * 1000000;
   printf("Calculated in %.3f ns using %d workers.\n",

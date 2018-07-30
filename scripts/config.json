@@ -1,0 +1,26 @@
+{
+    "import":{
+        "chisel3":[
+            "util",
+            "Module",
+            "testers",
+            "iotesters"
+        ],
+
+        "org.scalatest":"_",
+        "muxes":"_",
+        "config":"_",
+        "control":"_",
+        "util":"_",
+        "interfaces":"_",
+        "regfile":"_",
+        "memory":"_",
+        "stack":"_",
+        "arbiters":"_",
+        "loop":"_",
+        "accel":"_",
+        "node":"_",
+        "junctions":"_"
+    }
+}
+

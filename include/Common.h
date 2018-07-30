@@ -19,10 +19,34 @@
 #include <sstream>
 #include <string>
 
+#define WARNING(x)                                             \
+    do {                                                       \
+        std::cout << "\033[1;31m[WARNING] \033[0m"             \
+                  << "\033[1;33m" << x <<" \033[0m" << std::endl; \
+    } while (0)
+
 using namespace std;
 using namespace llvm;
 
 namespace common {
+
+
+/**
+ * Implimentaiton of FloatingPointIEEE754
+ */
+union FloatingPointIEEE754 {
+    struct ieee754{
+        ieee754():mantissa(0), exponent(0), sign(0){}
+        unsigned int mantissa: 23;
+        unsigned int exponent: 8;
+        unsigned int sign: 1;
+    };
+    ieee754 raw;
+    unsigned int bits;
+    float f;
+
+    FloatingPointIEEE754():f(0){}
+};
 
 // Structures
 struct GepOne {
@@ -37,6 +61,23 @@ struct GepTwo {
     int64_t numByte2;
 };
 
+struct GepArrayInfo {
+    uint32_t array_size;
+    uint32_t length;
+
+    GepArrayInfo(uint32_t _size, uint32_t _l) : array_size(_size), length(_l) {}
+    GepArrayInfo() : array_size(0), length(0) {}
+};
+
+struct GepStructInfo {
+    std::vector<uint32_t> element_size;
+
+    GepStructInfo() { element_size.clear(); }
+
+    GepStructInfo(std::vector<uint32_t> _input_elements)
+        : element_size(_input_elements) {}
+};
+
 // Functions
 void optimizeModule(llvm::Module *);
 
@@ -46,6 +87,22 @@ InstructionType getLLVMOpcodeName(uint32_t OpCode);
 }
 
 namespace helpers {
+
+/**
+ * Print helper function
+ */
+bool helperReplace(std::string &, const std::string &, const std::string &);
+bool helperReplace(std::string &, const std::string &,
+                   std::vector<const std::string> &, const std::string &);
+bool helperReplace(std::string &, const std::string &, std::vector<uint32_t>,
+                   const std::string &);
+bool helperReplace(std::string &, const std::string &, const uint32_t);
+bool helperReplace(std::string &, const std::string &, const int);
+bool helperReplace(std::string &, const std::string &,
+                   std::vector<const uint32_t> &);
+bool helperReplace(std::string &, const std::string &,
+                   std::list<std::pair<uint32_t, uint32_t>> &,
+                   const std::string &);
 
 /**
  * FUNCTIONS
@@ -158,11 +215,7 @@ class GEPAddrCalculation : public ModulePass,
                            public InstVisitor<GEPAddrCalculation> {
     friend class InstVisitor<GEPAddrCalculation>;
 
-    // void visitFunction(Function &F);
-    // void visitBasicBlock(BasicBlock &BB);
-    // void visitInstruction(Instruction &I);
-
-    void visitGetElementPtrInst(Instruction &I);
+    void visitGetElementPtrInst(llvm::GetElementPtrInst &I);
     void visitSExtInst(Instruction &I);
 
     map<Value *, uint64_t> values;
@@ -196,8 +249,35 @@ class GEPAddrCalculation : public ModulePass,
     }
 };
 
-class InstCounter : public llvm::ModulePass{
+class GepInformation : public ModulePass, public InstVisitor<GepInformation> {
+    friend class InstVisitor<GepInformation>;
 
+    void visitGetElementPtrInst(llvm::GetElementPtrInst &I);
+
+   public:
+    static char ID;
+
+    // Gep containers
+    std::map<llvm::Instruction *, common::GepStructInfo> GepStruct;
+    std::map<llvm::Instruction *, common::GepArrayInfo> GepArray;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    GepInformation(llvm::StringRef FN) : ModulePass(ID), function_name(FN) {}
+
+    bool doInitialization(Module &) override { return false; };
+
+    bool doFinalization(Module &) override { return true; };
+
+    bool runOnModule(Module &) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+};
+
+class InstCounter : public llvm::ModulePass {
    public:
     static char ID;
 
@@ -216,6 +296,32 @@ class InstCounter : public llvm::ModulePass{
         AU.setPreservesAll();
     }
 };
+
+class CallInstSpliter: public ModulePass, public InstVisitor<CallInstSpliter> {
+    friend class InstVisitor<CallInstSpliter>;
+    private:
+
+    llvm::SmallVector<llvm::CallInst *, 10> call_container;
+   public:
+    static char ID;
+
+    // Function name
+    llvm::StringRef function_name;
+
+    CallInstSpliter() : llvm::ModulePass(ID), function_name("") {}
+    CallInstSpliter(llvm::StringRef fn) : llvm::ModulePass(ID), function_name(fn) {}
+
+    bool doInitialization(llvm::Module &) override;
+    bool doFinalization(llvm::Module &) override;
+    bool runOnModule(llvm::Module &) override;
+
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.setPreservesAll();
+    }
+
+    void visitCallInst(llvm::CallInst &Inst);
+};
+
 }
 
 #endif

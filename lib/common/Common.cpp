@@ -53,7 +53,7 @@ void optimizeModule(Module *Mod) {
     PassManagerBuilder PMB;
     PMB.OptLevel = 2;
     PMB.SLPVectorize = false;
-    PMB.BBVectorize = false;
+    PMB.LoopVectorize= false;
     legacy::PassManager PM;
     PMB.populateModulePassManager(PM);
     PM.run(*Mod);

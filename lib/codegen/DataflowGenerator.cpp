@@ -238,7 +238,7 @@ InstructionType InstructionTypeNode(Instruction &ins) {
 #endif
     // Default case
     // TODO: Other type of instructions are note supported for now!
-    ins.dump();
+    ins.print(errs(), true);
 
     assert(!"ERROR: Uknown node type");
     return TNULL;
@@ -359,7 +359,7 @@ void DataflowGeneratorPass::FillInstructionContainers(llvm::Function &F) {
  */
 void DataflowGeneratorPass::FillFunctionArg(llvm::Function &F) {
     uint32_t c = 0;
-    for (auto &f_arg : F.getArgumentList()) {
+    for (auto &f_arg : F.args()) {
         function_argument.push_back(&f_arg);
         ArgInfo temp_arg = {"field" + to_string(c), static_cast<uint32_t>(c)};
         argument_info[&f_arg] = temp_arg;
@@ -772,7 +772,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
     command = "    val in = Flipped(Decoupled(new Call(List(";
     final_command.append(ins_template.render(command));
     uint32_t c = 0;
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         command = "32,";
         ins_template.set("index", static_cast<int>(c++));
         final_command.append(ins_template.render(command));
@@ -789,8 +789,7 @@ void DataflowGeneratorPass::PrintDatFlowAbstractIO(llvm::Function &F) {
         command = "    val {{call}}_out = Decoupled(new Call(List(";
         ins_template.set("call", instruction_info[fc].name);
         final_command.append(ins_template.render(command));
-        auto call_ins = dyn_cast<llvm::CallInst>(fc);
-        for (int arg = 0; arg < call_ins->getNumArgOperands(); arg++) {
+        for (auto &ag : fc->getFunction()->args()) {
             command = "32,";
             final_command.append(command);
         }
@@ -1136,7 +1135,7 @@ void DataflowGeneratorPass::PrintGepIns(Instruction &Ins) {
             static_cast<int>(gep_pass_ctx.TwoGepIns[&Ins].numByte2));
 
     } else {
-        DEBUG(Ins.dump());
+        DEBUG(Ins.print(errs(), true));
 
         // Printing each instruction
         string init_test = "\n  //";
@@ -2185,86 +2184,260 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
      *
      *Base of these choices we generate the right value of the connection
      */
-    LuaTemplater ins_template;
+
+    enum RightSide {
+        ConLoop = 0,
+        ConConstInt,
+        ConConstFP,
+        ConGlobal,
+        ConFunctionArg,
+        ConInstruction,
+        ConNull
+    };
+
+    auto find_right_value_type = [&ins](uint32_t c,
+                                        llvm::Loop *loop) -> RightSide {
+        if (loop)
+            return RightSide::ConLoop;
+        else if (dyn_cast<llvm::Instruction>(ins.getOperand(c)))
+            return RightSide::ConInstruction;
+        else if (dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
+            return RightSide::ConConstInt;
+        else if (dyn_cast<llvm::ConstantFP>(ins.getOperand(c)))
+            return RightSide::ConConstFP;
+        else if (dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c)))
+            return RightSide::ConNull;
+        else if (dyn_cast<llvm::GlobalValue>(ins.getOperand(c)))
+            return RightSide::ConGlobal;
+        else if (dyn_cast<llvm::Argument>(ins.getOperand(c)))
+            return RightSide::ConFunctionArg;
+        else {
+            DEBUG(ins.print(errs(), true));
+            DEBUG(ins.getOperand(c)->print(errs(), true));
+            assert(!"Unrecognized operand type");
+        }
+    };
+
+    auto operand_name = [this, &ins](uint32_t c) -> string {
+        if (auto op = dyn_cast<llvm::Instruction>(ins.getOperand(c)))
+            return this->instruction_info[op].name;
+        else if (auto op = dyn_cast<llvm::ConstantInt>(ins.getOperand(c)))
+            return std::to_string(static_cast<int>(op->getSExtValue()));
+        else if (auto op = dyn_cast<llvm::ConstantFP>(ins.getOperand(c)))
+            assert(!"We dont't support floating point right now!");
+        // return std::to_string(static_cast<int>(op->getSplatValue()));
+        else if (auto op =
+                     dyn_cast<llvm::ConstantPointerNull>(ins.getOperand(c)))
+            return std::to_string(0);
+        else if (auto op = dyn_cast<llvm::GlobalValue>(ins.getOperand(c)))
+            return this->global_info[op].name;
+        else if (auto op = dyn_cast<llvm::Argument>(ins.getOperand(c)))
+            return this->argument_info[op].name;
+        else
+            assert(!"Unrecognized operand type");
+    };
+
+    // For each operand we have to figure out if the connection is
+    // comming from a live-in value or not, and for this purpose we
+    // use following function:
+    auto loop_detector = [&ins](auto LoopEdges, auto loop_info,
+                                auto c) -> Loop * {
+        auto operand = ins.getOperand(c);
+
+        Loop *target_loop = nullptr;
+        /**
+         * Check if the edge in LoopEdges
+         * This edge count is the loop header
+         */
+        auto loop_edge = std::find_if(
+            LoopEdges.begin(), LoopEdges.end(),
+            [&operand, &ins](const pair<Value *, Value *> &edge) {
+                return ((edge.second == &ins) && (edge.first == operand));
+            });
+
+        /**
+         * If we find the edge in the container it means that
+         * we have to connect the instruction to latch
+         * We still need to figure out:
+         *  1) The instruction belongs to which loop
+         *  2) The edge is live-in or live-out
+         *
+         *  We have split the edge and connect the source to the register
+         * file
+         *  and register file to the destination
+         *
+         *  Now we have to replace the SRC connection with appropriate loop
+         *  header
+         *  We need to find two things:
+         *      1) Loop
+         *      2) index of the loop header
+         */
+        // Make a priority_queue for loops
+        auto cmp = [](Loop *left, Loop *right) {
+            return left->getSubLoops().size() > right->getSubLoops().size();
+        };
+        std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)> order_loops(
+            cmp);
+        for (auto &L : getLoops(*loop_info)) {
+            order_loops.push(L);
+        }
+
+        if (loop_edge != LoopEdges.end()) {
+            while (!order_loops.empty()) {
+                auto L = order_loops.top();
+                auto Loc = L->getStartLoc();
+                auto Filename = getBaseName(Loc->getFilename().str());
+
+                if (dyn_cast<Argument>(loop_edge->first)) {
+                    target_loop = L;
+                    break;
+                }
+
+                else if (L->contains(dyn_cast<Instruction>(loop_edge->first))) {
+                    target_loop = L;
+                    break;
+                } else
+                    assert(!"Wrong edge detector!");
+
+                order_loops.pop();
+            }
+        }
+
+        return target_loop;
+    };
+
+    /**
+     * This function figure the right side string of each assignment
+     */
+    auto print_right_string = [this, &ins](RightSide right_type,
+                                           string right_string, Loop *L,
+                                           uint32_t c) -> string {
+        LuaTemplater lua_right;
+        string command = string();
+
+        switch (right_type) {
+            case RightSide::ConLoop:
+                command =
+                    "{{loop_name}}_liveIN_{{loop_index}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                lua_right.set("ins_name", instruction_info[&ins].name);
+                lua_right.set(
+                    "loop_name",
+                    "loop_L_" + std::to_string(L->getStartLoc().getLine()));
+                lua_right.set(
+                    "loop_index",
+                    static_cast<int>(this->ins_loop_header_idx[&ins]));
+                lua_right.set("operand_name", right_string);
+                break;
+
+            case RightSide::ConInstruction:
+                command =
+                    "{{operand_name}}.io.Out"
+                    "(param.{{ins_name}}_in(\"{{operand_name}}\"))\n";
+                lua_right.set("ins_name", instruction_info[&ins].name);
+                lua_right.set("operand_name", right_string);
+                break;
+            case RightSide::ConGlobal:
+                command = "io.{{operand_name}}\n";
+                lua_right.set("operand_name", right_string);
+                break;
+
+            case RightSide::ConFunctionArg:
+                command = "io.in.data(\"{{operand_name}}\")\n";
+                lua_right.set("operand_name", right_string);
+                break;
+            case RightSide::ConConstInt:
+            case RightSide::ConNull:
+                command = "{{value}}.U\n";
+                lua_right.set("value", right_string);
+                break;
+            case RightSide::ConConstFP:
+                assert(!"We don't support floating point right now!");
+                break;
+
+            default:
+                assert(!"Uknow type!");
+                break;
+        }
+
+        return lua_right.render(command);
+    };
 
     // First we iterate over function's operands
     auto ins_type = InstructionTypeNode(ins);
     for (uint32_t c = 0; c < ins.getNumOperands(); ++c) {
-        auto operand = ins.getOperand(c);
+        // XXX If the operand is BasicBlock it means
+        // the insturtion is branch we already have
+        // connected the signal
+        if (dyn_cast<llvm::BasicBlock>(ins.getOperand(c))) continue;
 
-        // For each operand we have to figure out if the connection is
-        // comming from a live-in value or not, and for this purpose we
-        // use following function:
-        auto loop_detector = [operand](auto &ins, auto LoopEdges,
-                                       auto loop_info) -> Loop * {
-            Loop *target_loop = nullptr;
-            /**
-             * Check if the edge in LoopEdges
-             * This edge count is the loop header
-             */
-            auto loop_edge = std::find_if(
-                LoopEdges.begin(), LoopEdges.end(),
-                [&operand, &ins](const pair<Value *, Value *> &edge) {
-                    return ((edge.second == &ins) && (edge.first == operand));
-                });
+        // Initilizing command and comment string std::vector<string> command;
+        string command = string();
+        string command_left = string();
+        string command_right = string();
 
-            /**
-             * If we find the edge in the container it means that
-             * we have to connect the instruction to latch
-             * We still need to figure out:
-             *  1) The instruction belongs to which loop
-             *  2) The edge is live-in or live-out
-             *
-             *  We have split the edge and connect the source to the register
-             * file
-             *  and register file to the destination
-             *
-             *  Now we have to replace the SRC connection with appropriate loop
-             *  header
-             *  We need to find two things:
-             *      1) Loop
-             *      2) index of the loop header
-             */
-            // Make a priority_queue for loops
-            auto cmp = [](Loop *left, Loop *right) {
-                return left->getSubLoops().size() > right->getSubLoops().size();
-            };
-            std::priority_queue<Loop *, vector<Loop *>, decltype(cmp)>
-                order_loops(cmp);
-            for (auto &L : getLoops(*loop_info)) {
-                order_loops.push(L);
-            }
+        auto target_loop = loop_detector(this->LoopEdges, this->LI, c);
+        auto right_type = find_right_value_type(
+            c, loop_detector(this->LoopEdges, this->LI, c));
 
-            if (loop_edge != LoopEdges.end()) {
-                while (!order_loops.empty()) {
-                    auto L = order_loops.top();
-                    auto Loc = L->getStartLoc();
-                    string Filename = string();
-                    if (Loc)
-                        Filename = getBaseName(Loc->getFilename().str());
-                    else
-                        Filename = "tmp_file_name";
+        auto ins_type = InstructionTypeNode(ins);
+        auto right_string =
+            print_right_string(right_type, operand_name(c), target_loop, c);
 
-                    if (dyn_cast<Argument>(loop_edge->first)) {
-                        target_loop = L;
-                        break;
-                    }
+        // Setting right side of the connection
+        switch (ins_type) {
+            case InstructionType::TBinaryOperator:
+            case InstructionType::TICmpInst:
+                if (c == 0)
+                    command =
+                        "  //Connecting left input of {{ins_name}}\n"
+                        "  {{ins_name}}.io.LeftIO <> {{right_side}}";
+                else if (c == 1)
+                    command =
+                        "  //Connecting Right input of {{ins_name}}\n"
+                        "  {{ins_name}}.io.RightIO <> {{right_side}}";
+                else
+                    assert(
+                        !"Binary operation can not have more than two inputs");
+                break;
 
-                    else if (L->contains(&ins) ||
-                             L->contains(
-                                 dyn_cast<Instruction>(loop_edge->first))) {
-                        target_loop = L;
-                        break;
-                    }
-                    order_loops.pop();
-                }
-            }
+            case InstructionType::TCBranchInst:
+                if (c == 0)
+                    command =
+                        "  //Connecting comparision input of {{ins_name}}\n"
+                        "  {{ins_name}}.io.CmpIO <> {{right_side}}";
+                else
+                    assert(
+                        !"Conditional branch can not have more than one input");
+                break;
 
-            return target_loop;
-        };
+            case InstructionType::TGEP:
+                if (c == 0)
+                    command =
+                        "  //Connecting base address of {{ins_name}}\n"
+                        "  {{ins_name}}.io.baseAddress <> {{right_side}}";
+                else if (c == 1)
+                    command =
+                        "  //Connecting idx1 input of {{ins_nam}}\n"
+                        "  {{ins_name}}.io.idx1 <> {{right_side}}";
+                else if (c == 2)
+                    command =
+                        "  //Connecting idx2 input of {{ins_name}}\n"
+                        "  {{ins_name}}.io.idx2 <> {{right_side}}";
+                else
+                    assert(!"The GEP instruction is not simplified!");
+                break;
 
-        auto target_loop = loop_detector(ins, this->LoopEdges, this->LI);
-        // if (target_loop != nullptr) errs() << "SUCESS!\n";
+            default:
+                DEBUG(ins.print(errs(), true));
+                DEBUG(ins.getOperand(c)->print(errs(), true));
+                assert(!"UKNOWN INSTRUCTION TYPE!");
+                break;
+        }
+        ins_template.set("ins_name", instruction_info[&ins].name);
+        ins_template.set("right_side", right_string);
+        // Setting left side of the connection command_left =
+        errs() << ins_template.render(command) << "\n";
     }
 }
 
@@ -2753,7 +2926,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
                                  instruction_info[operand_ins].name);
 
             } else {
-                ins.dump();
+                DEBUG(ins.print(errs(), true));
                 assert(!"Wrong load input");
             }
 
@@ -3487,7 +3660,7 @@ void DataflowGeneratorPass::PrintDataFlow(llvm::Instruction &ins) {
 // TODO add Cilk support
 #endif
         } else {
-            ins.dump();
+            DEBUG(ins.print(errs(), true));
             assert(!"The instruction is not supported in the dataflow connection phase");
         }
     }
@@ -4055,7 +4228,7 @@ void DataflowGeneratorPass::generateTestFunction(llvm::Function &F) {
 
     command = "  *    in = Flipped(Decoupled(new Call(List(...))))\n";
     final_command.append(ins_template.render(command));
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         command =
             "  poke(c.io.in.bits.data(\"field{{index}}\").data, 0.U)\n"
             "  poke(c.io.in.bits.data(\"field{{index}}\").predicate, "

@@ -1,6 +1,9 @@
 build/*
 build-tapir/*
+<<<<<<< HEAD
 *.txt
+=======
+>>>>>>> origin/newLib
 luacpptemplater/*
 *.swp
 .ycm_extra_conf.py
