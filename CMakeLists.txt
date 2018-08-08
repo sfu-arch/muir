@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.6)
 project(xketch-generator)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -9,8 +9,19 @@ set(PACKAGE_VERSION 0.1)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(PACKAGE_BUGREPORT "amiralis@sfu.ca")
 
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti -fpermissive")
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE
+      STRING "Build type (default Debug):" FORCE)
+endif()
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++14 -fno-rtti -Wall -fvisibility=hidde")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fno-rtti -Wall \
+    -fno-omit-frame-pointer -Wno-unused-function")
+
+if(APPLE)
+    set(CMAKE_MODULE_LINKER_FLAGS "-undefined dynamic_lookup")
+    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
@@ -35,7 +46,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
-option(LLVM_ENABLE_CXX1Y  "Enable C++17" ON)
+option(LLVM_ENABLE_CXX1Y  "Enable C++14" ON)
 option(LLVM_INCLUDE_TOOLS "Generate build targets for the LLVM tools." ON)
 option(LLVM_BUILD_TOOLS
   "Build the LLVM tools. If OFF, just generate build targets." ON
@@ -51,7 +62,7 @@ message("LLVM STATUS:
 # Now set the LLVM header and library paths:
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
-link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
+#link_directories(/p-ssd/modules/jsoncpp/lib/x86_64-linux-gnu)
 add_definitions(${LLVM_DEFINITIONS})
 
 ############## LLVM CONFIGURATION #################

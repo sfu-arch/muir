@@ -1735,7 +1735,7 @@ void DataflowGeneratorPass::PrintInputSplitter(llvm::Function &F) {
 
     // Print input call parameters
     uint32_t c = 0;
-    for (auto &ag : F.getArgumentList()) {
+    for (auto &ag : F.args()) {
         command = "32,";
         final_command.append(command);
     }
@@ -2434,6 +2434,7 @@ void DataflowGeneratorPass::NewPrintDataFlow(llvm::Instruction &ins) {
                 assert(!"UKNOWN INSTRUCTION TYPE!");
                 break;
         }
+        LuaTemplater ins_template;
         ins_template.set("ins_name", instruction_info[&ins].name);
         ins_template.set("right_side", right_string);
         // Setting left side of the connection command_left =

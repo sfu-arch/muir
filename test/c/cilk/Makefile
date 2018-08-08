@@ -1,12 +1,12 @@
 CC=clang
 XKETCH=../../../build/bin/dandelion
+SPLIT=/Users/amirali/git/xketch-generator/build/bin/tapir-extract
 CFLAGS= -DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
 #APALA=~/amoeba/apala-generator/build/bin/xketch
-APALA=/home/amiralis/git/xketch-ap/build/bin/xketch
 
 .PRECIOUS: %.ll
 
@@ -30,7 +30,7 @@ clean:
 	-rm -f *.bc *.ll *.dot *.scala *.svg *~ *.json
 
 %.split: %.bc
-	$(APALA) -fn-name=$* $< -o $*
+	$(SPLIT) -fn-name=$* $< -o $*
 	llvm-dis final.bc
 	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
 	$(XKETCH) -fn-name=$* $*a.ll -o $*

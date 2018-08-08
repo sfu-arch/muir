@@ -8,7 +8,6 @@
 
 #include "luacpptemplater/LuaTemplater.h"
 
-#include <Parser.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <queue>
 #include <set>
@@ -46,8 +45,6 @@ bool ParserPass::doInitialization(llvm::Module& M) { return false; }
 // For an analysis pass, runOnModule should perform the actual analysis and
 // compute the results. The actual output, however, is produced separately.
 bool ParserPass::runOnModule(Module& M) {
-
-
     for (auto& F : M) {
         if (F.isDeclaration()) continue;
 
@@ -61,17 +58,10 @@ bool ParserPass::runOnModule(Module& M) {
             raw_fd_ostream dot(("dfg." + F.getName() + ".dot").str().c_str(),
                                errc, sys::fs::F_None);
 
-
-
-
-            raw_fd_ostream json(("dfg." + F.getName() + ".json").str().c_str(), errc, sys::fs::F_None);
-
-
-
+            raw_fd_ostream json(("dfg." + F.getName() + ".json").str().c_str(),
+                                errc, sys::fs::F_None);
 
             ctxGraph->TraverseCtxTree(dot, json);
-
-
         }
     }
 
@@ -233,15 +223,11 @@ void Graph::Print(raw_fd_ostream& dot) {
 
     }  // for each ctx
 
-
     // print each context
     for (auto& C : ctxs) {
         C.second->PrintExt(dot);
 
     }  // for each ctx
-
-
-
 
     dot << "}\n";
 }  // Graph::Print
@@ -253,7 +239,6 @@ Context::Context(BasicBlock* b, Graph* g, int i) {
     StaticFunc = NULL;
     id = i;
 
-
 }  // Context::Context
 
 void Context::Insert(BasicBlock* b) { blks.insert(b); }  // Context::insert
@@ -263,19 +248,17 @@ void Context::Print(raw_fd_ostream& dot) {
     dot << (*(blks.begin()))->getName().str()
         << "\" {\n"  // context named after entry block
         << "style=filled\n"
-        << "color=lightgrey\n"
-        ;
-
+        << "color=lightgrey\n";
 
     for (auto& blk : blks) {
-        dot << "subgraph \"cluster" << blk->getName().str() << "\" {\n" << "style=filled\n" << "color=white\n";
-
-
+        dot << "subgraph \"cluster" << blk->getName().str() << "\" {\n"
+            << "style=filled\n"
+            << "color=white\n";
 
         // print instructions
         for (auto& ins : *blk) {
-
-            dot << "\"" << fn->FindNode(&ins)->GetName() << "\" [shape=box, style=filled, label=\"";
+            dot << "\"" << fn->FindNode(&ins)->GetName()
+                << "\" [shape=box, style=filled, label=\"";
             dot << ins << "\", fillcolor=";
             switch (fn->FindBbl(blk)->GetColor() % 4) {
                 case 0:
@@ -295,22 +278,21 @@ void Context::Print(raw_fd_ostream& dot) {
             };
 
             dot << "]\n";
-
         }
 
         fn->FindBbl(blk)->Print(dot);
 
         dot << "}\n";
 
-    }// for each block
+    }  // for each block
 
-    for (auto& blk:blks) {
+    for (auto& blk : blks) {
         fn->FindBbl(blk)->PrintExt(dot);
     }
 
     dot << "}\n";
 
-}// Context::Print
+}  // Context::Print
 
 void Context::PrintExt(raw_fd_ostream& dot) {
     for (auto& edg : outDet) {
@@ -333,13 +315,13 @@ void Blk::Print(raw_fd_ostream& dot) {
 
     dot << "]\n";*/
 
-    //print intra-block edges
-    for (auto &op:ops) {
+    // print intra-block edges
+    for (auto& op : ops) {
         fn->FindNode(op)->Print(dot);
     }
-}//Blk::Print
+}  // Blk::Print
 
-void Blk::PrintExt(llvm::raw_fd_ostream &dot) {
+void Blk::PrintExt(llvm::raw_fd_ostream& dot) {
     for (auto& edg : incoming) {
         if (!edg->External()) edg->Print(dot);
     }
@@ -351,8 +333,10 @@ void Edge::Print(raw_fd_ostream& dot) {
         dot << "\"" << fn->FindNode(&(GetSrc()->back()))->GetName() << "\"->"
             << "\"" << fn->FindNode(&(GetDst()->front()))->GetName() << "\""
             << "[color=red, penwidth=5, fontsize=25, "
-            << "ltail=\"" << "cluster" << GetSrc()->getName().str() << "\","
-            << "lhead=\"" << "cluster" << GetDst()->getName().str() << "\","
+            << "ltail=\""
+            << "cluster" << GetSrc()->getName().str() << "\","
+            << "lhead=\""
+            << "cluster" << GetDst()->getName().str() << "\","
             << "label=\"";
 
         for (auto& liv : fn->FindBbl(GetDst())->GetCtx()->GetLiveIns()) {
@@ -368,15 +352,19 @@ void Edge::Print(raw_fd_ostream& dot) {
         dot << "\"" << fn->FindNode(&(GetSrc()->back()))->GetName() << "\"->"
             << "\"" << fn->FindNode(&(GetDst()->front()))->GetName() << "\""
             << "[color=red, penwidth=5, "
-            << "ltail=\"" << "cluster" << GetSrc()->getName().str() << "\","
-            << "lhead=\"" << "cluster" << GetDst()->getName().str() << "\","
+            << "ltail=\""
+            << "cluster" << GetSrc()->getName().str() << "\","
+            << "lhead=\""
+            << "cluster" << GetDst()->getName().str() << "\","
             << "]\n";
 
     } else
         dot << "\"" << fn->FindNode(&(GetSrc()->back()))->GetName() << "\"->"
             << "\"" << fn->FindNode(&(GetDst()->front()))->GetName() << "\""
-            << "[ltail=\"" << "cluster" << GetSrc()->getName().str() << "\","
-            << "lhead=\"" << "cluster" << GetDst()->getName().str() << "\","
+            << "[ltail=\""
+            << "cluster" << GetSrc()->getName().str() << "\","
+            << "lhead=\""
+            << "cluster" << GetDst()->getName().str() << "\","
             << "]\n";
 }  // Edge::Print
 
@@ -384,8 +372,6 @@ void Graph::TraverseCtxTree(raw_fd_ostream& dot, raw_fd_ostream& json) {
     // this is a bottom-up traversal of the context tree
     // since the contexts were discovered in a top-down manner
     // we will traverse the contexts vector in reverse order
-
-
 
     for (auto iter = ctxs.rbegin(); iter != ctxs.rend() - 1;
          ++iter) {  // no need to fn-ize top context
@@ -530,9 +516,9 @@ void Context::MakeProto() {
 
     auto p = Mod->getName().find_last_of('.');
 
-
-    StaticFunc = Function::Create(StFuncType, GlobalValue::ExternalLinkage,
-                                  Mod->getName().substr(0, p) + "_detach" + to_string(id), Mod);
+    StaticFunc = Function::Create(
+        StFuncType, GlobalValue::ExternalLinkage,
+        Mod->getName().substr(0, p) + "_detach" + to_string(id), Mod);
 
 }  // Context::MakeProto
 
@@ -648,7 +634,6 @@ void Context::CopyFunc() {
         } else if (auto* GV = dyn_cast<GlobalVariable>(I)) {
             dyn_cast<User>(P)->replaceUsesOfWith(GV, GlobalPointer[GV]);
         }
-
     };
 
     for (auto& BB : *StaticFunc) {
@@ -672,8 +657,6 @@ void Context::CopyFunc() {
         // for each basic block, find the block it has been mapped to
 
         for (auto& I : IT) {
-
-
             if (auto Phi = dyn_cast<PHINode>(&I)) {
                 auto NV = Phi->getNumIncomingValues();
                 for (unsigned i = 0; i < NV; i++) {
@@ -755,11 +738,22 @@ void Context::InsertCall() {
         Params.push_back(G);
     }
 
-    auto* CI = CallInst::Create(StaticFunc, Params, "", funcCall);
-    auto RI = ReattachInst::Create(
-        cx, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
-    RI->insertAfter(CI);
+    //llvm::Value* _sync_region=nullptr;
+    //for(auto &BB: *F){
+        //for(auto &I : BB){
+            //if(auto _sync = dyn_cast<llvm::SyncInst>(&I)){
+                //_sync_region = _sync->getSyncRegion();
+            //}
+        //}
+    //}
 
+    auto _sync_region = cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
+    auto* CI = CallInst::Create(StaticFunc, Params, "", funcCall);
+     //auto RI = ReattachInst::Create(
+     //cx, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
+     auto RI = ReattachInst::Create(
+     outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), _sync_region);
+     RI->insertAfter(CI);
 
     // point parent's detach edge to caller block
     (cast<DetachInst>(inDet->GetSrc()->getTerminator()))
@@ -768,8 +762,6 @@ void Context::InsertCall() {
     auto parBlk = fn->FindBbl(blks.back());
     auto parBbl = parBlk->GetParent();
     auto parCtx = parBlk->GetCtx();
-
-
 
     for (auto& blk : blks) {
         blk->dropAllReferences();
@@ -792,9 +784,8 @@ void Context::InsertCall() {
     }
 
     blks.insert(funcCall);
-    fn->Insert(funcCall, new Blk(parBbl, false, true, color, this, fn, funcCall));
-
-
+    fn->Insert(funcCall,
+               new Blk(parBbl, false, true, color, this, fn, funcCall));
 
     // erase outgoing detach edges and incoming reattach edges
     outDet.clear();
@@ -840,197 +831,138 @@ void static PrintDebugFunc(Function*& val) { val->dump(); }
 void static PrintDebugPhi(PHINode*& val) { val->dump(); }
 
 static void Pair(raw_fd_ostream& json, string key, string val, bool first) {
-
     if (!first) json << ",";
     json << "\"" << key << "\":\"" << val << "\"\n";
 
-
-}//Field
+}  // Field
 
 static void ListVal(raw_fd_ostream& json, bool first) {
-
     if (!first) json << ",";
     json << "[\n";
 
+}  // ListField
 
-}//ListField
-
-static void ListKey (raw_fd_ostream& json, string key, bool first) {
+static void ListKey(raw_fd_ostream& json, string key, bool first) {
     if (!first) json << ",";
     json << "\"" << key << "\":\n";
     ListVal(json, true);
 }
 
-
-
-static void ListEnd(raw_fd_ostream& json) {
-    json << "]\n";
-}//ListEnd
-
+static void ListEnd(raw_fd_ostream& json) { json << "]\n"; }  // ListEnd
 
 static void StructVal(raw_fd_ostream& json, bool first) {
     if (!first) json << ",";
     json << "{\n";
 
+}  // StructVal
 
-}//StructVal
+static void StructEnd(raw_fd_ostream& json) { json << "}\n"; }  // StructEnd
 
-static void StructEnd(raw_fd_ostream& json) {
-    json << "}\n";
-}//StructEnd
-
-
-static void Key (raw_fd_ostream& json, string key, bool first) {
+static void Key(raw_fd_ostream& json, string key, bool first) {
     if (!first) json << ",";
     json << "\"" << key << "\":\n";
-
-
 }
 
-
-static void Val (raw_fd_ostream& json, string val, bool first) {
+static void Val(raw_fd_ostream& json, string val, bool first) {
     if (!first) json << ",";
-    json << "\"" << val << "\"" << "\n";
-
+    json << "\"" << val << "\""
+         << "\n";
 }
-
-
-
-
-
-
 
 void Graph::serialize(raw_fd_ostream& json) {
-
     json << "{\n";
     ListKey(json, "contexts", true);
-
-
-
 
     for (auto ctx = ctxs.begin(); ctx != ctxs.end(); ++ctx) {
         StructVal(json, (ctx == (ctxs.begin())));
 
-
-
-        if ((*ctx).first) Pair(json, "parent", (*ctx).first->getName(), true);
-        else Pair(json, "parent", "", true);
-
-
+        if ((*ctx).first)
+            Pair(json, "parent", (*ctx).first->getName(), true);
+        else
+            Pair(json, "parent", "", true);
 
         (*ctx).second->serialize(json);
 
-
         StructEnd(json);
-
     }
 
     ListEnd(json);
     json << "}\n";
 
-}//Graph::serialize
-
+}  // Graph::serialize
 
 void Context::serialize(raw_fd_ostream& json) {
-
-
-
     Pair(json, "entry", (*(blks.begin()))->getName().str(), false);
 
-
     ListKey(json, "blks", false);
-    for (auto& blk:blks) {
+    for (auto& blk : blks) {
         StructVal(json, (blk == *(blks.begin())));
 
         Pair(json, "name", blk->getName(), true);
 
-
-
         fn->FindBbl(blk)->serialize(json);
 
         StructEnd(json);
-
     }
     ListEnd(json);
 
-
-    if (StaticFunc) Pair(json, "StaticFunc", StaticFunc->getName().str(), false);
-
+    if (StaticFunc)
+        Pair(json, "StaticFunc", StaticFunc->getName().str(), false);
 
     Key(json, "inDet", false);
-    if (inDet) inDet->serialize(json, true);
-    else Val(json, "null", true);
-
-
+    if (inDet)
+        inDet->serialize(json, true);
+    else
+        Val(json, "null", true);
 
     ListKey(json, "outDet", false);
-    for (auto& edg: outDet) {
+    for (auto& edg : outDet) {
         edg->serialize(json, (edg == *(outDet.begin())));
-
     }
     ListEnd(json);
-
 
     ListKey(json, "inRe", false);
-    for (auto& edg: inRe) {
+    for (auto& edg : inRe) {
         edg->serialize(json, (edg == *(inRe.begin())));
-
     }
     ListEnd(json);
 
-
     ListKey(json, "outRe", false);
-    for (auto& edg: outRe) {
+    for (auto& edg : outRe) {
         edg->serialize(json, (edg == *(outRe.begin())));
-
     }
     ListEnd(json);
 
     ListKey(json, "liveIns", false);
-    for (auto& li: liveIns) {
+    for (auto& li : liveIns) {
         Val(json, li->getName().str(), (li == *(liveIns.begin())));
     }
     ListEnd(json);
 
     ListKey(json, "globIns", false);
-    for (auto& gi: globIns) {
+    for (auto& gi : globIns) {
         Val(json, gi->getName().str(), (gi == *(globIns.begin())));
     }
     ListEnd(json);
 
-
-
-}//Context::serialize
-
+}  // Context::serialize
 
 void Blk::serialize(raw_fd_ostream& json) {
-
-
-
-
-
     ListKey(json, "incoming", false);
-    for (auto& edg: incoming) {
-
+    for (auto& edg : incoming) {
         edg->serialize(json, (edg == *(incoming.begin())));
     }
     ListEnd(json);
 
-
     ListKey(json, "outgoing", false);
-    for (auto& edg: outgoing) {
-
+    for (auto& edg : outgoing) {
         edg->serialize(json, (edg == *(outgoing.begin())));
     }
     ListEnd(json);
 
-
-
-
-
-    //print nodes
+    // print nodes
     ListKey(json, "instructions", false);
-    for (auto& op: ops) {
+    for (auto& op : ops) {
         StructVal(json, (op == *(ops.begin())));
         Pair(json, "name", fn->FindNode(op)->GetName(), true);
         json << ",\"IR\":\"" << *op << "\"\n";
@@ -1039,8 +971,7 @@ void Blk::serialize(raw_fd_ostream& json) {
     }
     ListEnd(json);
 
-}//Blk::serialize
-
+}  // Blk::serialize
 
 void Edge::serialize(raw_fd_ostream& json, bool first) {
     StructVal(json, first);
@@ -1048,7 +979,7 @@ void Edge::serialize(raw_fd_ostream& json, bool first) {
     Pair(json, "src", src->getName().str(), true);
     Pair(json, "dst", dst->getName().str(), false);
 
-    switch(ty) {
+    switch (ty) {
         case REA:
             Pair(json, "ty", "reattach", false);
             break;
@@ -1061,39 +992,26 @@ void Edge::serialize(raw_fd_ostream& json, bool first) {
         default:
             Pair(json, "ty", "control", false);
             break;
-
     }
-
 
     StructEnd(json);
 
-}//Edge::serialize
-
+}  // Edge::serialize
 
 void Node::serialize(raw_fd_ostream& json) {
-
-
-
     ListKey(json, "incoming", false);
-    for (auto& edg: incoming) {
-
+    for (auto& edg : incoming) {
         edg->serialize(json, (edg == *(incoming.begin())));
     }
     ListEnd(json);
 
-
     ListKey(json, "outgoing", false);
-    for (auto& edg: outgoing) {
-
+    for (auto& edg : outgoing) {
         edg->serialize(json, (edg == *(outgoing.begin())));
     }
     ListEnd(json);
 
-
-
-
-}//Node::serialize
-
+}  // Node::serialize
 
 void Dep::serialize(raw_fd_ostream& json, bool first) {
     StructVal(json, first);
@@ -1102,7 +1020,7 @@ void Dep::serialize(raw_fd_ostream& json, bool first) {
     Pair(json, "dst", fn->FindNode(dst)->GetName(), false);
     Pair(json, "val", val->getName(), false);
 
-    switch(ty) {
+    switch (ty) {
         case DAT:
             Pair(json, "ty", "data", false);
             break;
@@ -1111,55 +1029,48 @@ void Dep::serialize(raw_fd_ostream& json, bool first) {
             break;
         default:
             break;
-
     }
-
-
-
 
     StructEnd(json);
 
-}//Dep::serialize
+}  // Dep::serialize
 
-
-void Graph::CreateNode(llvm::Instruction *op, string s, Blk* b) {
+void Graph::CreateNode(llvm::Instruction* op, string s, Blk* b) {
     auto n = new Node(s, b);
-    nodes.insert(pair<Instruction*, Node*> (op, n));
-}//Graph::CreateNode
+    nodes.insert(pair<Instruction*, Node*>(op, n));
+}  // Graph::CreateNode
 
-Node* Graph::FindNode(llvm::Instruction *op) {
+Node* Graph::FindNode(llvm::Instruction* op) {
     auto iter = nodes.find(op);
     if (iter == nodes.end()) return NULL;
     return iter->second;
-}//Graph::FindNode
-
+}  // Graph::FindNode
 
 void Blk::MakeDAG() {
-
     bottom = ops.back();
 
-    //create nodes
+    // create nodes
     auto ctr = 0;
-    for (auto& op: ops) {
-        fn->CreateNode(op, op->getParent()->getName().str() + "_" + to_string(ctr), this);
-        ctr ++;
+    for (auto& op : ops) {
+        fn->CreateNode(
+            op, op->getParent()->getName().str() + "_" + to_string(ctr), this);
+        ctr++;
     }
 
-    //iterate over ops and build the dependences
-    for (auto& op:ops) {
-        //skip over phis because their deps will not be inside this DAG
+    // iterate over ops and build the dependences
+    for (auto& op : ops) {
+        // skip over phis because their deps will not be inside this DAG
         if (auto Phi = dyn_cast<PHINode>(op)) {
             continue;
         }
 
-        //build data deps
+        // build data deps
         DAGDataDeps(op);
 
+    }  // for each op
 
-    }//for each op
-
-    //write completion deps
-    for (auto& op:ops) {
+    // write completion deps
+    for (auto& op : ops) {
         if (op == bottom) continue;
 
         auto n1 = fn->FindNode(op);
@@ -1168,26 +1079,24 @@ void Blk::MakeDAG() {
         auto n2 = fn->FindNode(bottom);
         assert(n2 && "terminator not registered\n");
 
-        Dep* d = new Dep(op, bottom,
-                         ConstantInt::getTrue(op->getParent()->getParent()->getParent()->getContext()),
-                         CMP, fn);
+        Dep* d = new Dep(
+            op, bottom,
+            ConstantInt::getTrue(
+                op->getParent()->getParent()->getParent()->getContext()),
+            CMP, fn);
         n1->AddOutgoing(d);
         n2->AddIncoming(d);
-
     }
 
-    //determine the top layer
-    for (auto& op:ops) {
+    // determine the top layer
+    for (auto& op : ops) {
         if (fn->FindNode(op)->IsTop()) tops.insert(op);
     }
 
+}  // Blk::MakeDAG
 
-}//Blk::MakeDAG
-
-void Blk::DAGDataDeps (Instruction* op) {
-
-
-    //for each operand, check if the producer is in the same block
+void Blk::DAGDataDeps(Instruction* op) {
+    // for each operand, check if the producer is in the same block
     for (auto OI = op->op_begin(), OE = op->op_end(); OI != OE; OI++) {
         if (auto I = dyn_cast<Instruction>(OI)) {
             if (ops.count(I) != 0) {
@@ -1199,25 +1108,21 @@ void Blk::DAGDataDeps (Instruction* op) {
                 src->AddOutgoing(d);
                 dst->AddIncoming(d);
             }
-        }//operand is an instruction
-    }//for each operand
+        }  // operand is an instruction
+    }      // for each operand
 
-}//Blk::DAGDataDeps
+}  // Blk::DAGDataDeps
 
-
-void Node::Print (llvm::raw_fd_ostream& dot) {
-    for (auto& dep:incoming) {
+void Node::Print(llvm::raw_fd_ostream& dot) {
+    for (auto& dep : incoming) {
         dep->Print(dot);
     }
-}//Node::Print
+}  // Node::Print
 
-
-void Dep::Print (llvm::raw_fd_ostream& dot) {
+void Dep::Print(llvm::raw_fd_ostream& dot) {
     dot << "\"" << fn->FindNode(src)->GetName() << "\"->"
         << "\"" << fn->FindNode(dst)->GetName() << "\""
         << "[label=\"" << val->getName() << "\"]"
         << "\n";
 
-}//Dep::Print
-
-
+}  // Dep::Print
