@@ -1,12 +1,11 @@
 #include <stdio.h>
 
 void test04(int a, int b){
- Minim_Loop: while (a != b) {
+while (a != b) {
     if (a > b)
       a -= b;
     else
       b -= a;
-    printf("a=%d, b=%d\n",a,b);
   } 
   return;
 }

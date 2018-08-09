@@ -863,6 +863,7 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
 void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
   uint32_t c = 0;
   for (auto &L : getLoops(loop_info)) {
+      L->getExitBlock()->dump();
     auto _new_loop = std::make_unique<LoopNode>(
         NodeInfo(c, "Loop_" + std::to_string(c)), nullptr,
         dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
