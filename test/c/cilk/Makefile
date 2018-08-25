@@ -1,7 +1,7 @@
 CC=clang
 XKETCH=../../../build/bin/dandelion
 SPLIT=/Users/amirali/git/xketch-generator/build/bin/tapir-extract
-CFLAGS= -DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
+CFLAGS=-DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)

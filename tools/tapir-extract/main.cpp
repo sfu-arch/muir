@@ -343,7 +343,7 @@ static void codeGenerator(Module &m){
     pm.add(new helpers::InstCounter(XKETCHName));
     pm.add(new codegen::DataflowGeneratorPass(out, test, XKETCHName));*/
 
-    //pm.add(createVerifierPass());
+    pm.add(createVerifierPass());
     pm.run(m);
 
     //auto replaceExt = [](string &s, const string &newExt) {

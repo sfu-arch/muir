@@ -1,5 +1,5 @@
 CC=clang
-XKETCH=../../build/bin/dandelion
+XKETCH=../../cmake-build-debug/bin/dandelion
 CFLAGS=-O1 -fno-vectorize -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
