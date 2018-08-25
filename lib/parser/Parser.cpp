@@ -738,22 +738,24 @@ void Context::InsertCall() {
         Params.push_back(G);
     }
 
-    //llvm::Value* _sync_region=nullptr;
-    //for(auto &BB: *F){
-        //for(auto &I : BB){
-            //if(auto _sync = dyn_cast<llvm::SyncInst>(&I)){
-                //_sync_region = _sync->getSyncRegion();
-            //}
-        //}
+    // llvm::Value* _sync_region=nullptr;
+    // for(auto &BB: *F){
+    // for(auto &I : BB){
+    // if(auto _sync = dyn_cast<llvm::SyncInst>(&I)){
+    //_sync_region = _sync->getSyncRegion();
+    //}
+    //}
     //}
 
-    auto _sync_region = cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
+    // auto _sync_region =
+    // cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
     auto* CI = CallInst::Create(StaticFunc, Params, "", funcCall);
-     //auto RI = ReattachInst::Create(
-     //cx, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
-     auto RI = ReattachInst::Create(
-     outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), _sync_region);
-     RI->insertAfter(CI);
+    auto RI = ReattachInst::Create(
+        cx, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
+
+    //auto RI = ReattachInst::Create(
+        //outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), nullptr);
+    RI->insertAfter(CI);
 
     // point parent's detach edge to caller block
     (cast<DetachInst>(inDet->GetSrc()->getTerminator()))
