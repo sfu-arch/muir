@@ -864,6 +864,8 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     }
 }
 
+//FIXME: This function needs to be reconsider. There are for loops with multiple exit
+//point which are not supported in this functions.
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
