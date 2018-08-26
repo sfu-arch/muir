@@ -1,5 +1,5 @@
 CC=clang
-XKETCH=../../cmake-build-debug/bin/dandelion
+XKETCH=../../build/bin/dandelion
 CFLAGS=-O1 -fno-vectorize -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
@@ -13,7 +13,7 @@ all: $(SCALA)
 svg: $(SVG)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -loop-simplify -disable-loop-vectorization -dce -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce -dot-cfg -o $@
 
 %.ll: %.bc
 	llvm-dis $<

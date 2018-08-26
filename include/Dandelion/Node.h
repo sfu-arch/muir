@@ -681,6 +681,7 @@ class LoopNode : public ContainerNode {
      * Make sure that loop end enable signal is always fix to index 1
      */
     void setLoopEndEnable(Node *_n) { addControlOutputPortIndex(_n, 1); }
+    void setLoopEndEnable(Node *_n, uint32_t i) { addControlOutputPortIndex(_n, i); }
 
     /**
      * Make sure that loop exit points are always starting from index 2
