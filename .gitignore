@@ -1,11 +1,11 @@
 build/*
 build-tapir/*
-<<<<<<< HEAD
-*.txt
-=======
->>>>>>> origin/newLib
+cmake-build/*
+cmake-build-debug/*
 luacpptemplater/*
+.idea
 *.swp
 .ycm_extra_conf.py
 *.svg
 *.out
+*.orig
