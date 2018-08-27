@@ -90,6 +90,9 @@ cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
 cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
                            cl::value_desc("Function name"), cl::Required);
 
+cl::opt<string> config_path("config", cl::desc("Target function name"),
+                           cl::value_desc("config_file"), cl::Required);
+
 cl::opt<bool> aaTrace("aa-trace", cl::desc("Alias analysis trace"),
                       cl::value_desc("T/F {default = true}"), cl::init(false));
 
@@ -335,7 +338,7 @@ static void runGraphGen(Module &M) {
     //pm.add(llvm::createCFGSimplificationPass());
     //pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add((llvm::createStripDeadDebugInfoPass()));
-    pm.add(llvm::createLoopSimplifyPass());
+//    pm.add(llvm::createLoopSimplifyPass());
     pm.add(new helpers::GepInformation(XKETCHName));
     pm.add(new LoopInfoWrapperPass());
     //pm.add(new helpers::CallInstSpliter(XKETCHName));

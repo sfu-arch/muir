@@ -596,7 +596,7 @@ class LoopNode : public ContainerNode {
 
     SuperNode *head_node;
     SuperNode *latch_node;
-    SuperNode *exit_node;
+    std::list<SuperNode *> exit_node;
 
     bool outer_loop;
 
@@ -605,19 +605,43 @@ class LoopNode : public ContainerNode {
     using Node::addControlOutputPort;
 
    public:
-    explicit LoopNode(NodeInfo _nf, LoopNode *_p_l = nullptr,
-                      SuperNode *_hnode = nullptr, SuperNode *_lnode = nullptr,
-                      SuperNode *_ex = nullptr)
+    explicit LoopNode(NodeInfo _nf)
+        : ContainerNode(_nf, ContainerNode::LoopNodeTy),
+          parent_loop(nullptr),
+          head_node(nullptr),
+          latch_node(nullptr),
+          exit_node(std::list<SuperNode *>()),
+          outer_loop(false) {
+        // Set the size of control input prot to at least two
+        resizeControlInputPort(LOOPCONTROL);
+        resizeControlOutputPort(LOOPCONTROL);
+    }
+
+    explicit LoopNode(NodeInfo _nf, LoopNode *_p_l, SuperNode *_hnode,
+                      SuperNode *_lnode)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
           parent_loop(_p_l),
           head_node(_hnode),
-          exit_node(_ex),
           latch_node(_lnode),
           outer_loop(false) {
         // Set the size of control input prot to at least two
         resizeControlInputPort(LOOPCONTROL);
         resizeControlOutputPort(LOOPCONTROL);
     }
+    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode,
+                      SuperNode *_lnode, std::list<SuperNode *> _ex)
+        : ContainerNode(_nf, ContainerNode::LoopNodeTy),
+          parent_loop(nullptr),
+          head_node(_hnode),
+          latch_node(_lnode),
+          exit_node(_ex),
+          outer_loop(false) {
+        // Set the size of control input prot to at least two
+        resizeControlInputPort(LOOPCONTROL);
+        resizeControlOutputPort(LOOPCONTROL);
+    }
+
+
 
     auto getParentLoopNode() { return parent_loop; }
     void setOuterLoop() { outer_loop = true; }
@@ -681,7 +705,9 @@ class LoopNode : public ContainerNode {
      * Make sure that loop end enable signal is always fix to index 1
      */
     void setLoopEndEnable(Node *_n) { addControlOutputPortIndex(_n, 1); }
-    void setLoopEndEnable(Node *_n, uint32_t i) { addControlOutputPortIndex(_n, i); }
+    void setLoopEndEnable(Node *_n, uint32_t i) {
+        addControlOutputPortIndex(_n, i);
+    }
 
     /**
      * Make sure that loop exit points are always starting from index 2
@@ -1260,7 +1286,7 @@ class GlobalValueNode : public Node {
 class ConstIntNode : public Node {
    private:
     llvm::ConstantInt *parent_const_int;
-    //uint32_t value;
+    // uint32_t value;
     int value;
 
    public:
@@ -1274,7 +1300,7 @@ class ConstIntNode : public Node {
         return T->getType() == Node::ConstIntTy;
     }
 
-    //uint32_t getValue() { return value; }
+    // uint32_t getValue() { return value; }
     int getValue() { return value; }
 
     llvm::ConstantInt *getConstantParent();

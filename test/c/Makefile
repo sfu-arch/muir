@@ -19,7 +19,7 @@ svg: $(SVG)
 	llvm-dis $<
 
 %.scala: %.ll
-	$(XKETCH) -fn-name=$* $< -o $*
+	$(XKETCH) -fn-name=$* -config=../../scripts/config.json $< -o $*
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@

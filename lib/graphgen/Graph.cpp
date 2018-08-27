@@ -72,13 +72,13 @@ template <class T> std::vector<T *> getNodeList(Graph *_graph) {
 /**
  * Print function prints the generated graph in the choosen format
  */
-void Graph::printGraph(PrintType _pt) {
+void Graph::printGraph(PrintType _pt, std::string json_path) {
   switch (_pt) {
   case PrintType::Scala:
     DEBUG(dbgs() << "Print Graph information!\n");
 
     // TODO: pass the corect config path
-    printScalaHeader("config.json", "dataflow");
+    printScalaHeader(json_path, "dataflow");
 
     doInitialization();
 

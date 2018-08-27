@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 void test04(int a, int b){
-while (a != b) {
+for(int i = 0; i < a; i++) {
     if (a > b)
       a -= b;
     else

@@ -124,6 +124,7 @@ class Graph {
     void doFinalization();
 
     void printGraph(PrintType);
+    void printGraph(PrintType, std::string json_path);
 
     bool isEmpty() { return graph_empty; }
     auto getMemoryUnit() const { return memory_unit.get(); }

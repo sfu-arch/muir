@@ -31,6 +31,7 @@ using BasicBlockList = std::list<SuperNode>;
 using NodeList = std::list<Node>;
 
 extern cl::opt<string> XKETCHName;
+extern cl::opt<string> config_path;
 
 namespace graphgen {
 
@@ -736,16 +737,14 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
+[[deprecated("Replace by updateLoopDependencies")]]
 void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
     for (auto &L : getLoops(loop_info)) {
         LoopNode *_parent = nullptr;
         if (L->getParentLoop()) _parent = loop_value_node[L->getParentLoop()];
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)), _parent,
-            dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
-            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
-            dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]));
+            NodeInfo(c, "Loop_" + std::to_string(c)));
 
         // Insert the loop node
         auto _loop_node =
@@ -849,8 +848,8 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
                 }
             }
         }
+        // This function should be called after filling the containers always
         _loop_node->setEndingInstructions();
-
         for (auto _en_instruction : _loop_node->endings()) {
             auto _en = _en_instruction->getInstruction();
             auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
@@ -864,27 +863,22 @@ void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     }
 }
 
-//FIXME: This function needs to be reconsider. There are for loops with multiple exit
-//point which are not supported in this functions.
+// FIXME: This function needs to be reconsider. There are for loops with
+// multiple exit
+// point which are not supported in this functions.
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
 void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
+
     for (auto &L : getLoops(loop_info)) {
+
+        //DEBUG
+        L->getHeader()->getName();
+        // Getting list of loop's exit basicblock
         SmallVector<BasicBlock *, 8> _exit_blocks;
-        L->getExitingBlocks(_exit_blocks);
-        auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)), nullptr,
-            dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
-            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
-            dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]));
-
-        // Insert the loop node
-        auto _loop_node =
-            this->dependency_graph->insertLoopNode(std::move(_new_loop));
-
-        loop_value_node[&*L] = _loop_node;
+        L->getExitBlocks(_exit_blocks);
 
         auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
         std::vector<std::pair<BasicBlock *, SuperNode *>> _l_exit_blocks;
@@ -904,12 +898,29 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it)->getInstruction());
             });
 
+        std::list<SuperNode *> _list_exit;
+        std::transform(_l_exit_blocks.begin(), _l_exit_blocks.end(),
+                       std::back_inserter(_list_exit),
+                       [](auto _l_e) -> SuperNode * { return _l_e.second; });
+
+        auto _new_loop = std::make_unique<LoopNode>(
+            NodeInfo(c, "Loop_" + std::to_string(c)),
+            dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
+            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
+            _list_exit);
+
+        // Insert the loop node
+        auto _loop_node =
+            this->dependency_graph->insertLoopNode(std::move(_new_loop));
+
+        loop_value_node[&*L] = _loop_node;
+
         _loop_node->setEnableLoopSignal(_src_br_inst_it);
         _loop_node->setActiveOutputLoopSignal(_l_head);
 
         uint32_t _index = 0;
-        for (auto _l : _l_exit_blocks) {
-            _loop_node->setLoopEndEnable(_l.second, _index++);
+        for (auto _l : _list_exit) {
+            _loop_node->setLoopEndEnable(_l, _index++);
         }
         //        _loop_node->setLoopEndEnable(_l_exit);
 
@@ -926,24 +937,25 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             assert(!"Unexpected terminator!");
 
         // Connecting end branch to the loop end input
-        //for (auto _l : _l_exit_blocks) {
-            //auto _l_exit = _l.second;
-            //auto _tar_exit_br_inst_it = *std::find_if(
-                //_l_exit->inputControl_begin(), _l_exit->inputControl_end(),
-                //[&L](auto const _node_it) {
-                    //return L->contains(
-                        //dyn_cast<BranchNode>(_node_it)->getInstruction());
-                //});
+        for (auto _le : _list_exit) {
+            auto _tar_exit_br_inst_it = *std::find_if(
+                _le->inputControl_begin(), _le->inputControl_end(),
+                [&L](auto const _node_it) {
 
-            //auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
+                    return L->contains(
+                        dyn_cast<BranchNode>(_node_it)->getInstruction());
+                });
 
-            //_tar_exit_br_inst_it->replaceControlOutputNode(_l_exit, _loop_node);
-            //_l_exit->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
-        //}
+            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
 
-        // Increament the counter
+            _tar_exit_br_inst_it->replaceControlOutputNode(_le, _loop_node);
+            _le->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
+        }
+
+        // Increament loop counter
         c++;
-    }
+
+    }  // Get loops
 
     for (auto &L : getLoops(loop_info)) {
         auto _loop_node = loop_value_node[L];
@@ -1066,7 +1078,7 @@ void GraphGeneratorPass::init(Function &F) {
 
     // Printing the graph
     dependency_graph->optimizationPasses();
-    dependency_graph->printGraph(PrintType::Scala);
+    dependency_graph->printGraph(PrintType::Scala, config_path);
 }
 
 // bool GraphGeneratorPass::runOnFunction(Function &F) {
