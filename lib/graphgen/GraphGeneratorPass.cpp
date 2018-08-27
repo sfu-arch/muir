@@ -707,7 +707,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
 
-                    if (auto detach = dyn_cast<ReattachNode>(_ins)) continue;
+                    if (auto reatach = dyn_cast<ReattachNode>(_ins)) continue;
 
                     // Detect Phi instrucctions
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
@@ -737,8 +737,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
-[[deprecated("Replace by updateLoopDependencies")]]
-void GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
+[[deprecated("Replace by updateLoopDependencies")]] void
+GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
     for (auto &L : getLoops(loop_info)) {
         LoopNode *_parent = nullptr;
@@ -873,8 +873,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
 
     for (auto &L : getLoops(loop_info)) {
-
-        //DEBUG
+        // DEBUG
         L->getHeader()->getName();
         // Getting list of loop's exit basicblock
         SmallVector<BasicBlock *, 8> _exit_blocks;
@@ -906,8 +905,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         auto _new_loop = std::make_unique<LoopNode>(
             NodeInfo(c, "Loop_" + std::to_string(c)),
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
-            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]),
-            _list_exit);
+            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]), _list_exit);
 
         // Insert the loop node
         auto _loop_node =
@@ -1053,8 +1051,10 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
         auto &_end_ins = _ins->getParent()->back();
         auto _end_node = map_value_node[&_end_ins];
         if (isa<ReattachNode>(_end_node) || isa<BranchNode>(_end_node)) {
-            _end_node->addDataInputPort(_call_node->getCallIn());
-            _call_node->getCallIn()->addDataOutputPort(_end_node);
+            if (isa<BranchNode>(_end_node)) {
+                _end_node->addDataInputPort(_call_node->getCallIn());
+                _call_node->getCallIn()->addDataOutputPort(_end_node);
+            }
 
             _end_node->addControlInputPort(_call_node->getCallIn());
             _call_node->getCallIn()->addControlOutputPort(_end_node);

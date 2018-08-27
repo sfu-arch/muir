@@ -1144,7 +1144,7 @@ class StoreNode : public InstructionNode {
         return ground;
     }
     void setGround() { ground = true; }
-    void unsetGround() { ground = true; }
+    void unsetGround() { ground = false; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -1381,10 +1381,12 @@ class DetachNode : public InstructionNode {
 };
 
 class ReattachNode : public InstructionNode {
+    private:
+        bool ground;
    public:
     ReattachNode(NodeInfo _ni, llvm::ReattachInst *_ins = nullptr,
                  NodeType _nd = UnkonwTy)
-        : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins), ground(false) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::ReattachInstructionTy;
@@ -1393,6 +1395,13 @@ class ReattachNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    auto isGround() {
+        if (this->numDataOutputPort() > 0) unsetGround();
+        return ground;
+    }
+    void setGround() { ground = true; }
+    void unsetGround() { ground = false; }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -1400,6 +1409,7 @@ class ReattachNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType) override;
+    std::string printGround(PrintType);
 };
 
 class SyncNode : public InstructionNode {

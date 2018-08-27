@@ -1,6 +1,6 @@
 CC=clang
 XKETCH=../../../build/bin/dandelion
-SPLIT=/Users/amirali/git/xketch-generator/build/bin/tapir-extract
+SPLIT=../../../build/bin/tapir-extract
 CFLAGS=-DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
@@ -29,14 +29,14 @@ svg: $(SVG)
 clean:
 	-rm -f *.bc *.ll *.dot *.scala *.svg *~ *.json
 
-%.split: %.bc
+
+.ONESHELL:
+%.test: %.bc
 	$(SPLIT) -fn-name=$* $< -o $*
 	llvm-dis final.bc
 	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
-	$(XKETCH) -fn-name=$* $*a.ll -o $*
+	$(XKETCH) -fn-name=$* -config=../../../scripts/config.json $*a.ll -o $*
 	$(eval subfcn = $(shell egrep -o "$*_detach[0-9]*" $*a.ll | sort -u))
 	for fcn in ${subfcn} ; do \
-	   $(XKETCH) -fn-name=$${fcn} $*a.ll -o $${fcn} ;  \
+	   $(XKETCH) -fn-name=$${fcn} -config=../../../scripts/config.json $*a.ll -o $${fcn} ;  \
 	done
-
-
