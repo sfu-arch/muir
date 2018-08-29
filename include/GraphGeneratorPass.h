@@ -85,7 +85,10 @@ class GraphGeneratorPass : public llvm::ModulePass,
     [[deprecated("This function doesn't support nested for loops. Instead use updateLoopDependencies function")]]
     void fillLoopDependencies(llvm::LoopInfo &);
 
+    [[deprecated("This function doesn't support nested for loops. Instead use updateLoopDependencies function")]]
     void updateLoopDependencies(llvm::LoopInfo &loop_info);
+
+    void makeLoopNodes(llvm::LoopInfo &loop_info);
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);

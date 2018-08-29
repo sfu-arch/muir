@@ -15,7 +15,7 @@ all: $(SCALA)
 svg: $(SVG)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -dce -mem2reg -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -separate-const-offset-from-gep -dce -mem2reg -dot-cfg -o $@
 
 %.ll: %.bc
 	llvm-dis $<
@@ -34,7 +34,7 @@ clean:
 %.test: %.bc
 	$(SPLIT) -fn-name=$* $< -o $*
 	llvm-dis final.bc
-	opt final.ll -S -dce -mem2reg -dot-cfg -o $*a.ll
+	opt final.ll -S -dce -separate-const-offset-from-gep -mem2reg -dot-cfg -o $*a.ll
 	$(XKETCH) -fn-name=$* -config=../../../scripts/config.json $*a.ll -o $*
 	$(eval subfcn = $(shell egrep -o "$*_detach[0-9]*" $*a.ll | sort -u))
 	for fcn in ${subfcn} ; do \
