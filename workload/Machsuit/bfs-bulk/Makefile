@@ -1,7 +1,7 @@
 KERN=bfs
 ALG=bulk
 
-CC=clang
+CC=wllvm
 
 CFLAGS?=-O3 -Wall -Wno-unused-label
 

@@ -256,7 +256,10 @@ void Graph::printConstants(PrintType _pt) {
             for (auto &const_node : this->const_int_list) {
                 // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
-                const_node->getConstantParent()->print(this->outCode);
+                if (const_node->getConstantParent())
+                    const_node->getConstantParent()->print(this->outCode);
+                else
+                    this->outCode << "NullPtr";
                 this->outCode << "\n";
                 this->outCode << const_node->printDefinition(PrintType::Scala);
             }
@@ -1265,6 +1268,18 @@ ConstIntNode *Graph::insertConstIntNode(ConstantInt &C) {
 /**
  * Insert a new const node
  */
+ConstIntNode *Graph::insertConstIntNode() {
+    const_int_list.push_back(std::make_unique<ConstIntNode>(
+        NodeInfo(const_int_list.size(),
+                 "const" + std::to_string(const_int_list.size())),
+        nullptr));
+
+    return const_int_list.back().get();
+}
+
+/**
+ * Insert a new const node
+ */
 
 ConstFPNode *Graph::insertConstFPNode(ConstantFP &C) {
     const_fp_list.push_back(std::make_unique<ConstFPNode>(
@@ -1680,8 +1695,6 @@ void Graph::groundReattachNode() {
         if (_st_node->numDataOutputPort() == 0) _st_node->setGround();
     }
 }
-
-
 
 //===----------------------------------------------------------------------===//
 //                          Optmization passes

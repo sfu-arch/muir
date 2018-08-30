@@ -181,6 +181,7 @@ class Graph {
     ArgumentNode *insertFunctionArgument(llvm::Argument &);
     GlobalValueNode *insertFunctionGlobalValue(llvm::GlobalValue &);
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
+    ConstIntNode *insertConstIntNode();
 
     InstructionNode *insertFaddNode(llvm::BinaryOperator &);
     InstructionNode *insertFdiveNode(llvm::BinaryOperator &);

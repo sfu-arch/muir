@@ -735,6 +735,8 @@ std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
  * Returning address of the parent instruction
  */
 Instruction *InstructionNode::getInstruction() {
+    if(this == nullptr)
+        return nullptr;
     return this->parent_instruction;
 }
 

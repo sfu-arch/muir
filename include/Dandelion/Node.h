@@ -1290,9 +1290,15 @@ class ConstIntNode : public Node {
     int value;
 
    public:
+    //Else part handels Undef cases.
+    //We pass nullptr to ConstIntNode when the operand type is
+    //undef
     ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
         : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {
-        value = parent_const_int->getSExtValue();
+            if(parent_const_int)
+                value = parent_const_int->getSExtValue();
+            else
+                value = 0;
     }
 
     // Define classof function so that we can use dyn_cast function

@@ -590,6 +590,18 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     dyn_cast<SuperNode>(
                         this->map_value_node[ins_it->getParent()])
                         ->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
+                } else if (auto undef_value =
+                               dyn_cast<llvm::UndefValue>(operand)) {
+                    _const_node = this->dependency_graph->insertConstIntNode();
+                    map_value_node[operand] = _const_node;
+
+                    _const_node->addControlInputPort(
+                        this->map_value_node[ins_it->getParent()]);
+                    this->map_value_node[ins_it->getParent()]
+                        ->addControlOutputPort(_const_node);
+                    dyn_cast<SuperNode>(
+                        this->map_value_node[ins_it->getParent()])
+                        ->addconstIntNode(dyn_cast<ConstIntNode>(_const_node));
                 }
 
                 auto _node_src = this->map_value_node.find(operand);
@@ -597,12 +609,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
                 if (_node_src == this->map_value_node.end()) {
                     DEBUG(operand->print(errs(), true));
+                    DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
                     assert(!"The destination instruction couldn't find!");
                 }
 
                 if (_node_dest == this->map_value_node.end()) {
                     DEBUG(operand->print(errs(), true));
+                    DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
                     assert(!"The destination instruction couldn't find!");
                 }
@@ -937,8 +951,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                 _le->inputControl_begin(), _le->inputControl_end(),
                 [&L](auto const _node_it) {
 
-                    return L->contains(
-                        dyn_cast<BranchNode>(_node_it)->getInstruction());
+                    if (_node_it == nullptr) return false;
+
+                    if (dyn_cast<BranchNode>(_node_it))
+                        return L->contains(
+                            dyn_cast<BranchNode>(_node_it)->getInstruction());
+                    else
+                        return false;
                 });
 
             auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
@@ -1016,7 +1035,6 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         }
     }
 }
-
 
 /**
  * This funciton iterates over function loops and generate loop nodes
@@ -1175,9 +1193,6 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
         }
     }
 }
-
-
-
 
 void GraphGeneratorPass::connectOutToReturn(Function &F) {
     for (auto &BB : F) {
