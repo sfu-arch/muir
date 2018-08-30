@@ -33,195 +33,290 @@ std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number) {
 
 PortID Node::addDataInputPort(Node *n) {
     auto _port_info = PortID(port_data.data_input_port.size());
-    port_data.data_input_port.emplace_back(n);
+    port_data.data_input_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
+
+PortID Node::addDataInputPort(Node *n, uint32_t _id) {
+    auto _port_info = PortID(_id);
+    port_data.data_input_port.emplace_back(std::make_pair(n, _port_info));
+    return _port_info;
+}
+
 PortID Node::addDataOutputPort(Node *n) {
     auto _port_info = PortID(port_data.data_output_port.size());
-    port_data.data_output_port.emplace_back(n);
+    port_data.data_output_port.emplace_back(std::make_pair(n, _port_info));
+    return _port_info;
+}
+
+PortID Node::addDataOutputPort(Node *n, uint32_t _id) {
+    auto _port_info = PortID(_id);
+    port_data.data_output_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
 
 PortID Node::addControlInputPort(Node *n) {
     auto _port_info = PortID(port_control.control_input_port.size());
-    port_control.control_input_port.emplace_back(n);
+    port_control.control_input_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
+
+PortID Node::addControlInputPort(Node *n, uint32_t _id) {
+    auto _port_info = PortID(_id);
+    port_control.control_input_port.emplace_back(std::make_pair(n, _port_info));
+    return _port_info;
+}
+
 PortID Node::addControlOutputPort(Node *n) {
     auto _port_info = PortID(port_control.control_output_port.size());
-    port_control.control_output_port.emplace_back(n);
+    port_control.control_output_port.emplace_back(
+        std::make_pair(n, _port_info));
+    return _port_info;
+}
+
+PortID Node::addControlOutputPort(Node *n, uint32_t _id) {
+    auto _port_info = PortID(_id);
+    port_control.control_output_port.emplace_back(
+        std::make_pair(n, _port_info));
     return _port_info;
 }
 
 PortID Node::addReadMemoryReqPort(Node *const n) {
     auto _port_info = PortID(read_port_data.memory_req_port.size());
-    read_port_data.memory_req_port.emplace_back(n);
+    read_port_data.memory_req_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
 PortID Node::addReadMemoryRespPort(Node *const n) {
     auto _port_info = PortID(read_port_data.memory_resp_port.size());
-    read_port_data.memory_resp_port.emplace_back(n);
+    read_port_data.memory_resp_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
 
 PortID Node::addWriteMemoryReqPort(Node *const n) {
     auto _port_info = PortID(write_port_data.memory_req_port.size());
-    write_port_data.memory_req_port.emplace_back(n);
+    write_port_data.memory_req_port.emplace_back(std::make_pair(n, _port_info));
     return _port_info;
 }
 PortID Node::addWriteMemoryRespPort(Node *const n) {
     auto _port_info = PortID(write_port_data.memory_resp_port.size());
-    write_port_data.memory_resp_port.emplace_back(n);
+    write_port_data.memory_resp_port.emplace_back(
+        std::make_pair(n, _port_info));
     return _port_info;
 }
 
 PortID Node::returnDataOutputPortIndex(Node *_node) {
-    auto ff =
-        std::find_if(this->port_data.data_output_port.begin(),
-                     this->port_data.data_output_port.end(),
-                     [&_node](auto &arg) -> bool { return arg == _node; });
+    auto ff = std::find_if(
+        this->port_data.data_output_port.begin(),
+        this->port_data.data_output_port.end(),
+        [&_node](auto &arg) -> bool { return arg.first == _node; });
     if (ff == this->port_data.data_output_port.end())
         assert(!"Node doesn't exist\n");
 
-    return std::distance(this->port_data.data_output_port.begin(),
-                         find(this->port_data.data_output_port.begin(),
-                              this->port_data.data_output_port.end(), _node));
+    return find_if(this->port_data.data_output_port.begin(),
+                   this->port_data.data_output_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnDataInputPortIndex(Node *_node) {
-    auto ff =
-        std::find_if(this->port_data.data_input_port.begin(),
-                     this->port_data.data_input_port.end(),
-                     [&_node](auto &arg) -> bool { return arg == _node; });
+    auto ff = std::find_if(
+        this->port_data.data_input_port.begin(),
+        this->port_data.data_input_port.end(),
+        [&_node](auto &arg) -> bool { return arg.first == _node; });
 
     if (ff == this->port_data.data_input_port.end())
         assert(!"Node doesn't exist\n");
-    return std::distance(this->port_data.data_input_port.begin(),
-                         find(this->port_data.data_input_port.begin(),
-                              this->port_data.data_input_port.end(), _node));
+    return find_if(this->port_data.data_input_port.begin(),
+                   this->port_data.data_input_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnControlOutputPortIndex(Node *_node) {
-    return std::distance(
-        this->port_control.control_output_port.begin(),
-        find(this->port_control.control_output_port.begin(),
-             this->port_control.control_output_port.end(), _node));
+    return find_if(this->port_control.control_output_port.begin(),
+                   this->port_control.control_output_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnControlInputPortIndex(Node *_node) {
-    return std::distance(
-        this->port_control.control_input_port.begin(),
-        find(this->port_control.control_input_port.begin(),
-             this->port_control.control_input_port.end(), _node));
+    return find_if(this->port_control.control_input_port.begin(),
+                   this->port_control.control_input_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
-bool Node::existControlInput(Node *_n) {
-    return find(this->port_control.control_input_port.begin(),
-                this->port_control.control_input_port.end(),
-                _n) != this->port_control.control_input_port.end();
+bool Node::existControlInput(Node *_node) {
+    return find_if(this->port_control.control_input_port.begin(),
+                   this->port_control.control_input_port.end(),
+                   [&_node](auto &arg) -> bool {
+                       return arg.first == _node;
+                   }) != this->port_control.control_input_port.end();
 }
 
-bool Node::existControlOutput(Node *_n) {
-    return find(this->port_control.control_output_port.begin(),
-                this->port_control.control_output_port.end(),
-                _n) != this->port_control.control_output_port.end();
+bool Node::existControlOutput(Node *_node) {
+    return find_if(this->port_control.control_output_port.begin(),
+                   this->port_control.control_output_port.end(),
+                   [&_node](auto &arg) -> bool {
+                       return arg.first == _node;
+                   }) != this->port_control.control_output_port.end();
 }
 
-bool Node::existDataInput(Node *_n) {
-    return find(this->port_data.data_input_port.begin(),
-                this->port_data.data_input_port.end(),
-                _n) != this->port_data.data_input_port.end();
+bool Node::existDataInput(Node *_node) {
+    return find_if(this->port_data.data_input_port.begin(),
+                   this->port_data.data_input_port.end(),
+                   [&_node](auto &arg) -> bool {
+                       return arg.first == _node;
+                   }) != this->port_data.data_input_port.end();
 }
 
-bool Node::existDataOutput(Node *_n) {
-    return find(this->port_data.data_output_port.begin(),
-                this->port_data.data_output_port.end(),
-                _n) != this->port_data.data_output_port.end();
+bool Node::existDataOutput(Node *_node) {
+    return find_if(this->port_data.data_output_port.begin(),
+                   this->port_data.data_output_port.end(),
+                   [&_node](auto &arg) -> bool {
+                       return arg.first == _node;
+                   }) != this->port_data.data_output_port.end();
 }
 
 // Return memory indexes
 PortID Node::returnMemoryReadInputPortIndex(Node *_node) {
-    return std::distance(
-        this->read_port_data.memory_req_port.begin(),
-        find(this->read_port_data.memory_req_port.begin(),
-             this->read_port_data.memory_req_port.end(), _node));
+    return find_if(this->read_port_data.memory_req_port.begin(),
+                   this->read_port_data.memory_req_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnMemoryReadOutputPortIndex(Node *_node) {
-    return std::distance(
-        this->read_port_data.memory_resp_port.begin(),
-        find(this->read_port_data.memory_resp_port.begin(),
-             this->read_port_data.memory_resp_port.end(), _node));
+    return find_if(this->read_port_data.memory_resp_port.begin(),
+                   this->read_port_data.memory_resp_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnMemoryWriteInputPortIndex(Node *_node) {
-    return std::distance(
-        this->write_port_data.memory_req_port.begin(),
-        find(this->write_port_data.memory_req_port.begin(),
-             this->write_port_data.memory_req_port.end(), _node));
+    return find_if(this->write_port_data.memory_req_port.begin(),
+                   this->write_port_data.memory_req_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
 PortID Node::returnMemoryWriteOutputPortIndex(Node *_node) {
-    return std::distance(
-        this->write_port_data.memory_resp_port.begin(),
-        find(this->write_port_data.memory_resp_port.begin(),
-             this->write_port_data.memory_resp_port.end(), _node));
+    return find_if(this->write_port_data.memory_resp_port.begin(),
+                   this->write_port_data.memory_resp_port.end(),
+                   [&_node](auto &arg) -> bool { return arg.first == _node; })
+        ->second;
 }
 
-std::list<Node *>::iterator Node::findDataInputNode(Node *_node) {
-    return find(this->port_data.data_input_port.begin(),
-                this->port_data.data_input_port.end(), _node);
+std::list<PortEntry>::iterator Node::findDataInputNode(Node *_node) {
+    return find_if(this->port_data.data_input_port.begin(),
+                   this->port_data.data_input_port.end(),
+                   [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
-std::list<Node *>::iterator Node::findDataOutputNode(Node *_node) {
-    return find(this->port_data.data_output_port.begin(),
-                this->port_data.data_output_port.end(), _node);
+std::list<PortEntry>::iterator Node::findDataOutputNode(Node *_node) {
+    return find_if(this->port_data.data_output_port.begin(),
+                   this->port_data.data_output_port.end(),
+                   [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
-std::list<Node *>::iterator Node::findControlInputNode(Node *_node) {
-    return find(this->port_control.control_input_port.begin(),
-                this->port_control.control_input_port.end(), _node);
+std::list<PortEntry>::iterator Node::findControlInputNode(Node *_node) {
+    return find_if(this->port_control.control_input_port.begin(),
+                   this->port_control.control_input_port.end(),
+                   [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
-std::list<Node *>::iterator Node::findControlOutputNode(Node *_node) {
-    return find(this->port_control.control_output_port.begin(),
-                this->port_control.control_output_port.end(), _node);
+std::list<PortEntry>::iterator Node::findControlOutputNode(Node *_node) {
+    return find_if(this->port_control.control_output_port.begin(),
+                   this->port_control.control_output_port.end(),
+                   [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
 void Node::removeNodeDataInputNode(Node *_node) {
-    this->port_data.data_input_port.remove(_node);
+    this->port_data.data_input_port.remove_if(
+        [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
 void Node::removeNodeDataOutputNode(Node *_node) {
-    this->port_data.data_output_port.remove(_node);
+    this->port_data.data_output_port.remove_if(
+        [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
 void Node::removeNodeControlInputNode(Node *_node) {
-    this->port_control.control_input_port.remove(_node);
+    this->port_control.control_input_port.remove_if(
+        [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
 void Node::removeNodeControlOutputNode(Node *_node) {
-    this->port_control.control_output_port.remove(_node);
+    this->port_control.control_output_port.remove_if(
+        [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
 void Node::replaceControlInputNode(Node *src, Node *tar) {
-    std::replace(this->port_control.control_input_port.begin(),
-                 this->port_control.control_input_port.end(), src, tar);
+    // std::replace(this->port_control.control_input_port.begin(),
+    // this->port_control.control_input_port.end(), src, tar);
+    auto count =
+        std::count_if(port_control.control_input_port.begin(),
+                      port_control.control_input_port.end(),
+                      [src](auto &arg) -> bool { return arg.first == src; });
+
+    assert(count == 1 &&
+           "Can not have multiple edge from one node to another!");
+
+    auto _src_node =
+        std::find_if(port_control.control_input_port.begin(),
+                     port_control.control_input_port.end(),
+                     [src](auto &arg) -> bool { return arg.first == src; });
+    _src_node->first = tar;
 }
 
 void Node::replaceControlOutputNode(Node *src, Node *tar) {
-    std::replace(port_control.control_output_port.begin(),
-                 port_control.control_output_port.end(), src, tar);
+    // We can't replace if we have multiple edge from src to dst
+    // with different port numbers
+    // std::replace(port_control.control_output_port.begin(),
+    // port_control.control_output_port.end(), src, tar);
+    auto count =
+        std::count_if(port_control.control_output_port.begin(),
+                      port_control.control_output_port.end(),
+                      [src](auto &arg) -> bool { return arg.first == src; });
+
+    assert(count == 1 &&
+           "Can not have multiple edge from one node to another!");
+
+    auto _src_node =
+        std::find_if(port_control.control_output_port.begin(),
+                     port_control.control_output_port.end(),
+                     [src](auto &arg) -> bool { return arg.first == src; });
+    _src_node->first = tar;
 }
 
 void Node::replaceDataInputNode(Node *src, Node *tar) {
-    std::replace(this->port_data.data_input_port.begin(),
-                 this->port_data.data_input_port.end(), src, tar);
+    auto count = std::count_if(
+        port_data.data_input_port.begin(), port_data.data_input_port.end(),
+        [src](auto &arg) -> bool { return arg.first == src; });
+
+    assert(count == 1 &&
+           "Can not have multiple edge from one node to another!");
+
+    auto _src_node = std::find_if(
+        port_data.data_input_port.begin(), port_data.data_input_port.end(),
+        [src](auto &arg) -> bool { return arg.first == src; });
+    _src_node->first = tar;
 }
 
 void Node::replaceDataOutputNode(Node *src, Node *tar) {
-    std::replace(port_data.data_output_port.begin(),
-                 port_data.data_output_port.end(), src, tar);
+    // std::replace(port_data.data_output_port.begin(),
+    // port_data.data_output_port.end(), src, tar);
+    auto count = std::count_if(
+        port_data.data_output_port.begin(), port_data.data_output_port.end(),
+        [src](auto &arg) -> bool { return arg.first == src; });
+
+    assert(count == 1 &&
+           "Can not have multiple edge from one node to another!");
+
+    auto _src_node = std::find_if(
+        port_data.data_output_port.begin(), port_data.data_output_port.end(),
+        [src](auto &arg) -> bool { return arg.first == src; });
+    _src_node->first = tar;
 }
 
 //===----------------------------------------------------------------------===//
@@ -735,8 +830,7 @@ std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
  * Returning address of the parent instruction
  */
 Instruction *InstructionNode::getInstruction() {
-    if(this == nullptr)
-        return nullptr;
+    if (this == nullptr) return nullptr;
     return this->parent_instruction;
 }
 
@@ -2559,8 +2653,7 @@ std::string ReattachNode::printDefinition(PrintType _pt) {
                 "$num_out, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             if (this->numDataInputPort() == 0)
-                helperReplace(_text, "$num_out",
-                              std::to_string(1));
+                helperReplace(_text, "$num_out", std::to_string(1));
             else
                 helperReplace(_text, "$num_out",
                               std::to_string(this->numDataInputPort()));

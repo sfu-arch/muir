@@ -310,10 +310,8 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> predicate instruction");
             for (auto &_s_node : super_node_list) {
-                for (auto _enable_iterator = _s_node->inputControl_begin();
-                     _enable_iterator != _s_node->inputControl_end();
-                     _enable_iterator++) {
-                    auto _input_node = dyn_cast<Node>(*_enable_iterator);
+                for (auto _enable_iterator : _s_node->input_control_range()) {
+                    auto _input_node = dyn_cast<Node>(_enable_iterator.first);
                     // auto _input_index = std::distance(
                     //_s_node->inputControl_begin(), _enable_iterator);
 
@@ -325,8 +323,8 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                     // return _s_node.get() == &*arg;
                     //});
 
-                    auto _input_index =
-                        _s_node->returnControlInputPortIndex(_input_node);
+                    auto _input_index = _enable_iterator.second;
+                        //_s_node->returnControlInputPortIndex(_input_node);
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
@@ -416,7 +414,7 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                     auto ff = std::find_if(_output_node->inputControl_begin(),
                                            _output_node->inputControl_end(),
                                            [&_s_node](auto &arg) -> bool {
-                                               return _s_node.get() == &*arg;
+                                               return _s_node.get() == &*arg.first;
                                            });
 
                     auto _input_index =
@@ -1323,13 +1321,11 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop -> predicate instruction");
             for (auto &_l_node : loop_nodes) {
-                for (auto _enable_iterator = _l_node->inputControl_begin();
-                     _enable_iterator != _l_node->inputControl_end();
-                     _enable_iterator++) {
-                    auto _input_node = dyn_cast<Node>(*_enable_iterator);
+                for (auto _enable_iterator : _l_node->input_control_range()) {
+                    auto _input_node = dyn_cast<Node>(&*_enable_iterator.first);
 
-                    auto _input_index =
-                        _l_node->returnControlInputPortIndex(_input_node);
+                    //auto _input_index =
+                        //_l_node->returnControlInputPortIndex(_input_node);
 
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
@@ -1338,7 +1334,7 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
                     this->outCode
                         << "  "
                         << _l_node->printInputEnable(PrintType::Scala,
-                                                     _input_index.getID())
+                                                     _enable_iterator.second.getID())
                         << " <> "
                         << _input_node->printOutputEnable(PrintType::Scala,
                                                           _output_index.getID())
@@ -1368,17 +1364,17 @@ void Graph::printLoopEndingDependencies(PrintType _pt) {
                 for (auto &_ending_ins : _l_node->endings()) {
                     for (auto &_cn_dependencies :
                          _ending_ins->output_control_range()) {
-                        auto _input_index =
-                            _cn_dependencies->returnControlInputPortIndex(
+                        auto _input_index = 
+                            _cn_dependencies.first->returnControlInputPortIndex(
                                 _ending_ins);
 
                         auto _output_index =
                             _ending_ins->returnControlOutputPortIndex(
-                                _cn_dependencies);
+                                _cn_dependencies.first);
 
                         this->outCode
                             << "  "
-                            << _cn_dependencies->printInputEnable(
+                            << _cn_dependencies.first->printInputEnable(
                                    PrintType::Scala, _input_index.getID())
                             << " <> "
                             << _ending_ins->printOutputEnable(
@@ -1414,9 +1410,9 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                             << "  "
                             << _live_in->printInputData(PrintType::Scala, c++)
                             << " <> "
-                            << _data_in->printOutputData(
+                            << _data_in.first->printOutputData(
                                    PrintType::Scala,
-                                   _data_in
+                                   _data_in.first
                                        ->returnDataOutputPortIndex(
                                            _live_in.get())
                                        .getID())
@@ -1430,12 +1426,12 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 for (auto &_live_in : _l_node->live_ins()) {
                     for (auto &_data_out : _live_in->output_data_range()) {
-                        if (isa<ArgumentNode>(_data_out)) continue;
+                        if (isa<ArgumentNode>(_data_out.first)) continue;
                         this->outCode
                             << "  "
-                            << _data_out->printInputData(
+                            << _data_out.first->printInputData(
                                    PrintType::Scala,
-                                   _data_out
+                                   _data_out.first
                                        ->returnDataInputPortIndex(
                                            _live_in.get())
                                        .getID())
@@ -1443,7 +1439,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                             << _live_in->printOutputData(
                                    PrintType::Scala,
                                    _live_in
-                                       ->returnDataOutputPortIndex(_data_out)
+                                       ->returnDataOutputPortIndex(_data_out.first)
                                        .getID())
                             << "\n\n";
                     }
@@ -1460,12 +1456,12 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                             << _live_out->printInputData(
                                    PrintType::Scala,
                                    _live_out
-                                       ->returnDataInputPortIndex(_data_out)
+                                       ->returnDataInputPortIndex(_data_out.first)
                                        .getID())
                             << " <> "
-                            << _data_out->printOutputData(
+                            << _data_out.first->printOutputData(
                                    PrintType::Scala,
-                                   _data_out
+                                   _data_out.first
                                        ->returnDataOutputPortIndex(
                                            _live_out.get())
                                        .getID())
@@ -1513,7 +1509,7 @@ void Graph::printOutPort(PrintType _pt) {
                          _c_node->getCallIn()->output_control_range()) {
                         this->outCode
                             << "  "
-                            << _ctrl_node->printInputEnable(PrintType::Scala, 0)
+                            << _ctrl_node.first->printInputEnable(PrintType::Scala, 0)
                             << " <> "
                             << _c_node->getCallIn()->printOutputEnable(
                                    PrintType::Scala, 0)
@@ -1543,25 +1539,25 @@ void Graph::doInitialization() {
 
     for (auto &_node : const_int_list) {
         for (auto &_child : _node->output_data_range()) {
-            if (isa<ArgumentNode>(&*_child)) continue;
+            if (isa<ArgumentNode>(&*_child.first)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_node,
-                               _node->returnDataOutputPortIndex(&*_child)),
-                std::make_pair(&*_child,
-                               _child->returnDataInputPortIndex(&*_node)));
+                               _node->returnDataOutputPortIndex(&*_child.first)),
+                std::make_pair(&*_child.first,
+                               _child.first->returnDataInputPortIndex(&*_node)));
         }
     }
 
     for (auto &_node : const_fp_list) {
         for (auto &_child : _node->output_data_range()) {
-            if (isa<ArgumentNode>(&*_child)) continue;
+            if (isa<ArgumentNode>(&*_child.first)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_node,
-                               _node->returnDataOutputPortIndex(&*_child)),
-                std::make_pair(&*_child,
-                               _child->returnDataInputPortIndex(&*_node)));
+                               _node->returnDataOutputPortIndex(&*_child.first)),
+                std::make_pair(&*_child.first,
+                               _child.first->returnDataInputPortIndex(&*_node)));
         }
     }
 
@@ -1569,12 +1565,12 @@ void Graph::doInitialization() {
         Node *_ptr = _node.get();
         if (isa<CallNode>(_ptr)) _ptr = dyn_cast<CallNode>(_ptr)->getCallIn();
         for (auto &_child : _ptr->output_data_range()) {
-            if (isa<ArgumentNode>(&*_child)) continue;
+            if (isa<ArgumentNode>(&*_child.first)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
-                std::make_pair(_ptr, _ptr->returnDataOutputPortIndex(&*_child)),
-                std::make_pair(&*_child,
-                               _child->returnDataInputPortIndex(_ptr)));
+                std::make_pair(_ptr, _ptr->returnDataOutputPortIndex(&*_child.first)),
+                std::make_pair(&*_child.first,
+                               _child.first->returnDataInputPortIndex(_ptr)));
         }
     }
     for (auto &_loop : loop_nodes) {
@@ -1583,22 +1579,22 @@ void Graph::doInitialization() {
                 this->insertEdge(
                     Edge::EdgeType::DataTypeEdge,
                     std::make_pair(&*_l_out,
-                                   _l_out->returnDataOutputPortIndex(&*_child)),
-                    std::make_pair(&*_child,
-                                   _child->returnDataInputPortIndex(&*_l_out)));
+                                   _l_out->returnDataOutputPortIndex(&*_child.first)),
+                    std::make_pair(&*_child.first,
+                                   _child.first->returnDataInputPortIndex(&*_l_out)));
             }
         }
     }
 
     for (auto &_arg : this->getSplitCall()->live_ins()) {
         for (auto &_node : _arg->output_data_range()) {
-            if (isa<ArgumentNode>(_node)) continue;
+            if (isa<ArgumentNode>(_node.first)) continue;
             this->insertEdge(
                 Edge::EdgeType::DataTypeEdge,
                 std::make_pair(&*_arg,
-                               _arg->returnDataOutputPortIndex(&*_node)),
-                std::make_pair(&*_node,
-                               _node->returnDataInputPortIndex(&*_arg)));
+                               _arg->returnDataOutputPortIndex(&*_node.first)),
+                std::make_pair(&*_node.first,
+                               _node.first->returnDataInputPortIndex(&*_arg)));
         }
     }
 

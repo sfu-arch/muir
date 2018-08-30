@@ -232,7 +232,7 @@ class GEPAddrCalculation : public ModulePass,
     llvm::StringRef function_name;
 
     GEPAddrCalculation(llvm::StringRef FN)
-        : ModulePass(ID), function_name(FN), counter(0) {}
+        : ModulePass(ID), counter(0), function_name(FN) {}
 
     bool doInitialization(Module &) override {
         counter = 0;

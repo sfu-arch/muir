@@ -474,21 +474,23 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         auto _fun_arg_node = dyn_cast<ArgumentNode>(_fun_arg_it->get());
         auto _spliter = this->dependency_graph->getSplitCall();
 
-        auto src_idx = _spliter->addDataOutputPort(_fun_arg_node);
-        auto dst_idx = _fun_arg_node->addDataInputPort(_spliter);
+        _spliter->addDataOutputPort(_fun_arg_node);
+        _fun_arg_node->addDataInputPort(_spliter);
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
 
-            // First operand of a call function is the pointer its self function
+            // First operand of a call function is a pointer to itself
             if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
+
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
-                // Here we have to add a new edge from instruction to BB
+                // If target operand is basicblock it means the instruction is
+                // control instruction
                 // 1) First find the basicblock node
-                // 2) Add the bb as a control output
-                // 3) Add the ins ass a control input
+                // 2) Add bb as a control output
+                // 3) Add ins as a control input
                 auto _node_dest = this->map_value_node.find(
                     operand);  // it should be supernode
                 assert(isa<SuperNode>(_node_dest->second) &&
@@ -499,20 +501,24 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
+                // We don't connect reattach node data dependency
                 if (isa<ReattachNode>(_node_src->second)) continue;
 
-                // std::variant<BranchNode, DetachNode> _src;
                 auto _dst = _node_dest->second;
                 Node *_src = nullptr;
                 if (isa<BranchNode>(_node_src->second)) {
                     _src = dyn_cast<BranchNode>(_node_src->second);
                     if (ins_it->getNumOperands() == 3) {
+                        // LLVM IR -> CBranch(cmpInput(0), trueDst(1),
+                        // falseDst(2))
                         if (c == 1)
-                            dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
-                        else if (c == 2)
                             dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
-                    } else
-                        _src->addControlOutputPort(_dst);
+                        else if (c == 2)
+                            dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                    } else {
+                        // The node is Ubranch
+                        _src->addControlOutputPort(_dst, c);
+                    }
 
                     _dst->addControlInputPort(_src);
 
@@ -520,40 +526,19 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     // TODO fix the Detachnode connections
                     //
                     _src = dyn_cast<DetachNode>(_node_src->second);
-                    // if (ins_it->getNumOperands() == 3) {
-                    // if (c == 1)
-                    // dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
-                    // else if (c == 2)
-                    // dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
-                    //} else
-                    _src->addControlOutputPort(_dst);
-
+                    _src->addControlOutputPort(_dst, c);
                     _dst->addControlInputPort(_src);
 
                 } else if (isa<ReattachNode>(_node_src->second)) {
                     // TODO fix the Reattachnode connections
                     _src = dyn_cast<ReattachNode>(_node_src->second);
-                    // if (ins_it->getNumOperands() == 3) {
-                    // if (c == 1)
-                    // dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
-                    // else if (c == 2)
-                    // dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
-                    //} else
-                    _src->addControlOutputPort(_dst);
-
+                    _src->addControlOutputPort(_dst, c);
                     _dst->addControlInputPort(_src);
 
                 } else if (isa<SyncNode>(_node_src->second)) {
                     // TODO fix the Sync node connections
                     _src = dyn_cast<SyncNode>(_node_src->second);
-                    // if (ins_it->getNumOperands() == 3) {
-                    // if (c == 1)
-                    // dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
-                    // else if (c == 2)
-                    // dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
-                    //} else
-                    _src->addControlOutputPort(_dst);
-
+                    _src->addControlOutputPort(_dst, c);
                     _dst->addControlInputPort(_src);
 
                 } else {
@@ -587,11 +572,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         this->map_value_node[ins_it->getParent()]);
                     this->map_value_node[ins_it->getParent()]
                         ->addControlOutputPort(_const_node);
+
                     dyn_cast<SuperNode>(
                         this->map_value_node[ins_it->getParent()])
                         ->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
                 } else if (auto undef_value =
                                dyn_cast<llvm::UndefValue>(operand)) {
+                    // TODO define an undef node instead of uisng empty const
+                    // node!
                     _const_node = this->dependency_graph->insertConstIntNode();
                     map_value_node[operand] = _const_node;
 
@@ -611,31 +599,39 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     DEBUG(operand->print(errs(), true));
                     DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
-                    assert(!"The destination instruction couldn't find!");
+                    assert(!"The source instruction couldn't find!\n"
+                            "[HINT] Look at the LLVM type it you don't have one to one mapping"
+                            "between LLVM and your graph library");
                 }
 
                 if (_node_dest == this->map_value_node.end()) {
                     DEBUG(operand->print(errs(), true));
                     DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
-                    assert(!"The destination instruction couldn't find!");
+                    assert(!"The destination instruction couldn't find!\n"
+                            "[HINT] Look at the LLVM type it you don't have one to one mapping"
+                            "between LLVM and your graph library");
                 }
 
                 auto _src = _node_src->second;
                 auto _dst = _node_dest->second;
 
+                // Make sure that _src and _dst pointing
+                // to correct node
                 if (_const_node) _src = _const_node;
                 if (auto call_out = dyn_cast<CallNode>(_dst))
                     _dst = call_out->getCallOut();
                 if (auto call_in = dyn_cast<CallNode>(_src))
                     _src = call_in->getCallIn();
 
-                _src->addDataOutputPort(_dst);
+                _src->addDataOutputPort(_dst, c);
                 _dst->addDataInputPort(_src);
             }
         }
 
-        // Connecting LD and ST nodes to Memory system
+        // Connecting Load and Store nodes to Memory system
+        // TODO: We need to decide how to connect the memory nodes
+        // to the memory system
         if (auto _ld_node = dyn_cast<LoadNode>(
                 this->map_value_node.find(&*ins_it)->second)) {
             // TODO right now we consider all the connections to the cache or
@@ -652,8 +648,12 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             auto _dst_resp_idx = _ld_node->addReadMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
 
-        } else if (auto _st_node = dyn_cast<StoreNode>(
-                       this->map_value_node.find(&*ins_it)->second)) {
+        }
+
+        // Store node connection
+        //
+        else if (auto _st_node = dyn_cast<StoreNode>(
+                     this->map_value_node.find(&*ins_it)->second)) {
             auto _dst_req_idx =
                 this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
                     _st_node);
@@ -664,8 +664,12 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph->getMemoryUnit());
             auto _dst_resp_idx = _st_node->addWriteMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
-        } else if (auto _alloca_node = dyn_cast<AllocaNode>(
-                       this->map_value_node.find(&*ins_it)->second)) {
+        }
+
+        // Alloca node connection to the stack allocator
+        //
+        else if (auto _alloca_node = dyn_cast<AllocaNode>(
+                     this->map_value_node.find(&*ins_it)->second)) {
             auto _dst_req_idx = this->dependency_graph->getStackAllocator()
                                     ->addReadMemoryReqPort(_alloca_node);
             auto _src_resp_idx = this->dependency_graph->getStackAllocator()
@@ -674,8 +678,11 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 this->dependency_graph->getStackAllocator());
             auto _dst_resp_idx = _alloca_node->addReadMemoryRespPort(
                 this->dependency_graph->getStackAllocator());
-        } else if (auto _fpdiv_node = dyn_cast<FdiveOperatorNode>(
-                       this->map_value_node.find(&*ins_it)->second)) {
+        }
+
+        // Connection FPNode operations
+        else if (auto _fpdiv_node = dyn_cast<FdiveOperatorNode>(
+                     this->map_value_node.find(&*ins_it)->second)) {
             auto _dst_req_idx =
                 this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
                     _fpdiv_node);
@@ -687,6 +694,9 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             auto _dst_resp_idx = _fpdiv_node->addReadMemoryRespPort(
                 this->dependency_graph->getFPUNode());
         }
+
+        // TODO: We need to have diveider as well and connect the diveder node
+        // like above!
     }
 }
 
@@ -707,12 +717,18 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
             auto _dst_idx = _en_bb->addControlInputPort(
                 this->dependency_graph->getSplitCall());
         }
-        // if (returnNumPred(&BB) > 1) {
-        if (dyn_cast<SuperNode>(this->map_value_node[&BB])
-                ->numControlInputPort() > 1) {
-            auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
-            _bb->setNodeType(SuperNode::Mask);
-        }
+        // Here we check wether the basicblock is reached from multiple places.
+        // If it has been reached from multiple places it means it CAN have a
+        // value which is feeded from multiple places. But still we are not sure
+        // and we have to make sure that if there is PHI node whithin the
+        // basicblock.
+        // TODO: It's an uneccessary check point which we have to get ride of it
+        // latter
+        // if (dyn_cast<SuperNode>(this->map_value_node[&BB])
+        //->numControlInputPort() > 1) {
+        // auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
+        //_bb->setNodeType(SuperNode::Mask);
+        //}
 
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
@@ -721,6 +737,9 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
 
+                    // TODO: Why we are skipping reattach node?
+                    // Because you don't need to make reattachnode's connecitons
+                    // they already exist.
                     if (auto reatach = dyn_cast<ReattachNode>(_ins)) continue;
 
                     // Detect Phi instrucctions
@@ -728,13 +747,17 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         //_bb->setNodeType(SuperNode::Mask);
                         _bb->addPhiInstruction(_phi_ins);
                         _phi_ins->setParentNode(_bb);
+
+                        // Since we know that the BB has a PHI node,
+                        // we change the type to Mask
+                        _bb->setNodeType(SuperNode::Mask);
                     }
 
                     if (auto _call_node = dyn_cast<CallNode>(_ins)) {
                         _bb->addControlOutputPort(_call_node->getCallOut());
                         _call_node->setCallOutEnable(_bb);
                     } else {
-                        // Make a control edge
+                        //
                         _bb->addControlOutputPort(_ins);
                         _ins->addControlInputPort(_bb);
                     }
@@ -751,142 +774,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
 /**
  * This funciton iterates over function loops and generate loop nodes
  */
-[[deprecated("Replace by updateLoopDependencies")]] void
-GraphGeneratorPass::fillLoopDependencies(llvm::LoopInfo &loop_info) {
-    uint32_t c = 0;
-    for (auto &L : getLoops(loop_info)) {
-        LoopNode *_parent = nullptr;
-        if (L->getParentLoop()) _parent = loop_value_node[L->getParentLoop()];
-        auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)));
-
-        // Insert the loop node
-        auto _loop_node =
-            this->dependency_graph->insertLoopNode(std::move(_new_loop));
-        auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
-        auto _l_exit = dyn_cast<SuperNode>(map_value_node[L->getExitBlock()]);
-
-        // Change the type of loop head basic block
-        _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
-
-        auto _src_br_inst_it = *std::find_if(
-            _l_head->inputControl_begin(), _l_head->inputControl_end(),
-            [&L](auto const _node_it) {
-                return !L->contains(
-                    dyn_cast<BranchNode>(_node_it)->getInstruction());
-            });
-
-        _loop_node->setEnableLoopSignal(_src_br_inst_it);
-        _loop_node->setActiveOutputLoopSignal(_l_head);
-        _loop_node->setLoopEndEnable(_l_exit);
-
-        _src_br_inst_it->replaceControlOutputNode(_l_head, _loop_node);
-        _l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
-
-        // Connect the latch ending branch to loopNode
-        if (auto _latch_br = dyn_cast<BranchNode>(
-                map_value_node[&L->getLoopLatch()->back()])) {
-            auto _src_idx = _latch_br->addControlOutputPort(_loop_node);
-            _loop_node->setLoopLatchEnable(_latch_br);
-
-        } else
-            assert(!"Unexpected terminator!");
-
-        // Connecting end branch to the loop end input
-        auto _tar_exit_br_inst_it = *std::find_if(
-            _l_exit->inputControl_begin(), _l_exit->inputControl_end(),
-            [&L](auto const _node_it) {
-                return L->contains(
-                    dyn_cast<BranchNode>(_node_it)->getInstruction());
-            });
-
-        auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
-
-        _tar_exit_br_inst_it->replaceControlOutputNode(_l_exit, _loop_node);
-        _l_exit->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
-
-        // Update data dependencies
-        /**
-         * The function needs these steps:
-         * 1) Detect Live-ins
-         * 2) Insert a new Live-in into loop header
-         * 3) Update the dependencies
-         */
-        for (auto B : L->blocks()) {
-            UpdateLiveInConnections(L, _loop_node, map_value_node);
-            for (auto &I : *B) {
-                /**
-                 * The function needs these steps:
-                 * 1) Detect Live-outs
-                 * 2) Insert a new Live-outs into loop header
-                 * 3) Update the dependencies
-                 */
-                for (auto *U : I.users()) {
-                    if (!definedInRegion(
-                            SetVector<BasicBlock *>(L->blocks().begin(),
-                                                    L->blocks().end()),
-                            U)) {
-                        auto new_live_out =
-                            _loop_node->insertLiveOutArgument(U);
-
-                        auto _src = map_value_node[&I];
-                        auto _tar = map_value_node[U];
-
-                        // TODO later we need to get ride of these lines
-                        if (auto call_out = dyn_cast<CallNode>(_tar))
-                            _tar = call_out->getCallOut();
-                        if (auto call_in = dyn_cast<CallNode>(_src))
-                            _src = call_in->getCallIn();
-
-                        _src->replaceDataOutputNode(_tar, new_live_out);
-                        _tar->replaceDataInputNode(_src, new_live_out);
-                        new_live_out->addDataInputPort(_src);
-
-                        new_live_out->addDataOutputPort(_tar);
-                    }
-                }
-            }
-        }
-
-        // Increament the counter
-        c++;
-
-        // Filling the containers
-        for (auto B : L->blocks()) {
-            if (!B->empty()) {
-                _loop_node->pushSuperNode(
-                    dyn_cast<SuperNode>(map_value_node[B]));
-                for (auto &I : *B) {
-                    _loop_node->pushInstructionNode(
-                        dyn_cast<InstructionNode>(map_value_node[&I]));
-                }
-            }
-        }
-        // This function should be called after filling the containers always
-        _loop_node->setEndingInstructions();
-        for (auto _en_instruction : _loop_node->endings()) {
-            auto _en = _en_instruction->getInstruction();
-            auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
-                                                ->getParent()
-                                                ->getInstList()
-                                                .back()];
-
-            _en_instruction->addControlOutputPort(_br_ins);
-            _br_ins->addControlInputPort(_en_instruction);
-        }
-    }
-}
-
-/**
- * This funciton iterates over function loops and generate loop nodes
- */
 void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
 
     for (auto &L : getLoops(loop_info)) {
         // DEBUG
         L->getHeader()->getName();
+
         // Getting list of loop's exit basicblock
+        // Remember for loops can have multiple exit point
         SmallVector<BasicBlock *, 8> _exit_blocks;
         L->getExitBlocks(_exit_blocks);
 
@@ -899,13 +795,15 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         }
 
         // Change the type of loop head basic block
+        // Since we know that there is a backedge
         _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
 
+        // Try to find the backedge to the loop head basic block
         auto _src_br_inst_it = *std::find_if(
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto const _node_it) {
                 return !L->contains(
-                    dyn_cast<BranchNode>(_node_it)->getInstruction());
+                    dyn_cast<BranchNode>(_node_it.first)->getInstruction());
             });
 
         std::list<SuperNode *> _list_exit;
@@ -918,23 +816,22 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
             dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]), _list_exit);
 
-        // Insert the loop node
+        // Insert loop node
         auto _loop_node =
             this->dependency_graph->insertLoopNode(std::move(_new_loop));
 
         loop_value_node[&*L] = _loop_node;
 
-        _loop_node->setEnableLoopSignal(_src_br_inst_it);
+        _loop_node->setEnableLoopSignal(_src_br_inst_it.first);
         _loop_node->setActiveOutputLoopSignal(_l_head);
 
         uint32_t _index = 0;
         for (auto _l : _list_exit) {
             _loop_node->setLoopEndEnable(_l, _index++);
         }
-        //        _loop_node->setLoopEndEnable(_l_exit);
 
-        _src_br_inst_it->replaceControlOutputNode(_l_head, _loop_node);
-        _l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
+        _src_br_inst_it.first->replaceControlOutputNode(_l_head, _loop_node);
+        _l_head->replaceControlInputNode(_src_br_inst_it.first, _loop_node);
 
         // Connect the latch ending branch to loopNode
         if (auto _latch_br = dyn_cast<BranchNode>(
@@ -951,19 +848,19 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                 _le->inputControl_begin(), _le->inputControl_end(),
                 [&L](auto const _node_it) {
 
-                    if (_node_it == nullptr) return false;
+                    if (_node_it.first == nullptr) return false;
 
-                    if (dyn_cast<BranchNode>(_node_it))
+                    if (dyn_cast<BranchNode>(_node_it.first))
                         return L->contains(
-                            dyn_cast<BranchNode>(_node_it)->getInstruction());
+                            dyn_cast<BranchNode>(_node_it.first)->getInstruction());
                     else
                         return false;
                 });
 
-            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
+            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
 
-            _tar_exit_br_inst_it->replaceControlOutputNode(_le, _loop_node);
-            _le->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
+            _tar_exit_br_inst_it.first->replaceControlOutputNode(_le, _loop_node);
+            _le->replaceControlInputNode(_tar_exit_br_inst_it.first, _loop_node);
         }
 
         // Increament loop counter
@@ -1065,7 +962,7 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto const _node_it) {
                 return !L->contains(
-                    dyn_cast<BranchNode>(_node_it)->getInstruction());
+                    dyn_cast<BranchNode>(_node_it.first)->getInstruction());
             });
 
         std::list<SuperNode *> _list_exit;
@@ -1084,7 +981,7 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
 
         loop_value_node[&*L] = _loop_node;
 
-        _loop_node->setEnableLoopSignal(_src_br_inst_it);
+        _loop_node->setEnableLoopSignal(_src_br_inst_it.first);
         _loop_node->setActiveOutputLoopSignal(_l_head);
 
         uint32_t _index = 0;
@@ -1094,7 +991,7 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
 
         //_src_br_inst_it->replaceControlOutputNode(_l_head, _loop_node);
         //_l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
-        _src_br_inst_it->addControlOutputPort(_loop_node);
+        _src_br_inst_it.first->addControlOutputPort(_loop_node);
         _l_head->addControlInputPort(_loop_node);
 
         // Connect the latch ending branch to loopNode
@@ -1113,14 +1010,14 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
                 [&L](auto const _node_it) {
 
                     return L->contains(
-                        dyn_cast<BranchNode>(_node_it)->getInstruction());
+                        dyn_cast<BranchNode>(_node_it.first)->getInstruction());
                 });
 
-            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it);
+            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
 
             //_tar_exit_br_inst_it->replaceControlOutputNode(_le, _loop_node);
             //_le->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
-            _tar_exit_br_inst_it->addControlOutputPort(_loop_node);
+            _tar_exit_br_inst_it.first->addControlOutputPort(_loop_node);
             _le->addControlInputPort(_loop_node);
         }
 
@@ -1243,8 +1140,6 @@ void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     findDataPort(F);
     fillBasicBlockDependencies(F);
-
-    // fillLoopDependencies(*LI);
     updateLoopDependencies(*LI);
     connectOutToReturn(F);
     connectParalleNodes(F);

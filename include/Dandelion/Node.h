@@ -44,30 +44,6 @@ class ConstIntNode;
 class ConstFPNode;
 
 enum PrintType { Scala = 0, Dot, Json };
-
-struct DataPort {
-    std::list<Node *> data_input_port;
-    std::list<Node *> data_output_port;
-};
-
-struct ControlPort {
-    std::list<Node *> control_input_port;
-    std::list<Node *> control_output_port;
-};
-
-struct MemoryPort {
-    std::list<Node *> memory_req_port;
-    std::list<Node *> memory_resp_port;
-};
-
-struct NodeInfo {
-    uint32_t ID;
-    std::string Name;
-
-    NodeInfo(uint32_t _id, std::string _n) : ID(_id), Name(_n){};
-    NodeInfo(std::string _n, uint32_t _id) : ID(_id), Name(_n){};
-};
-
 struct PortID {
     uint32_t ID;
 
@@ -78,6 +54,31 @@ struct PortID {
     uint32_t getID() { return ID; }
 
     bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
+};
+
+using PortEntry = std::pair<Node *, PortID>;
+
+struct DataPort {
+    std::list<PortEntry> data_input_port;
+    std::list<PortEntry> data_output_port;
+};
+
+struct ControlPort {
+    std::list<PortEntry> control_input_port;
+    std::list<PortEntry> control_output_port;
+};
+
+struct MemoryPort {
+    std::list<PortEntry> memory_req_port;
+    std::list<PortEntry> memory_resp_port;
+};
+
+struct NodeInfo {
+    uint32_t ID;
+    std::string Name;
+
+    NodeInfo(uint32_t _id, std::string _n) : ID(_id), Name(_n){};
+    NodeInfo(std::string _n, uint32_t _id) : ID(_id), Name(_n){};
 };
 
 class Node {
@@ -127,14 +128,20 @@ class Node {
     PortID returnMemoryReadOutputPortIndex(Node *);
     PortID returnMemoryWriteOutputPortIndex(Node *);
 
-    virtual PortID addDataInputPort(Node *);
-    virtual PortID addDataOutputPort(Node *);
+    virtual PortID addDataInputPort(Node *node);
+    virtual PortID addDataOutputPort(Node *node);
 
-    PortID addControlInputPort(Node *);
-    PortID addControlOutputPort(Node *);
+    virtual PortID addDataInputPort(Node *node, uint32_t id);
+    virtual PortID addDataOutputPort(Node *node, uint32_t id);
 
-    bool existControlInput(Node *);
-    bool existControlOutput(Node *);
+    PortID addControlInputPort(Node *node);
+    PortID addControlOutputPort(Node *node);
+
+    PortID addControlInputPort(Node *node, uint32_t id);
+    PortID addControlOutputPort(Node *node, uint32_t id);
+
+    bool existControlInput(Node *node);
+    bool existControlOutput(Node *node);
 
     bool existDataInput(Node *);
     bool existDataOutput(Node *);
@@ -175,10 +182,10 @@ class Node {
         return write_port_data.memory_resp_port.size();
     }
 
-    std::list<Node *>::iterator findDataInputNode(Node *);
-    std::list<Node *>::iterator findDataOutputNode(Node *);
-    std::list<Node *>::iterator findControlInputNode(Node *);
-    std::list<Node *>::iterator findControlOutputNode(Node *);
+    std::list<PortEntry>::iterator findDataInputNode(Node *);
+    std::list<PortEntry>::iterator findDataOutputNode(Node *);
+    std::list<PortEntry>::iterator findControlInputNode(Node *);
+    std::list<PortEntry>::iterator findControlOutputNode(Node *);
 
     void removeNodeDataInputNode(Node *);
     void removeNodeDataOutputNode(Node *);
@@ -254,34 +261,37 @@ class Node {
      * Adding a node to a specific index of control input port
      */
     void addControlInputPortIndex(Node *_n, uint32_t _id) {
-        if (port_control.control_input_port.size() == _id)
-            port_control.control_input_port.push_back(_n);
-        else if (port_control.control_input_port.size() < _id) {
-            port_control.control_input_port.resize(_id);
-            port_control.control_input_port.push_back(_n);
-        }
+        port_control.control_input_port.push_back(std::make_pair(_n, _id));
 
-        auto it = port_control.control_input_port.begin();
-        std::advance(it, _id);
-        std::replace(port_control.control_input_port.begin(),
-                     port_control.control_input_port.end(), *it, _n);
+        // if (port_control.control_input_port.size() == _id)
+        // port_control.control_input_port.push_back(_n);
+        // else if (port_control.control_input_port.size() < _id) {
+        // port_control.control_input_port.resize(_id);
+        // port_control.control_input_port.push_back(_n);
+        //}
+
+        // auto it = port_control.control_input_port.begin();
+        // std::advance(it, _id);
+        // std::replace(port_control.control_input_port.begin(),
+        // port_control.control_input_port.end(), *it, _n);
     }
 
     /**
      * Adding a node to a specific index of control output port
      */
     void addControlOutputPortIndex(Node *_n, uint32_t _id) {
-        if (port_control.control_output_port.size() == _id)
-            port_control.control_output_port.push_back(_n);
-        else if (port_control.control_output_port.size() < _id) {
-            port_control.control_output_port.resize(_id);
-            port_control.control_output_port.push_back(_n);
-        }
+        port_control.control_output_port.push_back(std::make_pair(_n, _id));
+        // if (port_control.control_output_port.size() == _id)
+        // port_control.control_output_port.push_back(_n);
+        // else if (port_control.control_output_port.size() < _id) {
+        // port_control.control_output_port.resize(_id);
+        // port_control.control_output_port.push_back(_n);
+        //}
 
-        auto it = port_control.control_output_port.begin();
-        std::advance(it, _id);
-        std::replace(port_control.control_output_port.begin(),
-                     port_control.control_output_port.end(), *it, _n);
+        // auto it = port_control.control_output_port.begin();
+        // std::advance(it, _id);
+        // std::replace(port_control.control_output_port.begin(),
+        // port_control.control_output_port.end(), *it, _n);
     }
 
    public:
@@ -613,8 +623,8 @@ class LoopNode : public ContainerNode {
           exit_node(std::list<SuperNode *>()),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        resizeControlInputPort(LOOPCONTROL);
-        resizeControlOutputPort(LOOPCONTROL);
+        //resizeControlInputPort(LOOPCONTROL);
+        //resizeControlOutputPort(LOOPCONTROL);
     }
 
     explicit LoopNode(NodeInfo _nf, LoopNode *_p_l, SuperNode *_hnode,
@@ -625,11 +635,11 @@ class LoopNode : public ContainerNode {
           latch_node(_lnode),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        resizeControlInputPort(LOOPCONTROL);
-        resizeControlOutputPort(LOOPCONTROL);
+        //resizeControlInputPort(LOOPCONTROL);
+        //resizeControlOutputPort(LOOPCONTROL);
     }
-    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode,
-                      SuperNode *_lnode, std::list<SuperNode *> _ex)
+    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode, SuperNode *_lnode,
+                      std::list<SuperNode *> _ex)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
           parent_loop(nullptr),
           head_node(_hnode),
@@ -637,11 +647,9 @@ class LoopNode : public ContainerNode {
           exit_node(_ex),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        resizeControlInputPort(LOOPCONTROL);
-        resizeControlOutputPort(LOOPCONTROL);
+        //resizeControlInputPort(LOOPCONTROL);
+        //resizeControlOutputPort(LOOPCONTROL);
     }
-
-
 
     auto getParentLoopNode() { return parent_loop; }
     void setOuterLoop() { outer_loop = true; }
@@ -1290,15 +1298,15 @@ class ConstIntNode : public Node {
     int value;
 
    public:
-    //Else part handels Undef cases.
-    //We pass nullptr to ConstIntNode when the operand type is
-    //undef
+    // Else part handels Undef cases.
+    // We pass nullptr to ConstIntNode when the operand type is
+    // undef
     ConstIntNode(NodeInfo _ni, llvm::ConstantInt *_cint = nullptr)
         : Node(Node::ConstIntTy, _ni), parent_const_int(_cint) {
-            if(parent_const_int)
-                value = parent_const_int->getSExtValue();
-            else
-                value = 0;
+        if (parent_const_int)
+            value = parent_const_int->getSExtValue();
+        else
+            value = 0;
     }
 
     // Define classof function so that we can use dyn_cast function
@@ -1387,12 +1395,14 @@ class DetachNode : public InstructionNode {
 };
 
 class ReattachNode : public InstructionNode {
-    private:
-        bool ground;
+   private:
+    bool ground;
+
    public:
     ReattachNode(NodeInfo _ni, llvm::ReattachInst *_ins = nullptr,
                  NodeType _nd = UnkonwTy)
-        : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins), ground(false) {}
+        : InstructionNode(_ni, InstructionNode::ReattachInstructionTy, _ins),
+          ground(false) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::ReattachInstructionTy;
