@@ -1409,6 +1409,7 @@ class SextNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 

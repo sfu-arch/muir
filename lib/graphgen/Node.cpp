@@ -2312,6 +2312,23 @@ std::string SextNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
+
+std::string SextNode::printInputData(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.Input";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
 std::string SextNode::printOutputData(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());

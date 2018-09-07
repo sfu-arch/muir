@@ -412,7 +412,8 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     if (src_type->isStructTy()) {
         map_value_node[&I] = this->dependency_graph->insertGepNode(
             I, gep_pass_ctx.GepStruct[&I]);
-    } else if (src_type->isArrayTy() || src_type->isIntegerTy()) {
+    } else if (src_type->isArrayTy() || src_type->isIntegerTy() ||
+               src_type->isDoubleTy() || src_type->isFloatTy()) {
         map_value_node[&I] =
             this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepArray[&I]);
     } else
@@ -855,16 +856,19 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                     if (_node_it.first == nullptr) return false;
 
                     if (dyn_cast<BranchNode>(_node_it.first))
-                        return L->contains(
-                            dyn_cast<BranchNode>(_node_it.first)->getInstruction());
+                        return L->contains(dyn_cast<BranchNode>(_node_it.first)
+                                               ->getInstruction());
                     else
                         return false;
                 });
 
-            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
+            auto _src_idx =
+                _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
 
-            _tar_exit_br_inst_it.first->replaceControlOutputNode(_le, _loop_node);
-            _le->replaceControlInputNode(_tar_exit_br_inst_it.first, _loop_node);
+            _tar_exit_br_inst_it.first->replaceControlOutputNode(_le,
+                                                                 _loop_node);
+            _le->replaceControlInputNode(_tar_exit_br_inst_it.first,
+                                         _loop_node);
         }
 
         // Increament loop counter
@@ -1017,7 +1021,8 @@ void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
                         dyn_cast<BranchNode>(_node_it.first)->getInstruction());
                 });
 
-            auto _src_idx = _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
+            auto _src_idx =
+                _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
 
             //_tar_exit_br_inst_it->replaceControlOutputNode(_le, _loop_node);
             //_le->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
