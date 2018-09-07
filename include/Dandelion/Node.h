@@ -623,8 +623,8 @@ class LoopNode : public ContainerNode {
           exit_node(std::list<SuperNode *>()),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        //resizeControlInputPort(LOOPCONTROL);
-        //resizeControlOutputPort(LOOPCONTROL);
+        // resizeControlInputPort(LOOPCONTROL);
+        // resizeControlOutputPort(LOOPCONTROL);
     }
 
     explicit LoopNode(NodeInfo _nf, LoopNode *_p_l, SuperNode *_hnode,
@@ -635,8 +635,8 @@ class LoopNode : public ContainerNode {
           latch_node(_lnode),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        //resizeControlInputPort(LOOPCONTROL);
-        //resizeControlOutputPort(LOOPCONTROL);
+        // resizeControlInputPort(LOOPCONTROL);
+        // resizeControlOutputPort(LOOPCONTROL);
     }
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode, SuperNode *_lnode,
                       std::list<SuperNode *> _ex)
@@ -647,8 +647,8 @@ class LoopNode : public ContainerNode {
           exit_node(_ex),
           outer_loop(false) {
         // Set the size of control input prot to at least two
-        //resizeControlInputPort(LOOPCONTROL);
-        //resizeControlOutputPort(LOOPCONTROL);
+        // resizeControlInputPort(LOOPCONTROL);
+        // resizeControlOutputPort(LOOPCONTROL);
     }
 
     auto getParentLoopNode() { return parent_loop; }
@@ -1331,7 +1331,7 @@ class ConstFPNode : public Node {
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
         : Node(Node::ConstFPTy, _ni), parent_const_fp(_cfp) {
-        value.f = parent_const_fp->getValueAPF().convertToFloat();
+        value.f = parent_const_fp->getValueAPF().convertToDouble();
     }
 
     // Define classof function so that we can use dyn_cast function
@@ -1392,6 +1392,24 @@ class DetachNode : public InstructionNode {
     // virtual std::string printOutputData(PrintType, uint32_t) override;
     // virtual std::string printOutputData(PrintType) override;
     // virtual std::string printInputData(PrintType, uint32_t) override;
+};
+
+class SextNode : public InstructionNode {
+   public:
+    SextNode(NodeInfo _ni, llvm::SExtInst *_ins = nullptr,
+             NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::SextInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::SextInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
 class ReattachNode : public InstructionNode {

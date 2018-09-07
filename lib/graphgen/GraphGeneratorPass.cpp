@@ -380,6 +380,10 @@ void GraphGeneratorPass::visitFCmp(llvm::FCmpInst &I) {
     map_value_node[&I] = this->dependency_graph->insertFcmpNode(I);
 }
 
+void GraphGeneratorPass::visitSExtInst(llvm::SExtInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertSextNode(I);
+}
+
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();

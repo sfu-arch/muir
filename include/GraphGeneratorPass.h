@@ -75,6 +75,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void visitStoreInst(llvm::StoreInst &);
     void visitReturnInst(llvm::ReturnInst &);
     void visitCallInst(llvm::CallInst &);
+    void visitSExtInst(llvm::SExtInst &);
 
     void visitFAdd(llvm::BinaryOperator &);
     void visitFDiv(llvm::BinaryOperator &);

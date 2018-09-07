@@ -1,4 +1,4 @@
-#define DEBUG_TYPE "data_common"
+#define DEBUG_TYPE "helpers"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Passes.h"
@@ -410,9 +410,6 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     assert(I.getNumOperands() <= 3 &&
            "Gep with more than 2 operand is not supported");
 
-    // Dumping the instruction
-    DEBUG(I.print(errs(), true));
-
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
     uint32_t numByte = 0;
@@ -461,7 +458,18 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
                 &I, common::GepArrayInfo(DL.getTypeAllocSize(src_integer_type),
                                          1)));
 
+    } else if (src_type->isDoubleTy()) {
+        auto src_double_type = dyn_cast<llvm::Type>(src_type);
+        this->GepArray.insert(
+            std::pair<llvm::Instruction *, common::GepArrayInfo>(
+                &I,
+                common::GepArrayInfo(DL.getTypeAllocSize(src_double_type), 1)));
+
     } else {
+        // Dumping the instruction
+        DEBUG(errs() << PURPLE("[DEBUG] "));
+        DEBUG(I.print(errs(), true));
+        DEBUG(errs() << "\n");
         DEBUG(src_type->print(errs(), true));
         assert(!"GepInformation pass doesn't support this type of input");
     }
@@ -662,7 +670,6 @@ bool helpers::helperReplace(std::string &str, const std::string &from,
     return _ret;
 }
 
-
 bool helpers::helperReplace(std::string &str, const std::string &from,
                             const int to) {
     assert(!from.compare(0, 1, "$") && "Replace string should start with $!");
@@ -695,9 +702,8 @@ bool CallInstSpliter::runOnModule(Module &M) {
             auto _bb = _call->getParent();
             if (_call != &_bb->back() &&
                 !(isa<llvm::BranchInst>(_call->getNextNode()) ||
-                 isa<llvm::ReattachInst>(_call->getNextNode()))) {
-                auto _new_bb =
-                    _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
+                  isa<llvm::ReattachInst>(_call->getNextNode()))) {
+                _bb->splitBasicBlock(_call->getNextNode(), "bb_contine");
             }
         }
     }

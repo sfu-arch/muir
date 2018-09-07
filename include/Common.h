@@ -19,33 +19,41 @@
 #include <sstream>
 #include <string>
 
-#define WARNING(x)                                             \
-    do {                                                       \
-        std::cout << "\033[1;31m[WARNING] \033[0m"             \
-                  << "\033[1;33m" << x <<" \033[0m" << std::endl; \
+#define WARNING(x)                                                 \
+    do {                                                           \
+        std::cout << "\033[1;31m[WARNING] \033[0m"                 \
+                  << "\033[1;33m" << x << " \033[0m" << std::endl; \
     } while (0)
+
+#define ASSERTION(x)                             \
+    do {                                         \
+        std::cout << "\033[1;35m" << x << "\033[0m"; \
+    } while (0)  //<< "\033[1;33m" << x << " \033[0m" << std::endl; \
+    } while (0)
+
+#define PURPLE(x) "\033[1;35m" << x << "\033[0m";
+
 
 using namespace std;
 using namespace llvm;
 
 namespace common {
 
-
 /**
  * Implimentaiton of FloatingPointIEEE754
  */
 union FloatingPointIEEE754 {
-    struct ieee754{
-        ieee754():mantissa(0), exponent(0), sign(0){}
-        unsigned int mantissa: 23;
-        unsigned int exponent: 8;
-        unsigned int sign: 1;
+    struct ieee754 {
+        ieee754() : mantissa(0), exponent(0), sign(0) {}
+        unsigned int mantissa : 23;
+        unsigned int exponent : 8;
+        unsigned int sign : 1;
     };
     ieee754 raw;
     unsigned int bits;
     float f;
 
-    FloatingPointIEEE754():f(0){}
+    FloatingPointIEEE754() : f(0) {}
 };
 
 // Structures
@@ -297,11 +305,12 @@ class InstCounter : public llvm::ModulePass {
     }
 };
 
-class CallInstSpliter: public ModulePass, public InstVisitor<CallInstSpliter> {
+class CallInstSpliter : public ModulePass, public InstVisitor<CallInstSpliter> {
     friend class InstVisitor<CallInstSpliter>;
-    private:
 
+   private:
     llvm::SmallVector<llvm::CallInst *, 10> call_container;
+
    public:
     static char ID;
 
@@ -309,7 +318,8 @@ class CallInstSpliter: public ModulePass, public InstVisitor<CallInstSpliter> {
     llvm::StringRef function_name;
 
     CallInstSpliter() : llvm::ModulePass(ID), function_name("") {}
-    CallInstSpliter(llvm::StringRef fn) : llvm::ModulePass(ID), function_name(fn) {}
+    CallInstSpliter(llvm::StringRef fn)
+        : llvm::ModulePass(ID), function_name(fn) {}
 
     bool doInitialization(llvm::Module &) override;
     bool doFinalization(llvm::Module &) override;
@@ -321,7 +331,6 @@ class CallInstSpliter: public ModulePass, public InstVisitor<CallInstSpliter> {
 
     void visitCallInst(llvm::CallInst &Inst);
 };
-
 }
 
 #endif

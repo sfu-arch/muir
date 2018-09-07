@@ -183,6 +183,8 @@ class Graph {
     ConstIntNode *insertConstIntNode(llvm::ConstantInt &);
     ConstIntNode *insertConstIntNode();
 
+    InstructionNode *insertSextNode(llvm::SExtInst &);
+
     InstructionNode *insertFaddNode(llvm::BinaryOperator &);
     InstructionNode *insertFdiveNode(llvm::BinaryOperator &);
     InstructionNode *insertFcmpNode(llvm::FCmpInst &);

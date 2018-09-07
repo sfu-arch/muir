@@ -1275,6 +1275,23 @@ ConstIntNode *Graph::insertConstIntNode() {
     return const_int_list.back().get();
 }
 
+
+/**
+ * Insert a new sext node
+ */
+InstructionNode *Graph::insertSextNode(SExtInst& I) {
+    inst_list.push_back(std::make_unique<SextNode>(
+        NodeInfo(inst_list.size(),
+                 "sext" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
 /**
  * Insert a new const node
  */
