@@ -1042,8 +1042,8 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
-                                      GepArrayInfo _info) {
-    inst_list.push_back(std::make_unique<GepArrayNode>(
+                                      GepInfo _info) {
+    inst_list.push_back(std::make_unique<GepNode>(
         NodeInfo(inst_list.size(),
                  "Gep_" + I.getName().str() + to_string(inst_list.size())),
         _info, &I));
@@ -1054,21 +1054,39 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
     return ff->get();
 }
 
+
+
 /**
  * Insert a new GEP node
  */
-InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
-                                      GepStructInfo _info) {
-    inst_list.push_back(std::make_unique<GepStructNode>(
-        NodeInfo(inst_list.size(),
-                 "Gep" + I.getName().str() + to_string(inst_list.size())),
-        _info, &I));
+//InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
+                                      //GepArrayInfo _info) {
+    //inst_list.push_back(std::make_unique<GepArrayNode>(
+        //NodeInfo(inst_list.size(),
+                 //"Gep_" + I.getName().str() + to_string(inst_list.size())),
+        //_info, &I));
 
-    auto ff = std::find_if(
-        inst_list.begin(), inst_list.end(),
-        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-    return ff->get();
-}
+    //auto ff = std::find_if(
+        //inst_list.begin(), inst_list.end(),
+        //[&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    //return ff->get();
+//}
+
+/**
+ * Insert a new GEP node
+ */
+//InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
+                                      //GepStructInfo _info) {
+    //inst_list.push_back(std::make_unique<GepStructNode>(
+        //NodeInfo(inst_list.size(),
+                 //"gep" + I.getName().str() + to_string(inst_list.size())),
+        //_info, &I));
+
+    //auto ff = std::find_if(
+        //inst_list.begin(), inst_list.end(),
+        //[&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    //return ff->get();
+//}
 
 /**
  * Insert a new Bitcast node

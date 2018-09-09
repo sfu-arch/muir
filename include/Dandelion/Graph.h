@@ -16,8 +16,7 @@
 #include "Dandelion/Node.h"
 #include "iterator_range.h"
 
-using common::GepArrayInfo;
-using common::GepStructInfo;
+using common::GepInfo;
 
 namespace dandelion {
 
@@ -168,8 +167,10 @@ class Graph {
     InstructionNode *insertSelectNode(llvm::SelectInst &);
     InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
-    InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
-    InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
+    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
+    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
+    InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepInfo);
+
 
     InstructionNode *insertLoadNode(llvm::LoadInst &);
     InstructionNode *insertStoreNode(llvm::StoreInst &);

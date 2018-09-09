@@ -56,35 +56,6 @@ union FloatingPointIEEE754 {
 };
 
 // Structures
-struct GepOne {
-    int64_t index;
-    int64_t numByte;
-};
-
-struct GepTwo {
-    int64_t index1;
-    int64_t numByte1;
-    int64_t index2;
-    int64_t numByte2;
-};
-
-struct GepArrayInfo {
-    uint32_t array_size;
-    uint32_t length;
-
-    GepArrayInfo(uint32_t _size, uint32_t _l) : array_size(_size), length(_l) {}
-    GepArrayInfo() : array_size(0), length(0) {}
-};
-
-struct GepStructInfo {
-    std::vector<uint32_t> element_size;
-
-    GepStructInfo() { element_size.clear(); }
-
-    GepStructInfo(std::vector<uint32_t> _input_elements)
-        : element_size(_input_elements) {}
-};
-
 struct GepInfo {
     uint32_t overall_size;
     std::vector<uint32_t> element_size;
@@ -230,44 +201,6 @@ class LabelUID : public FunctionPass, public InstVisitor<LabelUID> {
     }
 };
 
-class GEPAddrCalculation : public ModulePass,
-                           public InstVisitor<GEPAddrCalculation> {
-    friend class InstVisitor<GEPAddrCalculation>;
-
-    void visitGetElementPtrInst(llvm::GetElementPtrInst &I);
-    void visitSExtInst(Instruction &I);
-
-    map<Value *, uint64_t> values;
-    uint64_t counter;
-
-   public:
-    static char ID;
-
-    // Gep containers
-    std::map<llvm::Instruction *, common::GepOne> SingleGepIns;
-    std::map<llvm::Instruction *, common::GepTwo> TwoGepIns;
-
-    // Function name
-    llvm::StringRef function_name;
-
-    GEPAddrCalculation(llvm::StringRef FN)
-        : ModulePass(ID), counter(0), function_name(FN) {}
-
-    bool doInitialization(Module &) override {
-        counter = 0;
-        values.clear();
-        return false;
-    };
-
-    bool doFinalization(Module &) override { return true; };
-
-    bool runOnModule(Module &) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-        AU.setPreservesAll();
-    }
-};
-
 class GepInformation : public ModulePass, public InstVisitor<GepInformation> {
     friend class InstVisitor<GepInformation>;
 
@@ -277,8 +210,6 @@ class GepInformation : public ModulePass, public InstVisitor<GepInformation> {
     static char ID;
 
     // Gep containers
-    std::map<llvm::Instruction *, common::GepStructInfo> GepStruct;
-    std::map<llvm::Instruction *, common::GepArrayInfo> GepArray;
     std::map<llvm::Instruction *, common::GepInfo> GepAddress;
 
     // Function name

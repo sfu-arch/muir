@@ -1,7 +1,7 @@
 add_subdirectory(memalias)
 add_subdirectory(lx)
 add_subdirectory(common)
-add_subdirectory(codegen)
+#add_subdirectory(codegen)
 add_subdirectory(gepsplitter-inst)
 add_subdirectory(graphgen)
 add_subdirectory(parser)

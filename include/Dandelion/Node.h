@@ -20,8 +20,7 @@
 
 using namespace llvm;
 using common::FloatingPointIEEE754;
-using common::GepArrayInfo;
-using common::GepStructInfo;
+using common::GepInfo;
 
 namespace dandelion {
 
@@ -754,6 +753,7 @@ class InstructionNode : public Node {
         AllocaInstructionTy,
         GetElementPtrArrayInstTy,
         GetElementPtrStructInstTy,
+        GetElementPtrInstTy,
         LoadInstructionTy,
         StoreInstructionTy,
         SextInstructionTy,
@@ -1037,21 +1037,77 @@ class AllocaNode : public InstructionNode {
     std::string printOffset(PrintType);
 };
 
-class GepArrayNode : public InstructionNode {
+//class GepArrayNode : public InstructionNode {
+   //private:
+    //GepArrayInfo gep_info;
+
+   //public:
+    //explicit GepArrayNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
+        //: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
+                          //_ins) {}
+    //explicit GepArrayNode(NodeInfo _ni, GepArrayInfo _info,
+                          //llvm::GetElementPtrInst *_ins = nullptr)
+        //: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
+          //gep_info(_info) {}
+
+    //static bool classof(const InstructionNode *T) {
+        //return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
+    //}
+    //static bool classof(const Node *T) {
+        //return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    //}
+
+    //virtual std::string printDefinition(PrintType) override;
+    //virtual std::string printInputEnable(PrintType) override;
+    //virtual std::string printInputEnable(PrintType, uint32_t) override;
+    //virtual std::string printInputData(PrintType, uint32_t) override;
+    //virtual std::string printOutputData(PrintType, uint32_t) override;
+//};
+
+//class GepStructNode : public InstructionNode {
+   //private:
+    //GepStructInfo gep_info;
+
+   //public:
+    //explicit GepStructNode(NodeInfo _ni,
+                           //llvm::GetElementPtrInst *_ins = nullptr)
+        //: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
+                          //_ins) {}
+    //explicit GepStructNode(NodeInfo _ni, GepStructInfo _info,
+                           //llvm::GetElementPtrInst *_ins = nullptr)
+        //: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
+          //gep_info(_info) {}
+
+    //static bool classof(const InstructionNode *T) {
+        //return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
+    //}
+    //static bool classof(const Node *T) {
+        //return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    //}
+
+    //virtual std::string printDefinition(PrintType) override;
+    //virtual std::string printInputEnable(PrintType) override;
+    //virtual std::string printInputEnable(PrintType, uint32_t) override;
+    //virtual std::string printInputData(PrintType, uint32_t) override;
+    //virtual std::string printOutputData(PrintType, uint32_t) override;
+//};
+
+class GepNode : public InstructionNode {
    private:
-    GepArrayInfo gep_info;
+    GepInfo gep_info;
 
    public:
-    explicit GepArrayNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
+    explicit GepNode(NodeInfo _ni,
+                           llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy,
                           _ins) {}
-    explicit GepArrayNode(NodeInfo _ni, GepArrayInfo _info,
-                          llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
+    explicit GepNode(NodeInfo _ni, common::GepInfo _info,
+                           llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins),
           gep_info(_info) {}
 
     static bool classof(const InstructionNode *T) {
-        return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
+        return T->getOpCode() == InstructionNode::GetElementPtrInstTy;
     }
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
@@ -1064,33 +1120,8 @@ class GepArrayNode : public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
-class GepStructNode : public InstructionNode {
-   private:
-    GepStructInfo gep_info;
 
-   public:
-    explicit GepStructNode(NodeInfo _ni,
-                           llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
-                          _ins) {}
-    explicit GepStructNode(NodeInfo _ni, GepStructInfo _info,
-                           llvm::GetElementPtrInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
-          gep_info(_info) {}
 
-    static bool classof(const InstructionNode *T) {
-        return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
-    }
-    static bool classof(const Node *T) {
-        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
-    }
-
-    virtual std::string printDefinition(PrintType) override;
-    virtual std::string printInputEnable(PrintType) override;
-    virtual std::string printInputEnable(PrintType, uint32_t) override;
-    virtual std::string printInputData(PrintType, uint32_t) override;
-    virtual std::string printOutputData(PrintType, uint32_t) override;
-};
 
 class LoadNode : public InstructionNode {
    private:
