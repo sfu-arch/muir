@@ -25,14 +25,13 @@
                   << "\033[1;33m" << x << " \033[0m" << std::endl; \
     } while (0)
 
-#define ASSERTION(x)                             \
-    do {                                         \
+#define ASSERTION(x)                                 \
+    do {                                             \
         std::cout << "\033[1;35m" << x << "\033[0m"; \
     } while (0)  //<< "\033[1;33m" << x << " \033[0m" << std::endl; \
     } while (0)
 
 #define PURPLE(x) "\033[1;35m" << x << "\033[0m";
-
 
 using namespace std;
 using namespace llvm;
@@ -84,6 +83,18 @@ struct GepStructInfo {
 
     GepStructInfo(std::vector<uint32_t> _input_elements)
         : element_size(_input_elements) {}
+};
+
+struct GepInfo {
+    uint32_t overall_size;
+    std::vector<uint32_t> element_size;
+
+    GepInfo() : overall_size(0) { element_size.clear(); }
+
+    GepInfo(std::vector<uint32_t> _input_elements)
+        : element_size(_input_elements) {
+        overall_size = _input_elements.back();
+    }
 };
 
 // Functions
@@ -268,6 +279,7 @@ class GepInformation : public ModulePass, public InstVisitor<GepInformation> {
     // Gep containers
     std::map<llvm::Instruction *, common::GepStructInfo> GepStruct;
     std::map<llvm::Instruction *, common::GepArrayInfo> GepArray;
+    std::map<llvm::Instruction *, common::GepInfo> GepAddress;
 
     // Function name
     llvm::StringRef function_name;

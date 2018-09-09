@@ -407,43 +407,29 @@ char GepInformation::ID = 0;
 }
 
 void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    assert(I.getNumOperands() <= 3 &&
-           "Gep with more than 2 operand is not supported");
-
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
     uint32_t numByte = 0;
     uint64_t start_align = 0;
     uint64_t end_align = 0;
+    std::vector<uint32_t> tmp_align = {0};
 
     auto src_type = I.getSourceElementType();
+
     if (src_type->isStructTy()) {
         auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
-        std::vector<uint32_t> tmp_align = {0};
         for (auto _element : src_struct_type->elements()) {
             tmp_align.push_back(tmp_align.back() +
                                 DL.getTypeAllocSize(_element));
         }
 
-        // this->GepStruct[&I] = tmp_align;
-        this->GepStruct.insert(
-            std::pair<llvm::Instruction *, std::vector<uint32_t>>(&I,
-                                                                  tmp_align));
-
-        DEBUG(
-            std::copy(tmp_align.begin(), tmp_align.end(),
-                      std::experimental::make_ostream_joiner(std::cout, ", ")));
-        DEBUG(std::cout << "\n");
-        DEBUG(errs() << DL.getTypeAllocSize(src_type) << "\n");
+        assert(DL.getTypeAllocSize(src_type) == tmp_align.back() &&
+               "Allocated size should be equal to summation of elements");
 
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
-        this->GepArray.insert(
-            std::pair<llvm::Instruction *, common::GepArrayInfo>(
-                &I,
-                common::GepArrayInfo(
-                    DL.getTypeAllocSize(src_array_type->getArrayElementType()),
-                    src_array_type->getNumElements())));
+        tmp_align.push_back(DL.getTypeAllocSize(src_array_type->getArrayElementType()));
+        tmp_align.push_back(DL.getTypeAllocSize(src_type));
 
         DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
         DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
@@ -451,19 +437,8 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
             errs() << "Num byte: "
                    << DL.getTypeAllocSize(src_array_type->getArrayElementType())
                    << "\n");
-    } else if (src_type->isIntegerTy()) {
-        auto src_integer_type = dyn_cast<llvm::IntegerType>(src_type);
-        this->GepArray.insert(
-            std::pair<llvm::Instruction *, common::GepArrayInfo>(
-                &I, common::GepArrayInfo(DL.getTypeAllocSize(src_integer_type),
-                                         1)));
-
-    } else if (src_type->isDoubleTy()) {
-        auto src_double_type = dyn_cast<llvm::Type>(src_type);
-        this->GepArray.insert(
-            std::pair<llvm::Instruction *, common::GepArrayInfo>(
-                &I,
-                common::GepArrayInfo(DL.getTypeAllocSize(src_double_type), 1)));
+    } else if (src_type->isIntegerTy() || src_type->isDoubleTy() || src_type->isFloatTy()) {
+        tmp_align.push_back(DL.getTypeAllocSize(src_type));
 
     } else {
         // Dumping the instruction
@@ -473,7 +448,84 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         DEBUG(src_type->print(errs(), true));
         assert(!"GepInformation pass doesn't support this type of input");
     }
+
+    this->GepAddress.insert(
+        std::pair<llvm::Instruction *, std::vector<uint32_t>>(&I, tmp_align));
+
+    DEBUG(std::copy(tmp_align.begin(), tmp_align.end(),
+                    std::experimental::make_ostream_joiner(std::cout, ", ")));
+    DEBUG(std::cout << "\n");
+    DEBUG(errs() << DL.getTypeAllocSize(src_type) << "\n");
 }
+
+// void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
+// assert(I.getNumOperands() <= 3 &&
+//"Gep with more than 2 operand is not supported");
+
+//// Getting datalayout
+// auto DL = I.getModule()->getDataLayout();
+// uint32_t numByte = 0;
+// uint64_t start_align = 0;
+// uint64_t end_align = 0;
+
+// auto src_type = I.getSourceElementType();
+// if (src_type->isStructTy()) {
+// auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+// std::vector<uint32_t> tmp_align = {0};
+// for (auto _element : src_struct_type->elements()) {
+// tmp_align.push_back(tmp_align.back() +
+// DL.getTypeAllocSize(_element));
+//}
+
+//// this->GepStruct[&I] = tmp_align;
+// this->GepStruct.insert(
+// std::pair<llvm::Instruction *, std::vector<uint32_t>>(&I,
+// tmp_align));
+
+// DEBUG(
+// std::copy(tmp_align.begin(), tmp_align.end(),
+// std::experimental::make_ostream_joiner(std::cout, ", ")));
+// DEBUG(std::cout << "\n");
+// DEBUG(errs() << DL.getTypeAllocSize(src_type) << "\n");
+
+//} else if (src_type->isArrayTy()) {
+// auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+// this->GepArray.insert(
+// std::pair<llvm::Instruction *, common::GepArrayInfo>(
+//&I,
+// common::GepArrayInfo(
+// DL.getTypeAllocSize(src_array_type->getArrayElementType()),
+// src_array_type->getNumElements())));
+
+// DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
+// DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
+// DEBUG(
+// errs() << "Num byte: "
+//<< DL.getTypeAllocSize(src_array_type->getArrayElementType())
+//<< "\n");
+//} else if (src_type->isIntegerTy()) {
+// auto src_integer_type = dyn_cast<llvm::IntegerType>(src_type);
+// this->GepArray.insert(
+// std::pair<llvm::Instruction *, common::GepArrayInfo>(
+//&I, common::GepArrayInfo(DL.getTypeAllocSize(src_integer_type),
+// 1)));
+
+//} else if (src_type->isDoubleTy()) {
+// auto src_double_type = dyn_cast<llvm::Type>(src_type);
+// this->GepArray.insert(
+// std::pair<llvm::Instruction *, common::GepArrayInfo>(
+//&I,
+// common::GepArrayInfo(DL.getTypeAllocSize(src_double_type), 1)));
+
+//} else {
+//// Dumping the instruction
+// DEBUG(errs() << PURPLE("[DEBUG] "));
+// DEBUG(I.print(errs(), true));
+// DEBUG(errs() << "\n");
+// DEBUG(src_type->print(errs(), true));
+// assert(!"GepInformation pass doesn't support this type of input");
+//}
+//}
 
 bool GepInformation::runOnModule(Module &M) {
     for (auto &ff : M) {
