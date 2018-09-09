@@ -1394,6 +1394,9 @@ class DetachNode : public InstructionNode {
     // virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
+/**
+ * SextNode
+ */
 class SextNode : public InstructionNode {
    public:
     SextNode(NodeInfo _ni, llvm::SExtInst *_ins = nullptr,
@@ -1412,6 +1415,30 @@ class SextNode : public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
+
+/**
+ * Zero extension node
+ */
+class ZextNode: public InstructionNode {
+   public:
+    ZextNode(NodeInfo _ni, llvm::ZExtInst *_ins = nullptr,
+             NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::ZextInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::ZextInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
+
 
 class ReattachNode : public InstructionNode {
    private:

@@ -184,6 +184,7 @@ class Graph {
     ConstIntNode *insertConstIntNode();
 
     InstructionNode *insertSextNode(llvm::SExtInst &);
+    InstructionNode *insertZextNode(llvm::ZExtInst &);
 
     InstructionNode *insertFaddNode(llvm::BinaryOperator &);
     InstructionNode *insertFdiveNode(llvm::BinaryOperator &);

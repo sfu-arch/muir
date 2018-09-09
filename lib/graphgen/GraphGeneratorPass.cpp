@@ -344,6 +344,7 @@ void GraphGeneratorPass::visitInstruction(Instruction &Ins) {
             this->dependency_graph->insertSyncNode(*_sync_ins);
     else {
         Ins.print(errs(), true);
+        errs() << "\n";
         assert(!"Instruction is not supported");
     }
 }
@@ -382,6 +383,10 @@ void GraphGeneratorPass::visitFCmp(llvm::FCmpInst &I) {
 
 void GraphGeneratorPass::visitSExtInst(llvm::SExtInst &I) {
     map_value_node[&I] = this->dependency_graph->insertSextNode(I);
+}
+
+void GraphGeneratorPass::visitZExtInst(llvm::ZExtInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertZextNode(I);
 }
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
