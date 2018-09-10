@@ -413,7 +413,7 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     auto &gep_pass_ctx = getAnalysis<helpers::GepInformation>();
 
-    if(gep_pass_ctx.GepAddress.count(&I)){
+    if(gep_pass_ctx.GepAddress.count(&I) == 0){
         I.dump();
         assert(!"No gep information");
     }
@@ -421,7 +421,7 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     auto src_type = I.getSourceElementType();
     map_value_node[&I] =
         this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepAddress[&I]);
-    if (map_value_node.count(&I)) {
+    if (map_value_node.count(&I) == 0) {
         I.dump();
         assert(!"Gep node is not picked up!!");
     }
