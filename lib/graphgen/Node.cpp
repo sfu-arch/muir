@@ -6,6 +6,7 @@
 #include "Dandelion/Node.h"
 
 #include <algorithm>
+#include <experimental/iterator>
 #include <iostream>
 #include <sstream>
 
@@ -2296,8 +2297,7 @@ std::string SextNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type())\n\n";
+            _text = "  val $name = Module(new $type())\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -2311,7 +2311,6 @@ std::string SextNode::printDefinition(PrintType _pt) {
     }
     return _text;
 }
-
 
 std::string SextNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -2375,8 +2374,7 @@ std::string ZextNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type())\n\n";
+            _text = "  val $name = Module(new $type())\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -2390,7 +2388,6 @@ std::string ZextNode::printDefinition(PrintType _pt) {
     }
     return _text;
 }
-
 
 std::string ZextNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
@@ -2444,242 +2441,238 @@ std::string ZextNode::printInputEnable(PrintType pt) {
     return _text;
 }
 
-
-
 //===----------------------------------------------------------------------===//
 //                            GetElementPtrArray Class
 //===----------------------------------------------------------------------===//
-//std::string GepArrayNode::printDefinition(PrintType _pt) {
-    //string _text("");
-    //string _name(this->getName());
+// std::string GepArrayNode::printDefinition(PrintType _pt) {
+// string _text("");
+// string _name(this->getName());
 
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //if (this->getInstruction()->getNumOperands() == 2) {
-                //_text =
-                    //"  val $name = Module(new $type(NumOuts=$num_out, "
-                    //"ID=$id)(numByte=$nb)(size=$size))\n\n";
-                //helperReplace(_text, "$type", "GepArrayOneNode");
-                //helperReplace(_text, "$nb", gep_info.array_size);
-                //helperReplace(_text, "$size", gep_info.length);
-            //} else {
-                //_text =
-                    //"  val $name = Module(new $type(NumOuts=$num_out, "
-                    //"ID=$id)(numByte=$nb)(size=$size))\n\n";
-                //helperReplace(_text, "$type", "GepArrayTwoNode");
-                //helperReplace(_text, "$nb", gep_info.array_size);
-                //helperReplace(_text, "$size", gep_info.length);
-            //}
-
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", std::to_string(this->getID()));
-            //helperReplace(_text, "$num_out",
-                          //std::to_string(this->numDataOutputPort()));
-
-            //break;
-        //default:
-            //assert(!"Don't support!");
-    //}
-    //return _text;
+// switch (_pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+// if (this->getInstruction()->getNumOperands() == 2) {
+//_text =
+//"  val $name = Module(new $type(NumOuts=$num_out, "
+//"ID=$id)(numByte=$nb)(size=$size))\n\n";
+// helperReplace(_text, "$type", "GepArrayOneNode");
+// helperReplace(_text, "$nb", gep_info.array_size);
+// helperReplace(_text, "$size", gep_info.length);
+//} else {
+//_text =
+//"  val $name = Module(new $type(NumOuts=$num_out, "
+//"ID=$id)(numByte=$nb)(size=$size))\n\n";
+// helperReplace(_text, "$type", "GepArrayTwoNode");
+// helperReplace(_text, "$nb", gep_info.array_size);
+// helperReplace(_text, "$size", gep_info.length);
 //}
 
-//std::string GepArrayNode::printInputEnable(PrintType pt, uint32_t _id) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.enable($id)";
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", _id);
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", std::to_string(this->getID()));
+// helperReplace(_text, "$num_out",
+// std::to_string(this->numDataOutputPort()));
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// default:
+// assert(!"Don't support!");
+//}
+// return _text;
 //}
 
-//std::string GepArrayNode::printInputEnable(PrintType pt) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.enable";
-            //helperReplace(_text, "$name", _name.c_str());
+// std::string GepArrayNode::printInputEnable(PrintType pt, uint32_t _id) {
+// string _text;
+// string _name(this->getName());
+// switch (pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.enable($id)";
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", _id);
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
 //}
 
-//std::string GepArrayNode::printOutputData(PrintType _pt, uint32_t _idx) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.Out.data($id)";
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", _idx);
+// std::string GepArrayNode::printInputEnable(PrintType pt) {
+// string _text;
+// string _name(this->getName());
+// switch (pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.enable";
+// helperReplace(_text, "$name", _name.c_str());
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
 //}
 
-//std::string GepArrayNode::printInputData(PrintType _pt, uint32_t _id) {
-    //string _name(this->getName());
-    //std::replace(_name.begin(), _name.end(), '.', '_');
-    //string _text;
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //if (_id == 0)
-                //_text = "$name.io.baseAddress";
-            //else if (_id == 1)
-                //_text = "$name.io.idx1";
-            //else
-                //_text = "$name.io.idx2";
+// std::string GepArrayNode::printOutputData(PrintType _pt, uint32_t _idx) {
+// string _text;
+// string _name(this->getName());
+// switch (_pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.Out.data($id)";
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", _idx);
 
-            //helperReplace(_text, "$name", _name.c_str());
-            //break;
-        //default:
-            //break;
-    //}
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
+//}
 
-    //return _text;
+// std::string GepArrayNode::printInputData(PrintType _pt, uint32_t _id) {
+// string _name(this->getName());
+// std::replace(_name.begin(), _name.end(), '.', '_');
+// string _text;
+// switch (_pt) {
+// case PrintType::Scala:
+// if (_id == 0)
+//_text = "$name.io.baseAddress";
+// else if (_id == 1)
+//_text = "$name.io.idx1";
+// else
+//_text = "$name.io.idx2";
+
+// helperReplace(_text, "$name", _name.c_str());
+// break;
+// default:
+// break;
+//}
+
+// return _text;
 //}
 
 //===----------------------------------------------------------------------===//
 //                            GetElementPtrStruct Class
 //===----------------------------------------------------------------------===//
-//std::string GepStructNode::printDefinition(PrintType _pt) {
-    //string _text("");
-    //string _name(this->getName());
+// std::string GepStructNode::printDefinition(PrintType _pt) {
+// string _text("");
+// string _name(this->getName());
 
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //if (this->getInstruction()->getNumOperands() == 2) {
-                //_text =
-                    //"  val $name = Module(new $type(NumOuts=$num_out, "
-                    //"ID=$id)(numByte=List($<input_vector>)))\n\n";
-                //helperReplace(_text, "$type", "GepStructOneNode");
-                //helperReplace(_text, "$<input_vector>", gep_info.element_size,
-                              //",");
-                //// helperReplace(_text, "$nb1", num_byte[0]);
-            //} else {
-                //_text =
-                    //"  val $name = Module(new $type(NumOuts=$num_out, "
-                    //"ID=$id)(numByte1=$nb1, numByte2=$nb2))\n\n";
-                //helperReplace(_text, "$type", "GepArrayTwoNode");
-                //// helperReplace(_text, "$nb1", num_byte[0]);
-                //// helperReplace(_text, "$nb2", num_byte[1]);
-            //}
-
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", std::to_string(this->getID()));
-            //helperReplace(_text, "$num_out",
-                          //std::to_string(this->numDataOutputPort()));
-
-            //break;
-        //default:
-            //assert(!"Don't support!");
-    //}
-    //return _text;
+// switch (_pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+// if (this->getInstruction()->getNumOperands() == 2) {
+//_text =
+//"  val $name = Module(new $type(NumOuts=$num_out, "
+//"ID=$id)(numByte=List($<input_vector>)))\n\n";
+// helperReplace(_text, "$type", "GepStructOneNode");
+// helperReplace(_text, "$<input_vector>", gep_info.element_size,
+//",");
+//// helperReplace(_text, "$nb1", num_byte[0]);
+//} else {
+//_text =
+//"  val $name = Module(new $type(NumOuts=$num_out, "
+//"ID=$id)(numByte1=$nb1, numByte2=$nb2))\n\n";
+// helperReplace(_text, "$type", "GepArrayTwoNode");
+//// helperReplace(_text, "$nb1", num_byte[0]);
+//// helperReplace(_text, "$nb2", num_byte[1]);
 //}
 
-//std::string GepStructNode::printInputEnable(PrintType pt, uint32_t _id) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.enable($id)";
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", _id);
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", std::to_string(this->getID()));
+// helperReplace(_text, "$num_out",
+// std::to_string(this->numDataOutputPort()));
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// default:
+// assert(!"Don't support!");
+//}
+// return _text;
 //}
 
-//std::string GepStructNode::printInputEnable(PrintType pt) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.enable";
-            //helperReplace(_text, "$name", _name.c_str());
+// std::string GepStructNode::printInputEnable(PrintType pt, uint32_t _id) {
+// string _text;
+// string _name(this->getName());
+// switch (pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.enable($id)";
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", _id);
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
 //}
 
-//std::string GepStructNode::printOutputData(PrintType _pt, uint32_t _idx) {
-    //string _text;
-    //string _name(this->getName());
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //std::replace(_name.begin(), _name.end(), '.', '_');
-            //_text = "$name.io.Out.data($id)";
-            //helperReplace(_text, "$name", _name.c_str());
-            //helperReplace(_text, "$id", _idx);
+// std::string GepStructNode::printInputEnable(PrintType pt) {
+// string _text;
+// string _name(this->getName());
+// switch (pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.enable";
+// helperReplace(_text, "$name", _name.c_str());
 
-            //break;
-        //case PrintType::Dot:
-            //assert(!"Dot file format is not supported!");
-        //default:
-            //assert(!"Uknown print type!");
-    //}
-    //return _text;
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
 //}
 
-//std::string GepStructNode::printInputData(PrintType _pt, uint32_t _id) {
-    //string _name(this->getName());
-    //std::replace(_name.begin(), _name.end(), '.', '_');
-    //string _text;
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //if (_id == 0)
-                //_text = "$name.io.baseAddress";
-            //else if (_id == 1)
-                //_text = "$name.io.idx1";
-            //else
-                //_text = "$name.io.idx2";
+// std::string GepStructNode::printOutputData(PrintType _pt, uint32_t _idx) {
+// string _text;
+// string _name(this->getName());
+// switch (_pt) {
+// case PrintType::Scala:
+// std::replace(_name.begin(), _name.end(), '.', '_');
+//_text = "$name.io.Out.data($id)";
+// helperReplace(_text, "$name", _name.c_str());
+// helperReplace(_text, "$id", _idx);
 
-            //helperReplace(_text, "$name", _name.c_str());
-            //break;
-        //default:
-            //break;
-    //}
-
-    //return _text;
+// break;
+// case PrintType::Dot:
+// assert(!"Dot file format is not supported!");
+// default:
+// assert(!"Uknown print type!");
+//}
+// return _text;
 //}
 
+// std::string GepStructNode::printInputData(PrintType _pt, uint32_t _id) {
+// string _name(this->getName());
+// std::replace(_name.begin(), _name.end(), '.', '_');
+// string _text;
+// switch (_pt) {
+// case PrintType::Scala:
+// if (_id == 0)
+//_text = "$name.io.baseAddress";
+// else if (_id == 1)
+//_text = "$name.io.idx1";
+// else
+//_text = "$name.io.idx2";
 
+// helperReplace(_text, "$name", _name.c_str());
+// break;
+// default:
+// break;
+//}
+
+// return _text;
+//}
 
 //===----------------------------------------------------------------------===//
 //                            GetElementPtrStruct Class
@@ -2689,23 +2682,32 @@ std::string GepNode::printDefinition(PrintType _pt) {
     string _name(this->getName());
 
     switch (_pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if (this->getInstruction()->getNumOperands() == 2) {
-                _text =
-                    "  val $name = Module(new $type(NumIns = $num_ins, NumOuts=$num_out, "
-                    "ArraySize = $array, ID=$id))))\n\n";
-                helperReplace(_text, "$type", "GepNode");
-            }
-
+            _text =
+                "  val $name = Module(new $type(NumIns = $num_ins, "
+                "NumOuts=$num_out, "
+                "ID=$id)(ElementSize = $size, ArraySize = $array))))\n\n";
+            helperReplace(_text, "$type", "GepNode");
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
+
+            // The first input is always baseaddress
             helperReplace(_text, "$num_ins",
-                          std::to_string(this->numDataInputPort()));
+                          std::to_string(this->numDataInputPort() - 1));
+
+            stringstream _array;
+            std::copy(this->gep_info.element_size.begin(),
+                      std::prev(this->gep_info.element_size.end()),
+                      std::experimental::make_ostream_joiner(_array, ", "));
+            helperReplace(_text, "$size",
+                          *std::prev(this->gep_info.element_size.end()));
+            helperReplace(_text, "$array", "List(" + _array.str() + ")");
 
             break;
+        }
         default:
             assert(!"Don't support!");
     }

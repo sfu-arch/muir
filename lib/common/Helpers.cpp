@@ -411,24 +411,22 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     uint32_t numByte = 0;
     uint64_t start_align = 0;
     uint64_t end_align = 0;
-    std::vector<uint32_t> tmp_align = {0};
+    std::vector<uint32_t> tmp_align;
 
     auto src_type = I.getSourceElementType();
 
     if (src_type->isStructTy()) {
+        tmp_align.push_back(0);
         auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
         for (auto _element : src_struct_type->elements()) {
             tmp_align.push_back(tmp_align.back() +
                                 DL.getTypeAllocSize(_element));
         }
 
-        //assert(DL.getTypeAllocSize(src_type) == tmp_align.back() &&
-               //"Allocated size should be equal to summation of elements");
-
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
         tmp_align.push_back(DL.getTypeAllocSize(src_array_type->getArrayElementType()));
-        tmp_align.push_back(DL.getTypeAllocSize(src_type));
+        //tmp_align.push_back(DL.getTypeAllocSize(src_type));
 
         DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
         DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
