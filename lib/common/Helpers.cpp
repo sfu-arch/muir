@@ -422,8 +422,8 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
                                 DL.getTypeAllocSize(_element));
         }
 
-        assert(DL.getTypeAllocSize(src_type) == tmp_align.back() &&
-               "Allocated size should be equal to summation of elements");
+        //assert(DL.getTypeAllocSize(src_type) == tmp_align.back() &&
+               //"Allocated size should be equal to summation of elements");
 
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);

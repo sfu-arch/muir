@@ -18,20 +18,12 @@ namespace gepsplitter {
     class GEPSplitter : public llvm::FunctionPass {
 
         virtual bool runOnFunction(llvm::Function &F);
-
-        virtual bool doInitialization(llvm::Module &M) override;
-
-        virtual bool doFinalization(llvm::Module &M) override;
-
         virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     public:
-        GEPSplitter(llvm::StringRef FN) : FunctionPass(ID), FunctionName(FN) {}
-
-        static char ID; // Pass identification, replacement for typeid
         explicit GEPSplitter() : FunctionPass(ID) {}
+        static char ID; // Pass identification, replacement for typeid
 
-        llvm::StringRef FunctionName;
     };
 }
 

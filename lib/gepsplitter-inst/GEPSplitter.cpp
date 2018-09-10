@@ -28,7 +28,7 @@
 //#include "Common.h"
 
 using namespace llvm;
-//using namespace allocacount;
+// using namespace allocacount;
 using gepsplitter::GEPSplitter;
 
 namespace gepsplitter {
@@ -37,28 +37,10 @@ namespace gepsplitter {
                                        "split complex GEPs into simple GEPs");
 }
 
-bool GEPSplitter::doInitialization(llvm::Module &M) {
-    common::optimizeModule(&M);
-    return false;
-}
-
-bool GEPSplitter::doFinalization(llvm::Module &M) {
-    return false;
-}
 
 bool GEPSplitter::runOnFunction(Function &F) {
 
-    if(F.getName() != this->FunctionName)
-        return false;
-
     bool Changed = false;
-
-    //TODO uncomment printing, helpers namespaces
-    //Printing Structur types
-//    helpers::printStruct(*F.getParent());
-
-    //Printing alloca instructions
-//    helpers::printAlloca(F);
 
     // Visit each GEP instruction.
     for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
@@ -80,46 +62,30 @@ bool GEPSplitter::runOnFunction(Function &F) {
                         FirstIndexIsZero
                         ? GEP->getOperand(0)
                         : GetElementPtrInst::Create(
-                                GEP->getSourceElementType(),
-                                GEP->getOperand(0),
-                                GEP->getOperand(1),
-                                "tmp", GEP);
-                        //: GetElementPtrInst::Create(
-                                //GEP->getResultElementType(), GEP->getOperand(0),
-                                //GEP->getOperand(1), "tmp", GEP);
-//                                GEP->getPointerOperandType(), GEP->getOperand(0),
+                                GEP->getSourceElementType(), GEP->getOperand(0),
+                                GEP->getOperand(1), "tmp", GEP);
 
                 // All remaining indices get expanded with a 3-operand GEP with
                 // zero
                 // as the second operand.
                 //
                 std::vector<Value *> Idxs(2);
-
                 Idxs[0] = ConstantInt::get(Type::getInt64Ty(F.getContext()), 0);
-
                 for (unsigned i = 2; i != NumOps; ++i) {
                     Idxs[1] = GEP->getOperand(i);
 
                     NewGEP = GetElementPtrInst::Create(
-                            nullptr, NewGEP, llvm::ArrayRef<llvm::Value *>(Idxs), "tmp", GEP);
-
+                            nullptr, NewGEP, llvm::ArrayRef<llvm::Value *>(Idxs),
+                            "tmp", GEP);
                 }
                 GEP->replaceAllUsesWith(NewGEP);
                 GEP->eraseFromParent();
                 Changed = true;
             }
 
-
-    outs() << F.getName() << "\n";
-//    Labeling basic blocks
-//    helpers::LabelUID(F);
-//    Printing alloca instructions
-//    helpers::printDFG(F);
-
     return Changed;
 }
 
 void GEPSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
-
     AU.setPreservesCFG();
 }

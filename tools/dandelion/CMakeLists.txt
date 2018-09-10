@@ -13,7 +13,7 @@ llvm_map_components_to_libnames(REQ_LLVM_LIBRARIES ${LLVM_TARGETS_TO_BUILD}
         analysis target mc support
 )
 
-target_link_libraries(dandelion graphgen memalias lx common luacpptemplater jsoncpp ${REQ_LLVM_LIBRARIES})
+target_link_libraries(dandelion graphgen memalias gepsplitter-inst lx common luacpptemplater jsoncpp ${REQ_LLVM_LIBRARIES})
 
 # Platform dependencies.
 if( WIN32 )

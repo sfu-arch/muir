@@ -1,4 +1,5 @@
 #define DEBUG_TYPE "dandelion-debug"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -21,13 +22,17 @@
     (LLVM_VERSION_MAJOR < (major) ||  \
      LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
 #if LLVM_VERSION_GE(3, 7)
+
 #include "llvm/IR/LegacyPassManager.h"
+
 #else
 #include "llvm/PassManager.h"
 #endif
 #if LLVM_VERSION_GE(4, 0)
+
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+
 #else
 #include "llvm/Bitcode/ReaderWriter.h"
 #endif
@@ -91,7 +96,7 @@ cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
                            cl::value_desc("Function name"), cl::Required);
 
 cl::opt<string> config_path("config", cl::desc("Target function name"),
-                           cl::value_desc("config_file"), cl::Required);
+                            cl::value_desc("config_file"), cl::Required);
 
 cl::opt<bool> aaTrace("aa-trace", cl::desc("Alias analysis trace"),
                       cl::value_desc("T/F {default = true}"), cl::init(false));
@@ -107,9 +112,9 @@ cl::opt<string> outFile("o", cl::desc("Xketch output file"),
                         cl::value_desc("filename"), cl::init(""));
 
 static cl::opt<char> optLevel(
-    "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-    cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+        "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+        cl::Prefix, cl::ZeroOrMore, cl::init('2'));
 
 cl::list<string> libPaths("L", cl::Prefix,
                           cl::desc("Specify a library search path"),
@@ -132,7 +137,7 @@ static void compile(Module &m, string outputPath) {
     switch (optLevel) {
         default:
             report_fatal_error("Invalid optimization level.\n");
-        // No fall through
+            // No fall through
         case '0':
             level = CodeGenOpt::None;
             break;
@@ -150,8 +155,8 @@ static void compile(Module &m, string outputPath) {
     string FeaturesStr;
     TargetOptions options = InitTargetOptionsFromCodeGenFlags();
     unique_ptr<TargetMachine> machine(
-        target->createTargetMachine(triple.getTriple(), MCPU, FeaturesStr,
-                                    options, getRelocModel(), CMModel, level));
+            target->createTargetMachine(triple.getTriple(), MCPU, FeaturesStr,
+                                        options, getRelocModel(), CMModel, level));
     assert(machine.get() && "Could not allocate target machine!");
 
     if (FloatABIForCalls != FloatABI::Default) {
@@ -187,8 +192,8 @@ static void compile(Module &m, string outputPath) {
         // Ask the target to add backend passes as necessary.
         if (machine->addPassesToEmitFile(pm, *os, FileType)) {
             report_fatal_error(
-                "target does not support generation "
-                "of this file type!\n");
+                    "target does not support generation "
+                    "of this file type!\n");
         }
 
         // Before executing passes, print the final values of the LLVM options.
@@ -305,7 +310,7 @@ static void graphGen(Module &m) {
     }
 
     std::error_code errc;
-    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+    raw_fd_ostream out(outFile + ".scala", errc, sys::fs::F_None);
 
     // raw_fd_ostream test(outFile+"_test.scala", errc, sys::fs::F_None);
 
@@ -320,10 +325,18 @@ static void graphGen(Module &m) {
 }
 
 /**
+ * Running gepsplitter
+ */
+static void splitGeps(Function &F) {
+    legacy::FunctionPassManager FPM(F.getParent());
+    FPM.add(new gepsplitter::GEPSplitter());
+    FPM.run(F);
+}
+
+/**
  * Function lists
  */
 static void runGraphGen(Module &M) {
-
     // Check wether xketch outpufile name has been specified
     if (outFile.getValue() == "") {
         errs() << "o command line option must be specified.\n";
@@ -331,18 +344,18 @@ static void runGraphGen(Module &M) {
     }
 
     std::error_code errc;
-    raw_fd_ostream out(outFile+".scala", errc, sys::fs::F_None);
+    raw_fd_ostream out(outFile + ".scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
-    //Usefull passes
-    //pm.add(llvm::createCFGSimplificationPass());
-    //pm.add(new helpers::GEPAddrCalculation(XKETCHName));
+    // Usefull passes
+    // pm.add(llvm::createCFGSimplificationPass());
+    // pm.add(new helpers::GEPAddrCalculation(XKETCHName));
     pm.add((llvm::createStripDeadDebugInfoPass()));
-//    pm.add(llvm::createLoopSimplifyPass());
+    //    pm.add(llvm::createLoopSimplifyPass());
     pm.add(new helpers::GepInformation(XKETCHName));
     pm.add(new LoopInfoWrapperPass());
-    //pm.add(new helpers::CallInstSpliter(XKETCHName));
-    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0,XKETCHName), out));
+    // pm.add(new helpers::CallInstSpliter(XKETCHName));
+    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, XKETCHName), out));
     pm.add(createVerifierPass());
     pm.run(M);
 }
@@ -377,21 +390,20 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    // Calling graphgen pass on selected functions
-    // TODO here we should iterate over list of choosen functions
-    //for (auto &F : *module) {
-        //if (F.isDeclaration() || F.getName() != XKETCHName) continue;
-        //else
-            //runGraphGen(F);
-    //}
+    // Simplifing the gep instructions
+    for (auto &F : *module) {
+        if (F.isDeclaration() || F.getName() != XKETCHName)
+            continue;
+        else
+            splitGeps(F);
+    }
+
     runGraphGen(*module);
 
     // Generating graph
-    //graphGen(*module);
+    // graphGen(*module);
 
-    // saveModule(*module, "final.bc");
-
-    // common::PrintFunctionDFG(*module);
+    //saveModule(*module, "final.bc");
 
     return 0;
 }
