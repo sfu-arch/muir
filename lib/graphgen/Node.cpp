@@ -799,9 +799,17 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.Out($id)";
-            helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
+            // The branch is UBranch and there is no true and false outptu
+            if (this->numDataInputPort() == 0) {
+                _text = "$name.io.Out($id)";
+                helperReplace(_text, "$name", _name.c_str());
+                helperReplace(_text, "$id", _id);
+            }else{
+            // The branch is CBranch and there is true and false outptut
+                _text = "$name.io.Out($id)";
+                helperReplace(_text, "$name", _name.c_str());
+                helperReplace(_text, "$id", _id);
+            }
             break;
         default:
             break;

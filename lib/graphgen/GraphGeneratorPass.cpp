@@ -635,7 +635,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 if (auto call_in = dyn_cast<CallNode>(_src))
                     _src = call_in->getCallIn();
 
-                _src->addDataOutputPort(_dst, c);
+                //_src->addDataOutputPort(_dst, c);
+                _src->addDataOutputPort(_dst);
                 _dst->addDataInputPort(_src);
             }
         }
@@ -1167,7 +1168,6 @@ void GraphGeneratorPass::init(Function &F) {
     dependency_graph->printGraph(PrintType::Scala, config_path);
 }
 
-// bool GraphGeneratorPass::runOnFunction(Function &F) {
 bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
