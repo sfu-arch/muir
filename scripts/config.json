@@ -20,7 +20,8 @@
         "loop":"_",
         "accel":"_",
         "node":"_",
-        "junctions":"_"
+        "junctions":"_",
+        "FPU":"_"
     }
 }
 

@@ -1,7 +1,7 @@
 KERN=kmp
 ALG=kmp
 
-CFLAGS?=-O3 -Wall -Wno-unused-label
+CFLAGS?=-O3 -fno-vectorize -fno-slp-vectorize -Wall -Wno-unused-label
 
 SRCS=$(KERN).c local_support.c ../../common/support.c
 FILES=$(SRCS) $(KERN).h ../../common/support.h

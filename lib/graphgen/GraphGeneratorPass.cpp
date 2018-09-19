@@ -413,7 +413,7 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
 void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     auto &gep_pass_ctx = getAnalysis<helpers::GepInformation>();
 
-    if(gep_pass_ctx.GepAddress.count(&I) == 0){
+    if (gep_pass_ctx.GepAddress.count(&I) == 0) {
         I.dump();
         assert(!"No gep information");
     }
@@ -912,8 +912,10 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                                                 ->getInstList()
                                                 .back()];
 
-            _en_instruction->addControlOutputPort(_br_ins);
-            _br_ins->addControlInputPort(_en_instruction);
+            if (_br_ins->numDataInputPort() == 0) {
+                _en_instruction->addControlOutputPort(_br_ins);
+                _br_ins->addControlInputPort(_en_instruction);
+            }
         }
     }
 
