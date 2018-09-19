@@ -1335,7 +1335,7 @@ InstructionNode *Graph::insertZextNode(ZExtInst& I) {
 ConstFPNode *Graph::insertConstFPNode(ConstantFP &C) {
     const_fp_list.push_back(std::make_unique<ConstFPNode>(
         NodeInfo(const_fp_list.size(),
-                 "const" + std::to_string(const_fp_list.size())),
+                 "constf" + std::to_string(const_fp_list.size())),
         &C));
 
     return const_fp_list.back().get();
