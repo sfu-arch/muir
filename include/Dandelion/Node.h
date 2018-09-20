@@ -51,6 +51,7 @@ struct PortID {
     PortID(uint32_t _id) : ID(_id) {}
 
     uint32_t getID() { return ID; }
+    uint32_t setID(uint32_t _id) { ID =_id; }
 
     bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
 };
@@ -127,6 +128,9 @@ class Node {
     PortID returnMemoryReadOutputPortIndex(Node *);
     PortID returnMemoryWriteOutputPortIndex(Node *);
 
+    // Node *returnDataOutputPortNode(uint32_t index);
+    Node *returnControlOutputPortNode(uint32_t index);
+
     virtual PortID addDataInputPort(Node *node);
     virtual PortID addDataOutputPort(Node *node);
 
@@ -192,16 +196,16 @@ class Node {
     void removeNodeControlOutputNode(Node *);
 
     /// replace two nodes form the control input container
-    void replaceControlInputNode(Node *src, Node *tar);
+    virtual void replaceControlInputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control output container
-    void replaceControlOutputNode(Node *src, Node *tar);
+    virtual void replaceControlOutputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control input container
-    void replaceDataInputNode(Node *src, Node *tar);
+    virtual void replaceDataInputNode(Node *src, Node *tar);
 
     /// replace two nodes form the control output container
-    void replaceDataOutputNode(Node *src, Node *tar);
+    virtual void replaceDataOutputNode(Node *src, Node *tar);
 
     // Iterator over input data edges
     auto inputDataport_begin() {
@@ -598,6 +602,9 @@ class FloatingPointNode : public Node {
  */
 class LoopNode : public ContainerNode {
    private:
+    enum PortType { Active = 0, Enable, EndEnable, LatchEnable, LoopExit };
+
+    std::list<std::pair<Node *, PortType>> port_type;
     LoopNode *parent_loop;
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
@@ -682,13 +689,17 @@ class LoopNode : public ContainerNode {
     /**
      * Make sure that loop enable signal is always set to index 0
      */
-    void setEnableLoopSignal(Node *_n) { addControlInputPortIndex(_n, 0); }
+    void setEnableLoopSignal(Node *_n) {
+        addControlInputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Enable));
+    }
 
     /**
      * Make sure the loop enable signal is always set to index 0
      */
     void setActiveOutputLoopSignal(Node *_n) {
-        addControlOutputPortIndex(_n, 0);
+        addControlOutputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Active));
     }
 
     /**
@@ -706,21 +717,28 @@ class LoopNode : public ContainerNode {
     /**
      * Make sure that loop latch enable signal is always fix to index 1
      */
-    void setLoopLatchEnable(Node *_n) { addControlInputPortIndex(_n, 1); }
+    void setLoopLatchEnable(Node *_n) {
+        addControlInputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::LatchEnable));
+    }
 
     /**
      * Make sure that loop end enable signal is always fix to index 1
      */
-    void setLoopEndEnable(Node *_n) { addControlOutputPortIndex(_n, 1); }
-    void setLoopEndEnable(Node *_n, uint32_t i) {
-        addControlOutputPortIndex(_n, i);
+    void setLoopEndEnable(Node *_n) {
+        addControlOutputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::EndEnable));
     }
+    // void setLoopEndEnable(Node *_n, uint32_t i) {
+    // addControlOutputPortIndex(_n, i);
+    //}
 
     /**
      * Make sure that loop exit points are always starting from index 2
      */
     PortID pushLoopExitLatch(Node *_n) {
         assert(numControlInputPort() > 1 && "Error in loop control signal!");
+        port_type.push_back(std::make_pair(_n, PortType::LoopExit));
         return addControlInputPort(_n);
     }
 
@@ -908,11 +926,9 @@ class FcmpNode : public InstructionNode {
 };
 
 class BranchNode : public InstructionNode {
-   private:
-    enum PredicateResult { False = 0, True };
-    list<std::pair<Node *, PredicateResult>> output_predicate;
-
    public:
+    enum PredicateResult { True = 0, False};
+    list<std::pair<Node *, PredicateResult>> output_predicate;
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
         : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
 
@@ -931,8 +947,19 @@ class BranchNode : public InstructionNode {
     void removeNodeControlInputNode(Node *) = delete;
     void removeNodeControlOutputNode(Node *) = delete;
 
-    void setTrueBranch(Node *_n) { this->addControlOutputPortIndex(_n, 0); }
-    void setFalseBranch(Node *_n) { this->addControlOutputPortIndex(_n, 1); }
+    void addTrueBranch(Node *_n) {
+        this->output_predicate.push_back(
+            std::make_pair(_n, PredicateResult::True));
+        this->addControlOutputPort(_n);
+    }
+    void addFalseBranch(Node *_n) {
+        this->output_predicate.push_back(
+            std::make_pair(_n, PredicateResult::False));
+        this->addControlOutputPort(_n);
+    }
+
+    /// replace two nodes form the control output container
+    virtual void replaceControlOutputNode(Node *src, Node *tar) override;
 
     /**
      * Overloaded print functions

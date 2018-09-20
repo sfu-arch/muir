@@ -508,7 +508,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                        "Destination node should be super node!");
 
                 auto _node_src = this->map_value_node.find(
-                    &*ins_it);  // it should be Insnode
+                    &*ins_it);  // it should be Instruction node
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
@@ -522,10 +522,20 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     if (ins_it->getNumOperands() == 3) {
                         // LLVM IR -> CBranch(cmpInput(0), trueDst(1),
                         // falseDst(2))
-                        if (c == 1)
-                            dyn_cast<BranchNode>(_src)->setTrueBranch(_dst);
-                        else if (c == 2)
-                            dyn_cast<BranchNode>(_src)->setFalseBranch(_dst);
+                        // XXX There is a bug in llvm IR
+                        // in CBranch first element in the IR actually is C = 2
+                        // and second elemnt is C = 1
+                        if (c == 1){
+                            //Handeling LLVM Bug
+                            if(ins_it->getParent() == operand){
+                                dyn_cast<BranchNode>(_src)->addFalseBranch(_dst);
+                            }else{
+                                dyn_cast<BranchNode>(_src)->addTrueBranch(_dst);
+                            }
+                        }
+                        else if (c == 2){
+                            dyn_cast<BranchNode>(_src)->addFalseBranch(_dst);
+                        }
                     } else {
                         // The node is Ubranch
                         _src->addControlOutputPort(_dst, c);
@@ -810,13 +820,23 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         // Since we know that there is a backedge
         _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
 
-        // Try to find the backedge to the loop head basic block
-        auto _src_br_inst_it = *std::find_if(
+        // Try to find forward edge to the loop head basic block
+        auto _src_forward_br_inst_it = *std::find_if(
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto const _node_it) {
                 return !L->contains(
                     dyn_cast<BranchNode>(_node_it.first)->getInstruction());
             });
+
+        // Try to find the backedge to the loop head basic block
+        //auto _src_back_br_inst_it = *std::find_if(
+            //_l_head->inputControl_begin(), _l_head->inputControl_end(),
+            //[&L](auto const _node_it) {
+                //return L->contains(
+                    //dyn_cast<BranchNode>(_node_it.first)->getInstruction());
+            //});
+
+        //dyn_cast<BranchNode>(_src_back_br_inst_it.first)->getInstruction()->dump();
 
         std::list<SuperNode *> _list_exit;
         std::transform(_l_exit_blocks.begin(), _l_exit_blocks.end(),
@@ -834,23 +854,37 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         loop_value_node[&*L] = _loop_node;
 
-        _loop_node->setEnableLoopSignal(_src_br_inst_it.first);
+        _loop_node->setEnableLoopSignal(_src_forward_br_inst_it.first);
         _loop_node->setActiveOutputLoopSignal(_l_head);
+        _l_head->replaceControlInputNode(_src_forward_br_inst_it.first,
+                                         _loop_node);
+        _src_forward_br_inst_it.first->replaceControlOutputNode(_l_head,
+                                                                _loop_node);
 
         uint32_t _index = 0;
         for (auto _l : _list_exit) {
-            _loop_node->setLoopEndEnable(_l, _index++);
+            _loop_node->setLoopEndEnable(_l);
         }
 
-        _src_br_inst_it.first->replaceControlOutputNode(_l_head, _loop_node);
-        _l_head->replaceControlInputNode(_src_br_inst_it.first, _loop_node);
+        //auto _branch_node = dyn_cast<BranchNode>(_src_back_br_inst_it.first);
+        //_branch_node->replaceControlOutputNode(_l_head, _loop_node);
 
         // Connect the latch ending branch to loopNode
         if (auto _latch_br = dyn_cast<BranchNode>(
                 map_value_node[&L->getLoopLatch()->back()])) {
-            auto _src_idx = _latch_br->addControlOutputPort(_loop_node);
             _loop_node->setLoopLatchEnable(_latch_br);
-
+            _latch_br->addControlOutputPort(_loop_node);
+            if (_latch_br->numDataInputPort() > 0) {
+                for (auto parent : _latch_br->output_control_range()) {
+                    if (parent.first == _loop_node) {
+                        _latch_br->output_predicate.push_back(std::make_pair(
+                            _loop_node, BranchNode::PredicateResult::True));
+                    } else {
+                        _latch_br->output_predicate.push_back(std::make_pair(
+                            _loop_node, BranchNode::PredicateResult::False));
+                    }
+                }
+            }
         } else
             assert(!"Unexpected terminator!");
 
@@ -869,13 +903,11 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                         return false;
                 });
 
-            auto _src_idx =
-                _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
-
-            _tar_exit_br_inst_it.first->replaceControlOutputNode(_le,
-                                                                 _loop_node);
+            _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
             _le->replaceControlInputNode(_tar_exit_br_inst_it.first,
                                          _loop_node);
+            _tar_exit_br_inst_it.first->replaceControlOutputNode(_le,
+                                                                 _loop_node);
         }
 
         // Increament loop counter
@@ -917,165 +949,6 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                 _en_instruction->addControlOutputPort(_br_ins);
                 _br_ins->addControlInputPort(_en_instruction);
             }
-        }
-    }
-
-    for (auto &L : getOuterLoops(loop_info)) {
-        // At this stage we know that outer loop dominante all other loops
-        // therefore each live-in for subLoops is a live-in for the outer
-        // loop as well. We first connect all the live-ins to the outer loop
-        // and then iteratively go trought the subloops and update the
-        // connections.
-        auto _loop_node = loop_value_node[&*L];
-        UpdateLiveInConnections(L, _loop_node, map_value_node);
-        UpdateLiveOutConnections(L, _loop_node, map_value_node);
-
-        std::queue<Loop *> _loop_queue;
-
-        for (auto _l : L->getSubLoopsVector()) _loop_queue.push(_l);
-
-        while (!_loop_queue.empty()) {
-            auto _sub_loop = _loop_queue.front();
-            _loop_queue.pop();
-
-            UpdateInnerLiveInConnections(_sub_loop, loop_value_node,
-                                         map_value_node);
-            UpdateInnerLiveOutConnections(_sub_loop, loop_value_node,
-                                          map_value_node);
-
-            for (auto _tmp_sub : _sub_loop->getSubLoopsVector()) {
-                _loop_queue.push(_tmp_sub);
-            }
-        }
-    }
-}
-
-/**
- * This funciton iterates over function loops and generate loop nodes
- */
-void GraphGeneratorPass::makeLoopNodes(llvm::LoopInfo &loop_info) {
-    uint32_t c = 0;
-
-    for (auto &L : getLoops(loop_info)) {
-        // DEBUG
-        L->getHeader()->getName();
-
-        // Getting list of loop's exit basicblock
-        SmallVector<BasicBlock *, 8> _exit_blocks;
-        L->getExitBlocks(_exit_blocks);
-
-        auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
-        std::vector<std::pair<BasicBlock *, SuperNode *>> _l_exit_blocks;
-
-        for (auto _l : _exit_blocks) {
-            _l_exit_blocks.push_back(
-                std::make_pair(_l, dyn_cast<SuperNode>(map_value_node[_l])));
-        }
-
-        // Change the type of loop head basic block
-        _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
-
-        auto _src_br_inst_it = *std::find_if(
-            _l_head->inputControl_begin(), _l_head->inputControl_end(),
-            [&L](auto const _node_it) {
-                return !L->contains(
-                    dyn_cast<BranchNode>(_node_it.first)->getInstruction());
-            });
-
-        std::list<SuperNode *> _list_exit;
-        std::transform(_l_exit_blocks.begin(), _l_exit_blocks.end(),
-                       std::back_inserter(_list_exit),
-                       [](auto _l_e) -> SuperNode * { return _l_e.second; });
-
-        auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c, "Loop_" + std::to_string(c)),
-            dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
-            dyn_cast<SuperNode>(map_value_node[L->getLoopLatch()]), _list_exit);
-
-        // Insert the loop node
-        auto _loop_node =
-            this->dependency_graph->insertLoopNode(std::move(_new_loop));
-
-        loop_value_node[&*L] = _loop_node;
-
-        _loop_node->setEnableLoopSignal(_src_br_inst_it.first);
-        _loop_node->setActiveOutputLoopSignal(_l_head);
-
-        uint32_t _index = 0;
-        for (auto _l : _list_exit) {
-            _loop_node->setLoopEndEnable(_l, _index++);
-        }
-
-        //_src_br_inst_it->replaceControlOutputNode(_l_head, _loop_node);
-        //_l_head->replaceControlInputNode(_src_br_inst_it, _loop_node);
-        _src_br_inst_it.first->addControlOutputPort(_loop_node);
-        _l_head->addControlInputPort(_loop_node);
-
-        // Connect the latch ending branch to loopNode
-        if (auto _latch_br = dyn_cast<BranchNode>(
-                map_value_node[&L->getLoopLatch()->back()])) {
-            auto _src_idx = _latch_br->addControlOutputPort(_loop_node);
-            _loop_node->setLoopLatchEnable(_latch_br);
-
-        } else
-            assert(!"Unexpected terminator!");
-
-        // Connecting end branch to the loop end input
-        for (auto _le : _list_exit) {
-            auto _tar_exit_br_inst_it = *std::find_if(
-                _le->inputControl_begin(), _le->inputControl_end(),
-                [&L](auto const _node_it) {
-
-                    return L->contains(
-                        dyn_cast<BranchNode>(_node_it.first)->getInstruction());
-                });
-
-            auto _src_idx =
-                _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
-
-            //_tar_exit_br_inst_it->replaceControlOutputNode(_le, _loop_node);
-            //_le->replaceControlInputNode(_tar_exit_br_inst_it, _loop_node);
-            _tar_exit_br_inst_it.first->addControlOutputPort(_loop_node);
-            _le->addControlInputPort(_loop_node);
-        }
-
-        // Increament loop counter
-        c++;
-
-    }  // Get loops
-
-    for (auto &L : getLoops(loop_info)) {
-        auto _loop_node = loop_value_node[L];
-
-        // Filling loop containers
-        for (auto B : L->blocks()) {
-            if (!B->empty()) {
-                _loop_node->pushSuperNode(
-                    dyn_cast<SuperNode>(map_value_node[B]));
-                for (auto &I : *B) {
-                    _loop_node->pushInstructionNode(
-                        dyn_cast<InstructionNode>(map_value_node[&I]));
-                }
-            }
-        }
-    }
-
-    for (auto &L : getOuterLoops(loop_info)) {
-        auto _loop_node = loop_value_node[L];
-        _loop_node->setOuterLoop();
-
-        // This function should be called after filling the containers always
-        _loop_node->setEndingInstructions();
-
-        for (auto _en_instruction : _loop_node->endings()) {
-            auto _en = _en_instruction->getInstruction();
-            auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
-                                                ->getParent()
-                                                ->getInstList()
-                                                .back()];
-
-            _en_instruction->addControlOutputPort(_br_ins);
-            _br_ins->addControlInputPort(_en_instruction);
         }
     }
 

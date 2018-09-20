@@ -108,6 +108,12 @@ PortID Node::addWriteMemoryRespPort(Node *const n) {
     return _port_info;
 }
 
+Node *Node::returnControlOutputPortNode(uint32_t index) {
+    auto node = port_control.control_output_port.begin();
+    std::advance(node, index);
+    return node->first;
+}
+
 PortID Node::returnDataOutputPortIndex(Node *_node) {
     auto ff = std::find_if(
         this->port_data.data_output_port.begin(),
@@ -243,6 +249,12 @@ void Node::removeNodeDataInputNode(Node *_node) {
 void Node::removeNodeDataOutputNode(Node *_node) {
     this->port_data.data_output_port.remove_if(
         [_node](auto &arg) -> bool { return arg.first == _node; });
+
+    //Updating portIDs
+    uint32_t _id = 0;
+    for(auto &_out_node : this->port_data.data_output_port){
+        _out_node.second.setID(_id++);
+    }
 }
 
 void Node::removeNodeControlInputNode(Node *_node) {
@@ -776,6 +788,33 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
 //                            BranchNode Class
 //===----------------------------------------------------------------------===//
 
+void BranchNode::replaceControlOutputNode(Node *src, Node *tar) {
+    // We can't replace if we have multiple edge from src to dst
+    // with different port numbers
+    // std::replace(port_control.control_output_port.begin(),
+    // port_control.control_output_port.end(), src, tar);
+    auto count =
+        std::count_if(outputControl_begin(), outputControl_end(),
+                      [src](auto &arg) -> bool { return arg.first == src; });
+
+    assert(count == 1 &&
+           "Can not have multiple edge from one node to another!");
+
+    // auto _src_node =
+    // std::find_if(outputControl_begin(),
+    // outputControl_end(),
+    //[src](auto &arg) -> bool { return arg.first == src; });
+    //_src_node->first = tar;
+    auto _src_node = findControlOutputNode(src);
+    auto two = _src_node->second;
+    _src_node->first = tar;
+
+    auto _src_predicate =
+        std::find_if(output_predicate.begin(), output_predicate.end(),
+                     [src](auto &arg) -> bool { return arg.first == src; });
+    _src_predicate->first = tar;
+}
+
 std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -804,11 +843,34 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                 _text = "$name.io.Out($id)";
                 helperReplace(_text, "$name", _name.c_str());
                 helperReplace(_text, "$id", _id);
-            }else{
-            // The branch is CBranch and there is true and false outptut
-                _text = "$name.io.Out($id)";
-                helperReplace(_text, "$name", _name.c_str());
-                helperReplace(_text, "$id", _id);
+            } else {
+                // The branch is CBranch and there is true and false outptut
+                //_text = "$name.io.Out($id)";
+                // helperReplace(_text, "$name", _name.c_str());
+                // helperReplace(_text, "$id", _id);
+                auto node = this->returnControlOutputPortNode(_id);
+                auto ff = std::find_if(
+                    output_predicate.begin(), output_predicate.end(),
+                    [node](auto &arg) -> bool { return arg.first == node; });
+
+                // Getting port index
+                uint32_t p_index = 0;
+                for (auto _p : output_predicate) {
+                    if (_p.first == node && _p.second == ff->second)
+                        break;
+                    else if (_p.second == ff->second)
+                        p_index++;
+                }
+
+                if (ff->second == BranchNode::PredicateResult::True) {
+                    _text = "$name.io.FalseOutput($id)";
+                    helperReplace(_text, "$name", _name.c_str());
+                    helperReplace(_text, "$id", p_index);
+                } else if (ff->second == BranchNode::PredicateResult::False) {
+                    _text = "$name.io.TrueOutput($id)";
+                    helperReplace(_text, "$name", _name.c_str());
+                    helperReplace(_text, "$id", p_index);
+                }
             }
             break;
         default:
@@ -1568,7 +1630,7 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                      this->numDataInputPort() == 0)
                 _text =
                     "  val $name = Module(new $type(NumPredOps=$npo, "
-                    "NumOuts=$nout ID = "
+                    "NumOuts=$nout, ID = "
                     "$id))\n\n";
             else if (this->numControlInputPort() == 1 &&
                      this->numControlOutputPort() > 1 &&
@@ -1582,9 +1644,24 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                     "$id))\n\n";
 
             if (this->numDataInputPort() > 0) {
-                helperReplace(_text, "$type", "CBranchNode");
-                helperReplace(_text, "$num_out",
-                              std::to_string(this->numControlOutputPort()));
+                _text =
+                    "  val $name = Module(new $type(NumTrue = $true, NumFalse "
+                    "= $false, ID = "
+                    "$id))\n\n";
+
+                // Getting port index
+                uint32_t p_true_index = 0;
+                uint32_t p_false_index = 0;
+                for (auto _p : output_predicate) {
+                    if (_p.second == this->PredicateResult::False)
+                        p_false_index++;
+                    else if (_p.second == this->PredicateResult::True)
+                        p_true_index++;
+                }
+                helperReplace(_text, "$type", "CBranchFastNodeVariable");
+                helperReplace(_text, "$false", p_false_index);
+                helperReplace(_text, "$true", p_true_index);
+
             } else
                 helperReplace(_text, "$type", "UBranchNode");
             helperReplace(_text, "$nout", this->numControlOutputPort());
@@ -2885,14 +2962,18 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
+    auto node = this->returnControlOutputPortNode(_id);
+    auto node_t = find_if(port_type.begin(), port_type.end(),
+            [node](auto _nt) -> bool{ return _nt.first == node; });
+
     switch (_pt) {
         case PrintType::Scala:
-            if (_id == 0)
+            if (node_t->second == PortType::EndEnable)
                 _text = "$name.io.endEnable";
-            else if (_id == 1)
+            else if (node_t->second == PortType::Active)
                 _text = "$name.io.activate";
-            else
-                _text = "$name.io.activate";
+            else if(node_t->second == PortType::Enable)
+                _text = "$name.io.AAAA";
             //_text = "UKNOWN";
             helperReplace(_text, "$name", _name.c_str());
             break;

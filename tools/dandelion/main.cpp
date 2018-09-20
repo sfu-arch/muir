@@ -403,7 +403,7 @@ int main(int argc, char **argv) {
     // Generating graph
     // graphGen(*module);
 
-    //saveModule(*module, "final.bc");
+    saveModule(*module, "final.bc");
 
     return 0;
 }
