@@ -497,6 +497,22 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
 
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
+                if(auto _inst_branch = dyn_cast<BranchInst>(&*ins_it)){
+                    _inst_branch->dump();
+                    //if(_inst_branch->getNumSuccessors() > 1){
+                        //errs() << "True: \n";
+                        //_inst_branch->getSuccessor(0)->dump();
+                        //errs() << "======== operand 0\n";
+                        //_inst_branch->getOperand(1)->dump();
+                        //errs() << "False: \n";
+                        //_inst_branch->getSuccessor(1)->dump();
+                        //errs() << "======== operand 1\n";
+                        //_inst_branch->getOperand(2)->dump();
+                    //}
+                }
+
+
+
                 // If target operand is basicblock it means the instruction is
                 // control instruction
                 // 1) First find the basicblock node

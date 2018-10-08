@@ -69,6 +69,13 @@ void kernel_covariance(int m, int n,
 {
   int i, j, k;
 
+  printf("m: %d\n", m);
+  printf("n: %d\n", n);
+  printf("float: %f\n", float_n);
+  printf("data: %d\n", data);
+  printf("cov: %u\n", cov);
+  printf("mean: %u\n", mean);
+
 #pragma scop
   for (j = 0; j < _PB_M; j++)
     {
