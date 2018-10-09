@@ -12,12 +12,16 @@ void kernel(Tile_T A[][NTiles], Tile_T B[][NTiles], Tile_T C[][NTiles]) {
   for (int i = 0; i < NTiles; i++) {
     for (int j = 0; j < NTiles; j++) {
         for (int k = 0; k < NTiles; k++) {
-            Tile_T *mul = mulTile(&A[i][j], &B[i][j]);
+            Tile_T* a   = loadTile(&A[i][j]);
+            Tile_T* b   = loadTile(&B[i][j]);
+            Tile_T *mul = mulTile(a,b);
             storeTile(addTile(&C[i][j],mul),&C[i][j]);
-            free(mul);
+            destroy(mul);
+            destroy(a);
+            destroy(b);
+            }
         }
     }
-  }
   return;
 }
 

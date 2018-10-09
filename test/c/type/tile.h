@@ -34,6 +34,7 @@
 Tile(TILE);
 
 // Blackbox operations
+void destroy(Tile_T *node) { free(node); }
 // Binary operations
 Tile_T *addTile(Tile_T *left, Tile_T *right) {
   Tile_T *m = (Tile_T *)malloc(sizeof(Tile_T));
