@@ -1,8 +1,9 @@
+#define INPUT_SIZE 16
+#define NTiles INPUT_SIZE / TILE
+
 #include "tile.h"
 #include <cassert>
 
-#define INPUT_SIZE 16
-#define NTiles INPUT_SIZE / TILE
 
 Tile_T A[NTiles][NTiles], B[NTiles][NTiles], C[NTiles][NTiles];
 

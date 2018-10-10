@@ -1,0 +1,8 @@
+matmul,matadd:
+clang-3.8 -DTILE=2  matadd.cpp ; defines tile size
+
+2dconv.cpp:
+clang-3.8 -DVECN=3  2dconv.cpp
+
+INPUT_SIZE = TILE_SIZE 
+VECN   = Size of filter

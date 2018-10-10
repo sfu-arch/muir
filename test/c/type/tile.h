@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TILE 2
-
 #define Tile(N)                                                                \
   typedef struct block {                                                       \
     int a[N][N];                                                               \
