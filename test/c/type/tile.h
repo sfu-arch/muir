@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern "C" {
 #define TILE 2
 
 #define Tile(N)                                                                \
@@ -76,4 +77,5 @@ Tile_T *loadTile(void *address) {
   Tile_T *m = (Tile_T *)malloc(sizeof(Tile_T));
   memcpy((void *)m, address, sizeof(Tile_T));
   return m;
+}
 }

@@ -1000,7 +1000,7 @@ InstructionNode *Graph::insertBranchNode(BranchInst &I) {
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
     inst_list.push_back(std::make_unique<PhiSelectNode>(
         NodeInfo(inst_list.size(),
-                 "phi_" + I.getName().str() + to_string(inst_list.size())),
+                 "phi" + I.getName().str() + to_string(inst_list.size())),
         &I));
 
     auto ff = std::find_if(

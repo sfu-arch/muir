@@ -1,6 +1,8 @@
 #include "tile.h"
-#include <cassert>
+#include <assert.h>
 
+
+extern "C" {
 #define INPUT_SIZE 16
 #define NTiles INPUT_SIZE / TILE
 
@@ -8,7 +10,7 @@ Tile_T A[NTiles][NTiles], B[NTiles][NTiles], C[NTiles][NTiles];
 
 
 // The HLS function
-void kernel(Tile_T A[][NTiles], Tile_T B[][NTiles], Tile_T C[][NTiles]) {
+void matadd(Tile_T A[][NTiles], Tile_T B[][NTiles], Tile_T C[][NTiles]) {
   for (int i = 0; i < NTiles; i++) {
     for (int j = 0; j < NTiles; j++) {
       storeTile(addTile(&A[i][j], &B[i][j]), &C[i][j]);
@@ -29,7 +31,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // Invoke Kernel
-  kernel(A, B, C);
+  matadd(A, B, C);
 
   // Print result
   for (int i = 0; i < NTiles; i++) {
@@ -40,4 +42,5 @@ int main(int argc, char const *argv[]) {
   }
 
   return 0;
+}
 }
