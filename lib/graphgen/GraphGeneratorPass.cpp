@@ -1019,8 +1019,8 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
                 _call_node->getCallIn()->addDataOutputPort(_end_node);
             }
 
-            _end_node->addControlInputPort(_call_node->getCallIn());
-            _call_node->getCallIn()->addControlOutputPort(_end_node);
+            //_end_node->addControlInputPort(_call_node->getCallIn());
+            //_call_node->getCallIn()->addControlOutputPort(_end_node);
         }
     }
 }
