@@ -250,9 +250,9 @@ void Node::removeNodeDataOutputNode(Node *_node) {
     this->port_data.data_output_port.remove_if(
         [_node](auto &arg) -> bool { return arg.first == _node; });
 
-    //Updating portIDs
+    // Updating portIDs
     uint32_t _id = 0;
-    for(auto &_out_node : this->port_data.data_output_port){
+    for (auto &_out_node : this->port_data.data_output_port) {
         _out_node.second.setID(_id++);
     }
 }
@@ -696,21 +696,21 @@ ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
 }
 
 uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
-    uint32_t c = 0;
-    for (auto &_a : live_in) {
-        if (_a->getName() == _arg_node->getName()) return c;
-        c++;
-    }
-    return c;
+    auto arg_find = std::find_if(
+        live_in.begin(), live_in.end(),
+        [_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
+
+    ptrdiff_t pos = std::distance(live_in.begin(), arg_find);
+    return pos;
 }
 
 uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
-    uint32_t c = 0;
-    for (auto &_a : live_out) {
-        if (_a->getName() == _arg_node->getName()) return c;
-        c++;
-    }
-    return c;
+    auto arg_find = std::find_if(
+        live_out.begin(), live_out.end(),
+        [_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
+
+    ptrdiff_t pos = std::distance(live_out.begin(), arg_find);
+    return pos;
 }
 
 //===----------------------------------------------------------------------===//
@@ -800,19 +800,18 @@ void BranchNode::replaceControlOutputNode(Node *src, Node *tar) {
     assert(count == 1 &&
            "Can not have multiple edge from one node to another!");
 
-    // auto _src_node =
-    // std::find_if(outputControl_begin(),
-    // outputControl_end(),
-    //[src](auto &arg) -> bool { return arg.first == src; });
-    //_src_node->first = tar;
-    auto _src_node = findControlOutputNode(src);
-    auto two = _src_node->second;
+    auto _src_node =
+        std::find_if(outputControl_begin(), outputControl_end(),
+                     [src](auto &arg) -> bool { return arg.first == src; });
     _src_node->first = tar;
 
     auto _src_predicate =
         std::find_if(output_predicate.begin(), output_predicate.end(),
                      [src](auto &arg) -> bool { return arg.first == src; });
     _src_predicate->first = tar;
+
+    //Make sure ordering works
+    output_predicate.splice(output_predicate.end(), output_predicate, _src_predicate);
 }
 
 std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
@@ -849,28 +848,51 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                 // helperReplace(_text, "$name", _name.c_str());
                 // helperReplace(_text, "$id", _id);
                 auto node = this->returnControlOutputPortNode(_id);
-                auto ff = std::find_if(
-                    output_predicate.begin(), output_predicate.end(),
-                    [node](auto &arg) -> bool { return arg.first == node; });
+                uint32_t false_index = 0;
+                uint32_t true_index = 0;
+                for (auto pr : output_predicate) {
+                    if (pr.first == node) {
+                        auto result =
+                            printed_predicate.insert(std::make_pair(pr, 1));
+                        if (result.second == false) {
+                            if (pr.second == BranchNode::PredicateResult::False)
+                                false_index++;
+                            else
+                                true_index++;
+                            continue;
+                        } else {
+                            if (pr.second ==
+                                BranchNode::PredicateResult::True) {
+                                _text = "$name.io.TrueOutput($id)";
+                                helperReplace(_text, "$name", _name.c_str());
+                                helperReplace(_text, "$id", true_index);
+                            } else if (pr.second ==
+                                       BranchNode::PredicateResult::False) {
+                                _text = "$name.io.FalseOutput($id)";
+                                helperReplace(_text, "$name", _name.c_str());
+                                helperReplace(_text, "$id", false_index);
+                            }
+                            break;
+                        }
+                    }
+
+                    if (pr.second == BranchNode::PredicateResult::False)
+                        false_index++;
+                    else
+                        true_index++;
+                }
+                // auto ff = std::find_if(
+                // output_predicate.begin(), output_predicate.end(),
+                //[node](auto &arg) -> bool { return arg.first == node; });
 
                 // Getting port index
-                uint32_t p_index = 0;
-                for (auto _p : output_predicate) {
-                    if (_p.first == node && _p.second == ff->second)
-                        break;
-                    else if (_p.second == ff->second)
-                        p_index++;
-                }
-
-                if (ff->second == BranchNode::PredicateResult::True) {
-                    _text = "$name.io.FalseOutput($id)";
-                    helperReplace(_text, "$name", _name.c_str());
-                    helperReplace(_text, "$id", p_index);
-                } else if (ff->second == BranchNode::PredicateResult::False) {
-                    _text = "$name.io.TrueOutput($id)";
-                    helperReplace(_text, "$name", _name.c_str());
-                    helperReplace(_text, "$id", p_index);
-                }
+                // uint32_t p_index = 0;
+                // for (auto _p : output_predicate) {
+                // if (_p.first == node && _p.second == ff->second)
+                // break;
+                // else if (_p.second == ff->second)
+                // p_index++;
+                //}
             }
             break;
         default:
@@ -998,7 +1020,9 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
+                        //                        this->parent_call_node->findLiveOutIndex(this));
                         this->parent_call_node->findLiveInIndex(this));
+                    // this->parent_call_node->findLiveInIndex(this));
                     if (this->parent_call_node->getContainerType() ==
                         ContainerNode::LoopNodeTy)
                         helperReplace(_text, "$out", "liveIn");
@@ -1658,7 +1682,7 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                     else if (_p.second == this->PredicateResult::True)
                         p_true_index++;
                 }
-                helperReplace(_text, "$type", "CBranchFastNodeVariable");
+                helperReplace(_text, "$type", "CBranchNodeVariable");
                 helperReplace(_text, "$false", p_false_index);
                 helperReplace(_text, "$true", p_true_index);
 
@@ -1803,7 +1827,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
             _text =
                 "  val $name = Module(new $type(NumInputs = $num_in, "
                 "NumOutputs = $num_out, ID = $id))\n\n";
-            helperReplace(_text, "$type", "PhiFastNode");
+            helperReplace(_text, "$type", "PhiNode");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$num_out",
@@ -2327,7 +2351,7 @@ std::string ConstIntNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ConstFastNode");
+            helperReplace(_text, "$type", "ConstNode");
             helperReplace(_text, "$val", this->getValue());
 
             break;
@@ -2963,8 +2987,9 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     auto node = this->returnControlOutputPortNode(_id);
-    auto node_t = find_if(port_type.begin(), port_type.end(),
-            [node](auto _nt) -> bool{ return _nt.first == node; });
+    auto node_t =
+        find_if(port_type.begin(), port_type.end(),
+                [node](auto _nt) -> bool { return _nt.first == node; });
 
     switch (_pt) {
         case PrintType::Scala:
@@ -2972,7 +2997,7 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                 _text = "$name.io.endEnable";
             else if (node_t->second == PortType::Active)
                 _text = "$name.io.activate";
-            else if(node_t->second == PortType::Enable)
+            else if (node_t->second == PortType::Enable)
                 _text = "$name.io.AAAA";
             //_text = "UKNOWN";
             helperReplace(_text, "$name", _name.c_str());
@@ -3297,7 +3322,7 @@ std::string AllocaNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts=$num_out, ID = $id"
-                ", RouteID=$rid, NumOuts=$num_out))\n\n";
+                ", RouteID=$rid))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$num_out", this->numDataOutputPort());

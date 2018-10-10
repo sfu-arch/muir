@@ -490,6 +490,9 @@ void GraphGeneratorPass::findDataPort(Function &F) {
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
+        auto _node_src = this->map_value_node.find(
+            &*ins_it);  // it should be Instruction node
+
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
 
@@ -497,22 +500,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
 
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
-                if(auto _inst_branch = dyn_cast<BranchInst>(&*ins_it)){
-                    _inst_branch->dump();
-                    //if(_inst_branch->getNumSuccessors() > 1){
-                        //errs() << "True: \n";
-                        //_inst_branch->getSuccessor(0)->dump();
-                        //errs() << "======== operand 0\n";
-                        //_inst_branch->getOperand(1)->dump();
-                        //errs() << "False: \n";
-                        //_inst_branch->getSuccessor(1)->dump();
-                        //errs() << "======== operand 1\n";
-                        //_inst_branch->getOperand(2)->dump();
-                    //}
-                }
-
-
-
                 // If target operand is basicblock it means the instruction is
                 // control instruction
                 // 1) First find the basicblock node
@@ -523,8 +510,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 assert(isa<SuperNode>(_node_dest->second) &&
                        "Destination node should be super node!");
 
-                auto _node_src = this->map_value_node.find(
-                    &*ins_it);  // it should be Instruction node
                 assert(isa<InstructionNode>(_node_src->second) &&
                        "Source node should be instruction node!");
 
@@ -541,16 +526,22 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         // XXX There is a bug in llvm IR
                         // in CBranch first element in the IR actually is C = 2
                         // and second elemnt is C = 1
-                        if (c == 1){
-                            //Handeling LLVM Bug
-                            if(ins_it->getParent() == operand){
-                                dyn_cast<BranchNode>(_src)->addFalseBranch(_dst);
-                            }else{
-                                dyn_cast<BranchNode>(_src)->addTrueBranch(_dst);
-                            }
-                        }
-                        else if (c == 2){
-                            dyn_cast<BranchNode>(_src)->addFalseBranch(_dst);
+                        auto _inst_branch = dyn_cast<BranchInst>(&*ins_it);
+                        // outs() << "DEBUG BEGIN\n";
+                        // ins_it->dump();
+                        //_inst_branch->getSuccessor(c - 1)->dump();
+                        // outs() << "DEBUG END\n";
+                        auto _inst_operand = this->map_value_node.find(
+                            _inst_branch->getSuccessor(c - 1));
+                        if (c == 1) {
+                            // Handeling LLVM Bug
+                            dyn_cast<BranchNode>(_src)->addTrueBranch(
+                                _inst_operand->second);
+                            //_inst_operand->second);
+                        } else if (c == 2) {
+                            dyn_cast<BranchNode>(_src)->addFalseBranch(
+                                _inst_operand->second);
+                            //_inst_operand->second);
                         }
                     } else {
                         // The node is Ubranch
@@ -816,15 +807,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     uint32_t c = 0;
 
     for (auto &L : getLoops(loop_info)) {
-        // DEBUG
-        L->getHeader()->getName();
-
         // Getting list of loop's exit basicblock
         // Remember for loops can have multiple exit point
+        auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
+
         SmallVector<BasicBlock *, 8> _exit_blocks;
         L->getExitBlocks(_exit_blocks);
 
-        auto _l_head = dyn_cast<SuperNode>(map_value_node[L->getHeader()]);
         std::vector<std::pair<BasicBlock *, SuperNode *>> _l_exit_blocks;
 
         for (auto _l : _exit_blocks) {
@@ -845,14 +834,12 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             });
 
         // Try to find the backedge to the loop head basic block
-        //auto _src_back_br_inst_it = *std::find_if(
-            //_l_head->inputControl_begin(), _l_head->inputControl_end(),
-            //[&L](auto const _node_it) {
-                //return L->contains(
-                    //dyn_cast<BranchNode>(_node_it.first)->getInstruction());
-            //});
-
-        //dyn_cast<BranchNode>(_src_back_br_inst_it.first)->getInstruction()->dump();
+        auto _src_back_br_inst_it = *std::find_if(
+            _l_head->inputControl_begin(), _l_head->inputControl_end(),
+            [&L](auto const _node_it) {
+                return L->contains(
+                    dyn_cast<BranchNode>(_node_it.first)->getInstruction());
+            });
 
         std::list<SuperNode *> _list_exit;
         std::transform(_l_exit_blocks.begin(), _l_exit_blocks.end(),
@@ -882,23 +869,19 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             _loop_node->setLoopEndEnable(_l);
         }
 
-        //auto _branch_node = dyn_cast<BranchNode>(_src_back_br_inst_it.first);
-        //_branch_node->replaceControlOutputNode(_l_head, _loop_node);
-
         // Connect the latch ending branch to loopNode
-        if (auto _latch_br = dyn_cast<BranchNode>(
-                map_value_node[&L->getLoopLatch()->back()])) {
+        if (auto _latch_br = dyn_cast<BranchNode>(_src_back_br_inst_it.first)) {
             _loop_node->setLoopLatchEnable(_latch_br);
             _latch_br->addControlOutputPort(_loop_node);
-            if (_latch_br->numDataInputPort() > 0) {
-                for (auto parent : _latch_br->output_control_range()) {
-                    if (parent.first == _loop_node) {
-                        _latch_br->output_predicate.push_back(std::make_pair(
-                            _loop_node, BranchNode::PredicateResult::True));
-                    } else {
-                        _latch_br->output_predicate.push_back(std::make_pair(
-                            _loop_node, BranchNode::PredicateResult::False));
-                    }
+            // Check wether branch instruction is conditional
+            if (_latch_br->getInstruction()->getNumOperands() > 0) {
+                if (dyn_cast<BranchInst>(_latch_br->getInstruction())
+                        ->getSuccessor(0) == _l_head->getBasicBlock()) {
+                    _latch_br->output_predicate.push_back(std::make_pair(
+                        _loop_node, BranchNode::PredicateResult::True));
+                } else {
+                    _latch_br->output_predicate.push_back(std::make_pair(
+                        _loop_node, BranchNode::PredicateResult::False));
                 }
             }
         } else
@@ -909,7 +892,6 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
             auto _tar_exit_br_inst_it = *std::find_if(
                 _le->inputControl_begin(), _le->inputControl_end(),
                 [&L](auto const _node_it) {
-
                     if (_node_it.first == nullptr) return false;
 
                     if (dyn_cast<BranchNode>(_node_it.first))
@@ -918,6 +900,8 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                     else
                         return false;
                 });
+
+            dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)->getInstruction()->dump();
 
             _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
             _le->replaceControlInputNode(_tar_exit_br_inst_it.first,
@@ -951,7 +935,8 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         auto _loop_node = loop_value_node[L];
         _loop_node->setOuterLoop();
 
-        // This function should be called after filling the containers always
+        // This function should be called after filling the containers
+        // always
         _loop_node->setEndingInstructions();
 
         for (auto _en_instruction : _loop_node->endings()) {

@@ -2,6 +2,7 @@
 #define DANDELION_NODE_H
 #include <stdint.h>
 #include <list>
+#include <map>
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
@@ -51,7 +52,7 @@ struct PortID {
     PortID(uint32_t _id) : ID(_id) {}
 
     uint32_t getID() { return ID; }
-    uint32_t setID(uint32_t _id) { ID =_id; }
+    uint32_t setID(uint32_t _id) { ID = _id; }
 
     bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
 };
@@ -209,9 +210,9 @@ class Node {
 
     // Iterator over input data edges
     auto inputDataport_begin() {
-        return this->port_data.data_input_port.cbegin();
+        return this->port_data.data_input_port.begin();
     }
-    auto inputDataport_end() { return this->port_data.data_input_port.cend(); }
+    auto inputDataport_end() { return this->port_data.data_input_port.end(); }
 
     auto input_data_range() {
         return helpers::make_range(inputDataport_begin(), inputDataport_end());
@@ -219,11 +220,9 @@ class Node {
 
     // Iterator over output data edges
     auto outputDataport_begin() {
-        return this->port_data.data_output_port.cbegin();
+        return this->port_data.data_output_port.begin();
     }
-    auto outputDataport_end() {
-        return this->port_data.data_output_port.cend();
-    }
+    auto outputDataport_end() { return this->port_data.data_output_port.end(); }
     auto output_data_range() {
         return helpers::make_range(outputDataport_begin(),
                                    outputDataport_end());
@@ -231,10 +230,10 @@ class Node {
 
     // Iterator over input control edges
     auto inputControl_begin() {
-        return this->port_control.control_input_port.cbegin();
+        return this->port_control.control_input_port.begin();
     }
     auto inputControl_end() {
-        return this->port_control.control_input_port.cend();
+        return this->port_control.control_input_port.end();
     }
     auto input_control_range() {
         return helpers::make_range(inputControl_begin(), inputControl_end());
@@ -242,10 +241,10 @@ class Node {
 
     // Iterator over output control edges
     auto outputControl_begin() {
-        return this->port_control.control_output_port.cbegin();
+        return this->port_control.control_output_port.begin();
     }
     auto outputControl_end() {
-        return this->port_control.control_output_port.cend();
+        return this->port_control.control_output_port.end();
     }
     auto output_control_range() {
         return helpers::make_range(outputControl_begin(), outputControl_end());
@@ -392,8 +391,8 @@ class SuperNode : public Node {
     bool hasPhi() { return !phi_list.empty(); }
     uint32_t getNumPhi() const { return phi_list.size(); }
 
-    auto phi_begin() { return this->phi_list.cbegin(); }
-    auto phi_end() { return this->phi_list.cend(); }
+    auto phi_begin() { return this->phi_list.begin(); }
+    auto phi_end() { return this->phi_list.end(); }
     auto phis() { return helpers::make_range(phi_begin(), phi_end()); }
 
     auto ins_begin() const { return this->instruction_list.begin(); }
@@ -490,14 +489,14 @@ class ContainerNode : public Node {
     uint32_t numLiveIn() { return live_in.size(); }
     uint32_t numLiveOut() { return live_out.size(); }
 
-    auto live_in_begin() { return this->live_in.cbegin(); }
-    auto live_in_end() { return this->live_in.cend(); }
+    auto live_in_begin() { return this->live_in.begin(); }
+    auto live_in_end() { return this->live_in.end(); }
     auto live_ins() {
         return helpers::make_range(live_in_begin(), live_in_end());
     }
 
-    auto live_out_begin() { return this->live_out.cbegin(); }
-    auto live_out_end() { return this->live_out.cend(); }
+    auto live_out_begin() { return this->live_out.begin(); }
+    auto live_out_end() { return this->live_out.end(); }
     auto live_outs() {
         return helpers::make_range(live_out_begin(), live_out_end());
     }
@@ -667,18 +666,18 @@ class LoopNode : public ContainerNode {
     }
 
     // Iterator over instucrion list
-    auto ins_begin() { return instruction_list.cbegin(); }
-    auto ins_end() { return instruction_list.cend(); }
+    auto ins_begin() { return instruction_list.begin(); }
+    auto ins_end() { return instruction_list.end(); }
     auto instructions() { return helpers::make_range(ins_begin(), ins_end()); }
 
     // Iterator over basic block list
-    auto bb_begin() { return basic_block_list.cbegin(); }
-    auto bb_end() { return basic_block_list.cend(); }
+    auto bb_begin() { return basic_block_list.begin(); }
+    auto bb_end() { return basic_block_list.end(); }
     auto bblocks() { return helpers::make_range(bb_begin(), bb_end()); }
 
     // Iterator over ending instructions
-    auto ending_begin() { return ending_instructions.cbegin(); }
-    auto ending_end() { return ending_instructions.cend(); }
+    auto ending_begin() { return ending_instructions.begin(); }
+    auto ending_end() { return ending_instructions.end(); }
     auto endings() { return helpers::make_range(ending_begin(), ending_end()); }
 
     // Iterator over input edges
@@ -927,7 +926,9 @@ class FcmpNode : public InstructionNode {
 
 class BranchNode : public InstructionNode {
    public:
-    enum PredicateResult { True = 0, False};
+    enum PredicateResult { True = 0, False };
+    using PrintedNode = std::pair<Node *, PredicateResult>;
+
     list<std::pair<Node *, PredicateResult>> output_predicate;
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
         : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
@@ -939,6 +940,7 @@ class BranchNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    map<PrintedNode, uint32_t> printed_predicate;
     /**
      * Because each index is fixed for branch node the user
      * can not remove any node from the control port
@@ -1039,7 +1041,8 @@ class AllocaNode : public InstructionNode {
                uint32_t rid = 0, llvm::AllocaInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins),
           size(_size),
-          num_byte(_num_byte) {}
+          num_byte(_num_byte),
+          route_id(rid) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
