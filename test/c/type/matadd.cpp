@@ -1,10 +1,11 @@
+#define INPUT_SIZE 16
+#define NTiles INPUT_SIZE / TILE
+
 #include "tile.h"
 #include <assert.h>
 
 
 extern "C" {
-#define INPUT_SIZE 16
-#define NTiles INPUT_SIZE / TILE
 
 Tile_T A[NTiles][NTiles], B[NTiles][NTiles], C[NTiles][NTiles];
 

@@ -4,7 +4,6 @@
 #include <string.h>
 
 extern "C" {
-#define TILE 2
 
 #define Tile(N)                                                                \
   typedef struct block {                                                       \
