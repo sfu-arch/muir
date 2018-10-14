@@ -2096,7 +2096,7 @@ std::string LoadNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out.data($id)";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _idx);
 
@@ -2870,7 +2870,7 @@ std::string GepNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out.data($id)";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _idx);
 
