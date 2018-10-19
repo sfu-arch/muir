@@ -2369,9 +2369,9 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
-            // helperReplace(_text, "$id", _id);
+             helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:

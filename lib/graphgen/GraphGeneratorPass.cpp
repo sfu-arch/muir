@@ -552,7 +552,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
                 } else if (isa<DetachNode>(_node_src->second)) {
                     // TODO fix the Detachnode connections
-                    //
                     _src = dyn_cast<DetachNode>(_node_src->second);
                     _src->addControlOutputPort(_dst, c);
                     _dst->addControlInputPort(_src);
@@ -1023,8 +1022,8 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
             }
 
             //TODO needs to be checked!
-            //_end_node->addControlInputPort(_call_node->getCallIn());
-            //_call_node->getCallIn()->addControlOutputPort(_end_node);
+            _end_node->addControlInputPort(_call_node->getCallIn());
+            _call_node->getCallIn()->addControlOutputPort(_end_node);
         }
     }
 }
