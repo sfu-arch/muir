@@ -88,33 +88,39 @@ using llvm::sys::ExecuteAndWait;
 using llvm::sys::findProgramByName;
 using llvm::legacy::PassManager;
 
+static cl::OptionCategory dandelionCategory{"dandelion options"};
+
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
-                       cl::Required);
+                       cl::Required, cl::cat{dandelionCategory});
 
 cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
-                           cl::value_desc("Function name"), cl::Required);
+                           cl::value_desc("Function name"), cl::Required,
+                           cl::cat{dandelionCategory});
 
 cl::opt<string> config_path("config", cl::desc("Target function name"),
-                            cl::value_desc("config_file"), cl::Required);
+                            cl::value_desc("config_file"), cl::Required,
+                            cl::cat{dandelionCategory});
 
 cl::opt<bool> aaTrace("aa-trace", cl::desc("Alias analysis trace"),
-                      cl::value_desc("T/F {default = true}"), cl::init(false));
+                      cl::value_desc("T/F {default = true}"), cl::init(false),
+                      cl::cat{dandelionCategory}, cl::cat{dandelionCategory});
 
 cl::opt<bool> lExtract("l-ex", cl::desc("Extracting loops"),
-                       cl::value_desc("T/F {default = false}"),
-                       cl::init(false));
+                       cl::value_desc("T/F {default = false}"), cl::init(false),
+                       cl::cat{dandelionCategory});
 
 cl::opt<bool> testCase("test-file", cl::desc("Printing Test file"),
-                       cl::value_desc("T/F {default = True}"), cl::init(true));
+                       cl::value_desc("T/F {default = True}"), cl::init(true),
+                       cl::cat{dandelionCategory});
 
-cl::opt<string> outFile("o", cl::desc("Xketch output file"),
-                        cl::value_desc("filename"), cl::init(""));
+cl::opt<string> outFile("o", cl::desc("tapas output file"),
+                        cl::value_desc("filename"), cl::init(""), cl::cat{dandelionCategory});
 
 static cl::opt<char> optLevel(
-        "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                      "(default = '-O2')"),
-        cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+    "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                  "(default = '-O2')"),
+    cl::Prefix, cl::ZeroOrMore, cl::init('2'));
 
 cl::list<string> libPaths("L", cl::Prefix,
                           cl::desc("Specify a library search path"),
@@ -137,7 +143,7 @@ static void compile(Module &m, string outputPath) {
     switch (optLevel) {
         default:
             report_fatal_error("Invalid optimization level.\n");
-            // No fall through
+        // No fall through
         case '0':
             level = CodeGenOpt::None;
             break;
@@ -155,8 +161,8 @@ static void compile(Module &m, string outputPath) {
     string FeaturesStr;
     TargetOptions options = InitTargetOptionsFromCodeGenFlags();
     unique_ptr<TargetMachine> machine(
-            target->createTargetMachine(triple.getTriple(), MCPU, FeaturesStr,
-                                        options, getRelocModel(), CMModel, level));
+        target->createTargetMachine(triple.getTriple(), MCPU, FeaturesStr,
+                                    options, getRelocModel(), CMModel, level));
     assert(machine.get() && "Could not allocate target machine!");
 
     if (FloatABIForCalls != FloatABI::Default) {
@@ -192,8 +198,8 @@ static void compile(Module &m, string outputPath) {
         // Ask the target to add backend passes as necessary.
         if (machine->addPassesToEmitFile(pm, *os, FileType)) {
             report_fatal_error(
-                    "target does not support generation "
-                    "of this file type!\n");
+                "target does not support generation "
+                "of this file type!\n");
         }
 
         // Before executing passes, print the final values of the LLVM options.
@@ -377,6 +383,7 @@ int main(int argc, char **argv) {
     sys::PrintStackTraceOnErrorSignal(argv[0]);
     llvm::PrettyStackTraceProgram X(argc, argv);
     llvm_shutdown_obj shutdown;
+    cl::HideUnrelatedOptions(dandelionCategory);
     cl::ParseCommandLineOptions(argc, argv);
 
     // Construct an IR file from the filename passed on the command line.
@@ -403,7 +410,7 @@ int main(int argc, char **argv) {
     // Generating graph
     // graphGen(*module);
 
-    //saveModule(*module, "final.bc");
+    // saveModule(*module, "final.bc");
 
     return 0;
 }

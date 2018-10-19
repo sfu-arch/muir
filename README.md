@@ -1,6 +1,6 @@
 Getting Started
 =======
-Official supported environment for building and runing TAPAS is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
+Official supported environment for building and running TAPAS is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
 ```
 # apt-get install build-essential cmake sbt verilator
 ````
@@ -22,18 +22,21 @@ $ make
 
 Running tests
 =======
-TAPAS comes with bunch of available tests. You can run and get the `.scala` for them this way:
+Inside test directory there are set of test example which show the generality of TAPAS.
+To get the generated accelerator files for test cases you can run:
+
 ```
 $ # in your code repository
 $ cd test/c/
 $ make all
 ```
-This is going to generate chisel `.scala` file for c files in `test/c` directory.
+For each test case there is going to be one sacala file which has the detailed implementation of TAPAS.
 
 How to run generator on your code (detailed way)?
 =======
-For generating `.scala` for your code you have to follow this steps :
-1. Emit the llvm ir (`.ll`) for your code with supported Tapir compiler (`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
+For generating `.scala` for your code the following steps need to be taken :
+
+1. Emit the llvm ir (`.ll`) for your code with supported Tapir/TAPAS compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
     * You can out put llvm ir with this command `./Tapir-Meta/tapir/build/bin/clang -emit-llvm [Your source code]`
 2. Run `opt` with `-mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce` arguments on your llvm ir (`.ll`) code.
 3. Run TAPAS generator on your `.ll` file like this :
@@ -50,12 +53,22 @@ After that you should have the `.scala` file beside your `.c` file with a same n
 Help
 =======
 ```
-./bin/xketch -help
+./bin/dandelion -help
 
--fn-name:           Target function
--o:                 Generate Xketch file for the target function
--l-ex:<false/true>  Extracting the loops of the function
--aa-Trace:          Printing memory traces
+dandelion options:
+
+  -aa-trace                - Alias analysis trace
+  -config=<config_file>    - Target function name
+  -fn-name=<Function name> - Target function name
+  -l-ex                    - Extracting loops
+  -o=<filename>            - tapas output file
+  -test-file               - Printing Test file
+
+Generic Options:
+
+  -help                    - Display available options (-help-hidden for more)
+  -help-list               - Display list of available options (-help-list-hidden for more)
+  -version                 - Display the version of this program
 ```
 
 Extra Documentation
