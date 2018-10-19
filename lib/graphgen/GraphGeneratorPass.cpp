@@ -1004,6 +1004,9 @@ void GraphGeneratorPass::connectParalleNodes(Function &F) {
 
     _sync_node->addControlInputPort(_detach_node);
     _sync_node->addControlInputPort(_reattach_node);
+
+    _detach_node->addControlOutputPort(_sync_node);
+    _reattach_node->addControlOutputPort(_sync_node);
 }
 
 void GraphGeneratorPass::connectingCalldependencies(Function &F) {

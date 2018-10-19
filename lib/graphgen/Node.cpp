@@ -1827,7 +1827,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
             _text =
                 "  val $name = Module(new $type(NumInputs = $num_in, "
                 "NumOutputs = $num_out, ID = $id))\n\n";
-            helperReplace(_text, "$type", "PhiNode");
+            helperReplace(_text, "$type", "PhiFastNode2");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$num_out",
