@@ -16,7 +16,7 @@ all: $(SCALA)
 svg: $(SVG)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -separate-const-offset-from-gep -dce -mem2reg -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | opt -dce -mem2reg -dot-cfg -o $@
 
 %.ll: %.bc
 	llvm-dis $<

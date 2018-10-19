@@ -626,6 +626,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     DEBUG(operand->print(errs(), true));
                     DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
+                    operand->dump();
                     assert(!"The source instruction couldn't find!\n"
                             "[HINT] Look at the LLVM type it you don't have one to one mapping"
                             "between LLVM and your graph library");
