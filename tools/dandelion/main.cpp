@@ -11,32 +11,9 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
-
-// Support for LLVM 4.0+
-#define LLVM_VERSION_GE(major, minor) \
-    (LLVM_VERSION_MAJOR > (major) ||  \
-     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor))
-#define LLVM_VERSION_EQ(major, minor) \
-    (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
-#define LLVM_VERSION_LE(major, minor) \
-    (LLVM_VERSION_MAJOR < (major) ||  \
-     LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR <= (minor))
-#if LLVM_VERSION_GE(3, 7)
-
 #include "llvm/IR/LegacyPassManager.h"
-
-#else
-#include "llvm/PassManager.h"
-#endif
-#if LLVM_VERSION_GE(4, 0)
-
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-
-#else
-#include "llvm/Bitcode/ReaderWriter.h"
-#endif
-
 //#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -116,6 +93,11 @@ cl::opt<bool> testCase("test-file", cl::desc("Printing Test file"),
 
 cl::opt<string> outFile("o", cl::desc("tapas output file"),
                         cl::value_desc("filename"), cl::init(""), cl::cat{dandelionCategory});
+
+cl::opt<char> HWoptLevel(
+    "H", cl::desc("Optimization level. [-H0, -H1, -H2, or -H3] "
+                  "(default = '-H1')"),
+    cl::Prefix, cl::ZeroOrMore, cl::init('1'));
 
 static cl::opt<char> optLevel(
     "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "

@@ -1,6 +1,6 @@
 CC=clang
 XKETCH=../../build/bin/dandelion
-CFLAGS=-O0 -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -m32 -S -o -
+CFLAGS=-O1 -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls test*.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)

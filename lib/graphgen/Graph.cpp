@@ -831,9 +831,8 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     string fix_name = BB.getName().str();
     std::replace(fix_name.begin(), fix_name.end(), '-', '_');
     super_node_list.push_back(std::make_unique<SuperNode>(
-        NodeInfo(
-            super_node_list.size(),
-            "bb_" + fix_name + to_string(super_node_list.size())),
+        NodeInfo(super_node_list.size(),
+                 "bb_" + fix_name + to_string(super_node_list.size())),
         &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
@@ -998,10 +997,24 @@ InstructionNode *Graph::insertBranchNode(BranchInst &I) {
  * Insert a new computation PhiNode
  */
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
+    bool reverse = false;
+    for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
+        auto _op = I.getIncomingBlock(i);
+        int j = 0;
+        for (auto _bb : llvm::successors(I.getParent())) {
+            if (i == j) {
+                if (_op != _bb) {
+                    reverse = true;
+                }
+            }
+            j++;
+        }
+    }
+
     inst_list.push_back(std::make_unique<PhiSelectNode>(
         NodeInfo(inst_list.size(),
                  "phi" + I.getName().str() + to_string(inst_list.size())),
-        &I));
+        reverse, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),

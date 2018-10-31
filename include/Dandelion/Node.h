@@ -23,6 +23,8 @@ using namespace llvm;
 using common::FloatingPointIEEE754;
 using common::GepInfo;
 
+extern cl::opt<char> HWoptLevel;
+
 namespace dandelion {
 
 class Graph;
@@ -375,7 +377,7 @@ class SuperNode : public Node {
     explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
         : Node(Node::SuperNodeTy, _nf),
           basic_block(_bb),
-          type(SuperNodeType::NoMask) {}
+          type(SuperNodeType::NoMask){}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -1002,11 +1004,17 @@ class SelectNode : public InstructionNode {
 class PhiSelectNode : public InstructionNode {
    private:
     SuperNode *mask_node;
+    bool reverse;
 
    public:
     PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr,
                   SuperNode *_parent = nullptr)
-        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins), reverse(false) {}
+
+
+    PhiSelectNode(NodeInfo _ni, bool _rev, llvm::PHINode *_ins = nullptr,
+                  SuperNode *_parent = nullptr)
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins), reverse(_rev) {}
 
     SuperNode *getMaskNode() const { return mask_node; }
 
