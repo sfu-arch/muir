@@ -1,3 +1,5 @@
+# Dandelion Generator
+
 Getting Started
 =======
 Official supported environment for building and running TAPAS is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
@@ -30,6 +32,7 @@ $ # in your code repository
 $ cd test/c/
 $ make all
 ```
+
 For each test case there is going to be one sacala file which has the detailed implementation of TAPAS.
 
 How to run generator on your code (detailed way)?
@@ -74,3 +77,4 @@ Generic Options:
 Extra Documentation
 =======
 For more information you can look at the wiki.
+https://github.com/sfu-arch/dandelion-lib/wiki
