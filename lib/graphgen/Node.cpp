@@ -1689,7 +1689,10 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                     else if (_p.second == this->PredicateResult::True)
                         p_true_index++;
                 }
-                helperReplace(_text, "$type", "CBranchNodeVariable");
+                helperReplace(_text, "$type",
+                              (this->getEndingLoopBranch())
+                                  ? "CBranchNodeVariableLoop"
+                                  : "CBranchNodeVariable");
                 helperReplace(_text, "$false", p_false_index);
                 helperReplace(_text, "$true", p_true_index);
 
@@ -1840,7 +1843,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumInputs = $num_in, "
                     "NumOutputs = $num_out, ID = $id))\n\n";
 
-                helperReplace(_text, "$type", "PhiFastNode2");
+            helperReplace(_text, "$type", "PhiFastNode2");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$num_out",
@@ -2962,7 +2965,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type",
-                          HWoptLevel == '1' ? "LoopBlockO1" : "LoopBlock");
+                          HWoptLevel == '1' ? "LoopBlock" : "LoopBlock");
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ",");
             helperReplace(_text, "$num_out", this->numLiveOut());

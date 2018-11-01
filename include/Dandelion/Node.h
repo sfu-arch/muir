@@ -377,7 +377,7 @@ class SuperNode : public Node {
     explicit SuperNode(NodeInfo _nf, llvm::BasicBlock *_bb = nullptr)
         : Node(Node::SuperNodeTy, _nf),
           basic_block(_bb),
-          type(SuperNodeType::NoMask){}
+          type(SuperNodeType::NoMask) {}
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -927,13 +927,22 @@ class FcmpNode : public InstructionNode {
 };
 
 class BranchNode : public InstructionNode {
+   private:
+    bool ending_loop;
+
    public:
     enum PredicateResult { True = 0, False };
     using PrintedNode = std::pair<Node *, PredicateResult>;
 
     list<std::pair<Node *, PredicateResult>> output_predicate;
+
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : ending_loop(false),
+          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+
+    BranchNode(NodeInfo _ni, bool _loop, llvm::BranchInst *_ins = nullptr)
+        : ending_loop(_loop),
+          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -941,6 +950,9 @@ class BranchNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    void setEndingLoopBranch() { ending_loop = true; }
+    bool getEndingLoopBranch() { return ending_loop; }
 
     map<PrintedNode, uint32_t> printed_predicate;
     /**
@@ -1009,12 +1021,13 @@ class PhiSelectNode : public InstructionNode {
    public:
     PhiSelectNode(NodeInfo _ni, llvm::PHINode *_ins = nullptr,
                   SuperNode *_parent = nullptr)
-        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins), reverse(false) {}
-
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins),
+          reverse(false) {}
 
     PhiSelectNode(NodeInfo _ni, bool _rev, llvm::PHINode *_ins = nullptr,
                   SuperNode *_parent = nullptr)
-        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins), reverse(_rev) {}
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _ins),
+          reverse(_rev) {}
 
     SuperNode *getMaskNode() const { return mask_node; }
 

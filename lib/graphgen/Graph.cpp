@@ -997,13 +997,17 @@ InstructionNode *Graph::insertBranchNode(BranchInst &I) {
  * Insert a new computation PhiNode
  */
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
+
+    //TODO This is a hack, the ordering phi nodes are sometimes different
+    //In this way I'm catching if I need to have reverse ordering or not.
+    //it has to fixed properly
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         auto _op = I.getIncomingBlock(i);
         int j = 0;
-        for (auto _bb : llvm::successors(I.getParent())) {
-            if (i == j) {
-                if (_op != _bb) {
+        for (auto _bb : llvm::predecessors(I.getParent())) {
+            if (_op == _bb) {
+                if (i == j) {
                     reverse = true;
                 }
             }
