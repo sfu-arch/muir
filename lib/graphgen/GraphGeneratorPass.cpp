@@ -903,6 +903,9 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
             dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)->getInstruction()->dump();
 
+            //Make the branch instruction as ending branch of the loop
+            dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)->setEndingLoopBranch();
+
             _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
             _le->replaceControlInputNode(_tar_exit_br_inst_it.first,
                                          _loop_node);

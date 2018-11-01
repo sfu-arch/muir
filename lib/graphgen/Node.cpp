@@ -367,7 +367,10 @@ std::string SuperNode::printDefinition(PrintType pt) {
 
             switch (this->getNodeType()) {
                 case SuperNodeType::NoMask:
-                    helperReplace(_text, "$type", "BasicBlockNoMaskNode");
+                    helperReplace(_text, "$type",
+                                  HWoptLevel == '1'
+                                      ? "BasicBlockNoMaskNodeMerge"
+                                      : "BasicBlockNoMaskNode");
                     break;
                 case SuperNodeType::Mask:
                     _text =
@@ -382,7 +385,9 @@ std::string SuperNode::printDefinition(PrintType pt) {
                         "  val $name = Module(new $type("
                         "NumOuts = "
                         "$num_out, NumPhi=$num_phi, BID = $bid))\n\n";
-                    helperReplace(_text, "$type", "LoopHead");
+                    helperReplace(
+                        _text, "$type",
+                        HWoptLevel == '1' ? "LoopFastHead" : "LoopHead");
                     break;
             }
 
@@ -415,7 +420,8 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
             else if (this->getNodeType() == SuperNode::Mask)
                 _text = "$name.io.predicateIn($id)";
             else
-                _text = "$name.io.predicateIn";
+                _text = HWoptLevel == '1' ? "$name.io.predicateIn($id)"
+                                          : "$name.io.predicateIn";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
@@ -810,8 +816,9 @@ void BranchNode::replaceControlOutputNode(Node *src, Node *tar) {
                      [src](auto &arg) -> bool { return arg.first == src; });
     _src_predicate->first = tar;
 
-    //Make sure ordering works
-    output_predicate.splice(output_predicate.end(), output_predicate, _src_predicate);
+    // Make sure ordering works
+    output_predicate.splice(output_predicate.end(), output_predicate,
+                            _src_predicate);
 }
 
 std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
@@ -1682,7 +1689,10 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                     else if (_p.second == this->PredicateResult::True)
                         p_true_index++;
                 }
-                helperReplace(_text, "$type", "CBranchNodeVariable");
+                helperReplace(_text, "$type",
+                              (this->getEndingLoopBranch())
+                                  ? "CBranchNodeVariableLoop"
+                                  : "CBranchNodeVariable");
                 helperReplace(_text, "$false", p_false_index);
                 helperReplace(_text, "$true", p_true_index);
 
@@ -1824,9 +1834,15 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text =
-                "  val $name = Module(new $type(NumInputs = $num_in, "
-                "NumOutputs = $num_out, ID = $id))\n\n";
+            if (this->reverse)
+                _text =
+                    "  val $name = Module(new $type(NumInputs = $num_in, "
+                    "NumOutputs = $num_out, ID = $id, Res = true))\n\n";
+            else
+                _text =
+                    "  val $name = Module(new $type(NumInputs = $num_in, "
+                    "NumOutputs = $num_out, ID = $id))\n\n";
+
             helperReplace(_text, "$type", "PhiFastNode2");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
@@ -2371,7 +2387,7 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
-             helperReplace(_text, "$id", _id);
+            helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:
@@ -2948,7 +2964,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
                 "$num_out, NumExits=$num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "LoopBlock");
+            helperReplace(_text, "$type",
+                          HWoptLevel == '1' ? "LoopBlock" : "LoopBlock");
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ",");
             helperReplace(_text, "$num_out", this->numLiveOut());
