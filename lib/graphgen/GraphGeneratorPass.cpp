@@ -582,13 +582,38 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         *const_value);
                     map_value_node[operand] = _const_node;
 
-                    _const_node->addControlInputPort(
-                        this->map_value_node[ins_it->getParent()]);
-                    this->map_value_node[ins_it->getParent()]
-                        ->addControlOutputPort(_const_node);
-                    dyn_cast<SuperNode>(
-                        this->map_value_node[ins_it->getParent()])
-                        ->addconstIntNode(dyn_cast<ConstIntNode>(_const_node));
+                    /**
+                     * Constant values should get their enable signal from
+                     * their incoming BB
+                     */
+                    if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
+                        DEBUG(operand->dump());
+                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(_phi_ins->getIncomingBlock(c)->dump());
+
+                        _const_node->addControlInputPort(
+                            this->map_value_node[_phi_ins->getIncomingBlock(
+                                c)]);
+
+                        this->map_value_node[_phi_ins->getIncomingBlock(c)]
+                            ->addControlOutputPort(_const_node);
+
+                        dyn_cast<SuperNode>(
+                            this->map_value_node[_phi_ins->getIncomingBlock(c)])
+                            ->addconstIntNode(
+                                dyn_cast<ConstIntNode>(_const_node));
+
+                    } else {
+                        _const_node->addControlInputPort(
+                            this->map_value_node[ins_it->getParent()]);
+                        this->map_value_node[ins_it->getParent()]
+                            ->addControlOutputPort(_const_node);
+                        dyn_cast<SuperNode>(
+                            this->map_value_node[ins_it->getParent()])
+                            ->addconstIntNode(
+                                dyn_cast<ConstIntNode>(_const_node));
+                    }
+
                 } else if (auto const_value =
                                dyn_cast<llvm::ConstantFP>(operand)) {
                     _const_node =
@@ -626,7 +651,7 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     DEBUG(operand->print(errs(), true));
                     DEBUG(errs() << "\n");
                     DEBUG(ins_it->print(errs(), true));
-                    operand->dump();
+                    DEBUG(operand->dump());
                     assert(!"The source instruction couldn't find!\n"
                             "[HINT] Look at the LLVM type it you don't have one to one mapping"
                             "between LLVM and your graph library");
@@ -901,10 +926,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                         return false;
                 });
 
-            dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)->getInstruction()->dump();
+            DEBUG(dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)
+                      ->getInstruction()
+                      ->dump());
 
-            //Make the branch instruction as ending branch of the loop
-            dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)->setEndingLoopBranch();
+            // Make the branch instruction as ending branch of the loop
+            dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)
+                ->setEndingLoopBranch();
 
             _loop_node->pushLoopExitLatch(_tar_exit_br_inst_it.first);
             _le->replaceControlInputNode(_tar_exit_br_inst_it.first,
@@ -1025,7 +1053,7 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
                 _call_node->getCallIn()->addDataOutputPort(_end_node);
             }
 
-            //TODO needs to be checked!
+            // TODO needs to be checked!
             _end_node->addControlInputPort(_call_node->getCallIn());
             _call_node->getCallIn()->addControlOutputPort(_end_node);
         }

@@ -19,6 +19,12 @@ int main() {
     for (int i = 0; i < 9; i++) {
         printf("%u,", a[i]);
     }
+
+    printf("\n");
+    for (int i = 0; i < 9; i++) {
+        printf("%u,", b[i]);
+    }
+
     printf("\nreturned: %u\n", foo);
     return (0);
 }
