@@ -18,7 +18,7 @@ using namespace llvm;
 using namespace std;
 using namespace lx;
 
-extern cl::opt<string> XKETCHName;
+extern cl::opt<string> target_fn;
 
 bool TargetLoopExtractor::doInitialization(Module &M) {
     // TODO: Add code here if it's needed before running loop extraction

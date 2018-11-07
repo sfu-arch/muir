@@ -88,7 +88,7 @@ cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
                        cl::Required);
 
-cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
+cl::opt<string> target_fn("fn-name", cl::desc("Target function name"),
                              cl::value_desc("Function name"), cl::Required);
 
 cl::opt<bool> aaTrace(
@@ -297,7 +297,7 @@ static void AApassTest(Module &m) {
     pm.add(createScopedNoAliasAAWrapperPass());
     pm.add(createCFLAndersAAWrapperPass());
     pm.add(createAAResultsWrapperPass());
-    pm.add(new amem::AliasMem(XKETCHName));
+    pm.add(new amem::AliasMem(target_fn));
     pm.add(createVerifierPass());
     pm.run(m);
 }
@@ -320,7 +320,7 @@ static void codeGenerator(Module &m){
 
     pm.add(llvm::createPromoteMemoryToRegisterPass());
     pm.add(createSeparateConstOffsetFromGEPPass());
-    //pm.add(new gepsplitter::GEPSplitter(XKETCHName));
+    //pm.add(new gepsplitter::GEPSplitter(target_fn));
 #ifndef TAPIR
     // Creates duplicate pfor.end and pfor.end.continue blocks
     pm.add(llvm::createTailCallEliminationPass());
@@ -335,10 +335,10 @@ static void codeGenerator(Module &m){
     pm.add(new DominatorTreeWrapperPass());
     pm.add(new LoopInfoWrapperPass());
 
-    pm.add(new helpers::GEPAddrCalculation(XKETCHName));
-    pm.add(new amem::AliasMem(XKETCHName));
-    pm.add(new helpers::InstCounter(XKETCHName));
-    pm.add(new codegen::DataflowGeneratorPass(out, test, XKETCHName));
+    pm.add(new helpers::GEPAddrCalculation(target_fn));
+    pm.add(new amem::AliasMem(target_fn));
+    pm.add(new helpers::InstCounter(target_fn));
+    pm.add(new codegen::DataflowGeneratorPass(out, test, target_fn));
 
     pm.add(createVerifierPass());
     pm.run(m);

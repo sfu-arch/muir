@@ -1,3 +1,3 @@
 add_library(memalias
-    AliasMem.cpp
+    AliasEdgeWriter.cpp
 )

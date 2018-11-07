@@ -19,6 +19,7 @@
 
 #include "Dandelion/Node.h"
 #include "GraphGeneratorPass.h"
+#include "AliasEdgeWriter.h"
 
 using namespace llvm;
 using namespace std;
@@ -30,7 +31,7 @@ using ArgumentList = std::list<ArgumentNode>;
 using BasicBlockList = std::list<SuperNode>;
 using NodeList = std::list<Node>;
 
-extern cl::opt<string> XKETCHName;
+extern cl::opt<string> target_fn;
 extern cl::opt<string> config_path;
 
 namespace graphgen {
@@ -133,13 +134,14 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         _value)) {
-                    auto new_live_in = _loop_node->insertLiveInArgument(_value);
 
                     if (map_value_node.find(_value) == map_value_node.end())
                         assert(!"Couldn't find the live-in source");
                     if (map_value_node.find(&I) == map_value_node.end())
                         assert(!"Couldn't find the live-in target");
 
+                    
+                    auto new_live_in = _loop_node->insertLiveInArgument(_value);
                     auto _src = map_value_node[_value];
                     auto _tar = map_value_node[&I];
 
@@ -217,6 +219,16 @@ void UpdateInnerLiveInConnections(
                     auto _parent_loop_node =
                         loop_value_node[_loop->getParentLoop()];
 
+
+                    //We don't count inputs to PHI nodes as live-in, because their value
+                    //needs to be run only once
+                    //
+                    if((isa<llvm::PHINode>(&I))) {
+                        DEBUG(I.dump());
+                        DEBUG(_value->dump());
+                        continue;
+                    }
+                    
                     auto new_live_in = _loop_node->insertLiveInArgument(_value);
 
                     Node *_src = nullptr;
@@ -299,7 +311,7 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
 
-        if (F.getName() == XKETCHName) {
+        if (F.getName() == target_fn) {
             this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
         }
     }
@@ -316,11 +328,6 @@ bool GraphGeneratorPass::doFinalization(Module &M) {
 /**
  * Set pass dependencies
  */
-void GraphGeneratorPass::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<helpers::GepInformation>();
-    AU.addRequired<llvm::LoopInfoWrapperPass>();
-    AU.setPreservesAll();
-}
 
 /**
  * Iterating over target function's basicblocks and
@@ -1060,6 +1067,22 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     }
 }
 
+void GraphGeneratorPass::connectingAliasEdges(Function &F) {
+    auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
+
+    for(auto edge : alias_context->AliasEdgesMap){
+        auto _src = map_value_node[edge.getFirst()];
+        for(auto end_edge : edge.getSecond()){
+            auto _tar = map_value_node[end_edge];
+
+            _src->addControlOutputPort(_tar);
+            _tar->addControlInputPort(_src);
+        }
+    }
+}
+
+
+
 /**
  * All the initializations for function members
  */
@@ -1071,6 +1094,7 @@ void GraphGeneratorPass::init(Function &F) {
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);
+    connectingAliasEdges(F);
 
     // Printing the graph
     dependency_graph->optimizationPasses();
@@ -1080,7 +1104,7 @@ void GraphGeneratorPass::init(Function &F) {
 bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
-        if (F.getName() == XKETCHName) {
+        if (F.getName() == target_fn) {
             stripDebugInfo(F);
             visit(F);
             init(F);

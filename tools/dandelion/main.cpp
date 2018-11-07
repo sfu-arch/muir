@@ -51,7 +51,7 @@
 #include <memory>
 #include <string>
 
-#include "AliasMem.h"
+#include "AliasEdgeWriter.h"
 #include "Common.h"
 #include "GEPSplitter.h"
 #include "GraphGeneratorPass.h"
@@ -71,7 +71,7 @@ cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
                        cl::Required, cl::cat{dandelionCategory});
 
-cl::opt<string> XKETCHName("fn-name", cl::desc("Target function name"),
+cl::opt<string> target_fn("fn-name", cl::desc("Target function name"),
                            cl::value_desc("Function name"), cl::Required,
                            cl::cat{dandelionCategory});
 
@@ -285,7 +285,7 @@ static void AApassTest(Module &m) {
     pm.add(createScopedNoAliasAAWrapperPass());
     pm.add(createCFLAndersAAWrapperPass());
     pm.add(createAAResultsWrapperPass());
-    pm.add(new amem::AliasMem(XKETCHName));
+    pm.add(new aew::AliasEdgeWriter());
     pm.add(createVerifierPass());
     pm.run(m);
 }
@@ -337,13 +337,21 @@ static void runGraphGen(Module &M) {
     legacy::PassManager pm;
     // Usefull passes
     // pm.add(llvm::createCFGSimplificationPass());
-    // pm.add(new helpers::GEPAddrCalculation(XKETCHName));
+    // pm.add(new helpers::GEPAddrCalculation(target_fn));
+    // pm.add(llvm::createLoopSimplifyPass());
+    // pm.add(new helpers::CallInstSpliter(target_fn));
+    pm.add(createGlobalsAAWrapperPass());
+    pm.add(createSCEVAAWrapperPass());
+    pm.add(createScopedNoAliasAAWrapperPass());
+    pm.add(createCFLAndersAAWrapperPass());
+    pm.add(createAAResultsWrapperPass());
+    pm.add(new aew::AliasEdgeWriter());
     pm.add((llvm::createStripDeadDebugInfoPass()));
-    //    pm.add(llvm::createLoopSimplifyPass());
-    pm.add(new helpers::GepInformation(XKETCHName));
+    pm.add(new helpers::GepInformation(target_fn));
     pm.add(new LoopInfoWrapperPass());
-    // pm.add(new helpers::CallInstSpliter(XKETCHName));
-    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, XKETCHName), out));
+    pm.add(createBasicAAWrapperPass());
+    pm.add(llvm::createTypeBasedAAWrapperPass());
+    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, target_fn), out));
     pm.add(createVerifierPass());
     pm.run(M);
 }
@@ -381,7 +389,7 @@ int main(int argc, char **argv) {
 
     // Simplifing the gep instructions
     for (auto &F : *module) {
-        if (F.isDeclaration() || F.getName() != XKETCHName)
+        if (F.isDeclaration() || F.getName() != target_fn)
             continue;
         else
             splitGeps(F);

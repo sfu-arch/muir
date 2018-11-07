@@ -13,7 +13,7 @@
 #include <set>
 #include <string>
 
-#include "AliasMem.h"
+#include "AliasEdgeWriter.h"
 #include "Common.h"
 #include "Parser.h"
 

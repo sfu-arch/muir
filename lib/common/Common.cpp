@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace std;
 
 
-extern cl::opt<string> XKETCHName;
+extern cl::opt<string> target_fn;
 
 namespace common {
 
@@ -63,7 +63,7 @@ void PrintFunctionDFG(llvm::Module &M) {
     for (auto &F : M) {
          if (F.isDeclaration()) continue;
 
-         if (F.getName() == XKETCHName) {
+         if (F.getName() == target_fn) {
          stripDebugInfo(F);
          DEBUG(dbgs() << "FUNCTION FOUND\n");
          //Making a function pass

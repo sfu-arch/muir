@@ -14,15 +14,17 @@
 #include "Common.h"
 #include "NodeType.h"
 
+#include "AliasEdgeWriter.h"
+
 #include "Dandelion/Edge.h"
 #include "Dandelion/Graph.h"
 #include "Dandelion/Node.h"
 
 #include <map>
+#include <queue>
 #include <set>
 #include <string>
 #include <vector>
-#include <queue>
 
 using namespace dandelion;
 
@@ -53,7 +55,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     llvm::raw_ostream &code_out;
 
     // NOTE: Uncomment if there is any dependent analysis
-    //virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+    // virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     virtual bool doInitialization(llvm::Module &M) override;
     virtual bool doFinalization(llvm::Module &M) override;
@@ -85,16 +87,19 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     void fillBasicBlockDependencies(llvm::Function &);
 
-    [[deprecated("This function doesn't support nested for loops. Instead use updateLoopDependencies function")]]
-    void fillLoopDependencies(llvm::LoopInfo &);
+    [
+        [deprecated("This function doesn't support nested for loops. Instead "
+                    "use updateLoopDependencies function")]] void
+    fillLoopDependencies(llvm::LoopInfo &);
 
     void updateLoopDependencies(llvm::LoopInfo &loop_info);
 
-    //void makeLoopNodes(llvm::LoopInfo &loop_info);
+    // void makeLoopNodes(llvm::LoopInfo &loop_info);
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);
     void connectingCalldependencies(llvm::Function &);
+    void connectingAliasEdges(llvm::Function &);
 
     void buildingGraph();
 
@@ -115,7 +120,13 @@ class GraphGeneratorPass : public llvm::ModulePass,
           dependency_graph(std::make_unique<Graph>(_n_info, out)),
           code_out(out) {}
 
-    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.addRequired<helpers::GepInformation>();
+        AU.addRequired<llvm::LoopInfoWrapperPass>();
+        AU.addRequired<llvm::AAResultsWrapperPass>();
+        AU.addRequired<aew::AliasEdgeWriter>();
+        AU.setPreservesAll();
+    }
 
     // virtual bool runOnFunction(llvm::Function &) override;
     virtual bool runOnModule(llvm::Module &m) override;
