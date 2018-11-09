@@ -188,6 +188,8 @@ class Graph {
     InstructionNode *insertZextNode(llvm::ZExtInst &);
 
     InstructionNode *insertFaddNode(llvm::BinaryOperator &);
+    InstructionNode *insertFsubNode(llvm::BinaryOperator &);
+    InstructionNode *insertFmulNode(llvm::BinaryOperator &);
     InstructionNode *insertFdiveNode(llvm::BinaryOperator &);
     InstructionNode *insertFcmpNode(llvm::FCmpInst &);
     ConstFPNode *insertConstFPNode(llvm::ConstantFP &);

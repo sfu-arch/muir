@@ -878,6 +878,44 @@ InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
 /**
  * Insert a new computation instruction
  */
+InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<FaddOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+
+/**
+ * Insert a new computation instruction
+ */
+InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
+    inst_list.push_back(std::make_unique<FaddOperatorNode>(
+        NodeInfo(inst_list.size(),
+                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
+
+/**
+ * Insert a new computation instruction
+ */
 InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
     inst_list.push_back(std::make_unique<FdiveOperatorNode>(
         NodeInfo(inst_list.size(),

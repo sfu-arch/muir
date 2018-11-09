@@ -358,6 +358,14 @@ void GraphGeneratorPass::visitFAdd(llvm::BinaryOperator &I) {
     map_value_node[&I] = this->dependency_graph->insertFaddNode(I);
 }
 
+void GraphGeneratorPass::visitFSub(llvm::BinaryOperator &I) {
+    map_value_node[&I] = this->dependency_graph->insertFsubNode(I);
+}
+
+void GraphGeneratorPass::visitFMul(llvm::BinaryOperator &I) {
+    map_value_node[&I] = this->dependency_graph->insertFmulNode(I);
+}
+
 void GraphGeneratorPass::visitFDiv(llvm::BinaryOperator &I) {
     map_value_node[&I] = this->dependency_graph->insertFdiveNode(I);
 }
