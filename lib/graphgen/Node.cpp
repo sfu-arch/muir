@@ -1677,7 +1677,7 @@ std::string BranchNode::printDefinition(PrintType _pt) {
             if (this->numDataInputPort() > 0) {
                 _text =
                     "  val $name = Module(new $type(NumTrue = $true, NumFalse "
-                    "= $false, ID = "
+                    "= $false, NumPredecessor = $pred, ID = "
                     "$id))\n\n";
 
                 // Getting port index
@@ -1695,6 +1695,7 @@ std::string BranchNode::printDefinition(PrintType _pt) {
                                   : "CBranchNodeVariable");
                 helperReplace(_text, "$false", p_false_index);
                 helperReplace(_text, "$true", p_true_index);
+                helperReplace(_text, "$pred", this->numControlInputPort() - 1);
 
             } else
                 helperReplace(_text, "$type", "UBranchNode");

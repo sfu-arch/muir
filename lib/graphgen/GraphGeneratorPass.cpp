@@ -980,19 +980,24 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // This function should be called after filling the containers
         // always
+        // Here we look for Store nodes and then connect them to their endinge
+        // branch instruction
         _loop_node->setEndingInstructions();
 
         for (auto _en_instruction : _loop_node->endings()) {
+
+            // We look for the ending branch instruction of each store node
             auto _en = _en_instruction->getInstruction();
             auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
                                                 ->getParent()
                                                 ->getInstList()
                                                 .back()];
 
-            if (_br_ins->numDataInputPort() == 0) {
-                _en_instruction->addControlOutputPort(_br_ins);
-                _br_ins->addControlInputPort(_en_instruction);
-            }
+            // For now we connect all the store nodes within a for loop
+            // to their ending branch instruction
+            // this condition can be ease down later on
+            _en_instruction->addControlOutputPort(_br_ins);
+            _br_ins->addControlInputPort(_en_instruction);
         }
     }
 
