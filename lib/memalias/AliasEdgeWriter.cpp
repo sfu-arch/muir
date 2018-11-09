@@ -1,5 +1,5 @@
-// #define DEBUG_TYPE "aew"
-// #include "MicroWorkloadExtract.h"
+#define DEBUG_TYPE "aew"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -11,6 +11,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -158,8 +159,8 @@ void AliasEdgeWriter::writeEdges(CallInst *CI, Function *OF) {
                     NaiveAliasEdgesMap[*MB].push_back(*NB);
                     if (P && Q && P != Q) {
                         if (!isa<AllocaInst>(P) && !isa<GlobalValue>(P)) {
-                            errs() << "checkP: " << *P << "\n";
-                            errs() << "checkQ: " << *Q << "\n";
+                            DEBUG(errs() << "checkP: " << *P << "\n");
+                            DEBUG(errs() << "checkQ: " << *Q << "\n");
                         }
                         Data["num-ipaa-no-alias"]++;
                     } else {
@@ -176,31 +177,31 @@ void AliasEdgeWriter::writeEdges(CallInst *CI, Function *OF) {
         }
     }
 
-    if(print){
-    ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
-    for (auto P : MustAliasEdges) {
-        MustEdgeFile << P.first << " " << P.second << "\n";
-    }
-    MustEdgeFile.close();
+    if (print) {
+        ofstream MustEdgeFile((OF->getName() + ".must.txt").str(), ios::out);
+        for (auto P : MustAliasEdges) {
+            MustEdgeFile << P.first << " " << P.second << "\n";
+        }
+        MustEdgeFile.close();
 
-    ofstream EdgeFile((OF->getName() + ".aa.txt").str(), ios::out);
-    for (auto P : AliasEdges) {
-        EdgeFile << P.first << " " << P.second << "\n";
-    }
-    EdgeFile.close();
+        ofstream EdgeFile((OF->getName() + ".aa.txt").str(), ios::out);
+        for (auto P : AliasEdges) {
+            EdgeFile << P.first << " " << P.second << "\n";
+        }
+        EdgeFile.close();
 
-    ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(), ios::out);
-    for (auto P : NaiveAliasEdges) {
-        NaiveEdgeFile << P.first << " " << P.second << "\n";
-    }
-    NaiveEdgeFile.close();
+        ofstream NaiveEdgeFile((OF->getName() + ".naiveaa.txt").str(),
+                               ios::out);
+        for (auto P : NaiveAliasEdges) {
+            NaiveEdgeFile << P.first << " " << P.second << "\n";
+        }
+        NaiveEdgeFile.close();
 
-    ofstream MayEdgeFile((OF->getName() + ".may.txt").str(), ios::out);
-    for (auto P : MayAliasEdges) {
-        MayEdgeFile << P.first << " " << P.second << "\n";
-    }
-    MayEdgeFile.close();
-
+        ofstream MayEdgeFile((OF->getName() + ".may.txt").str(), ios::out);
+        for (auto P : MayAliasEdges) {
+            MayEdgeFile << P.first << " " << P.second << "\n";
+        }
+        MayEdgeFile.close();
     }
 }
 
@@ -210,8 +211,8 @@ bool AliasEdgeWriter::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
 
-        //We need to label the instructions first
-        if(F.getName() == target_fn.getValue()){
+        // We need to label the instructions first
+        if (F.getName() == target_fn.getValue()) {
             helpers::FunctionUIDLabel(F);
         }
         for (auto &BB : F) {

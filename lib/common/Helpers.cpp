@@ -425,8 +425,9 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
-        tmp_align.push_back(DL.getTypeAllocSize(src_array_type->getArrayElementType()));
-        //tmp_align.push_back(DL.getTypeAllocSize(src_type));
+        tmp_align.push_back(
+            DL.getTypeAllocSize(src_array_type->getArrayElementType()));
+        // tmp_align.push_back(DL.getTypeAllocSize(src_type));
 
         DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
         DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
@@ -434,7 +435,8 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
             errs() << "Num byte: "
                    << DL.getTypeAllocSize(src_array_type->getArrayElementType())
                    << "\n");
-    } else if (src_type->isIntegerTy() || src_type->isDoubleTy() || src_type->isFloatTy()) {
+    } else if (src_type->isIntegerTy() || src_type->isDoubleTy() ||
+               src_type->isFloatTy()) {
         tmp_align.push_back(DL.getTypeAllocSize(src_type));
 
     } else {
@@ -531,55 +533,55 @@ bool GepInformation::runOnModule(Module &M) {
     return false;
 }
 
-//namespace helpers {
+// namespace helpers {
 
-//char GEPAddrCalculation::ID = 0;
+// char GEPAddrCalculation::ID = 0;
 //}
 
-//void GEPAddrCalculation::visitSExtInst(Instruction &I) {
-    //// Getting datalayout
-    //auto DL = I.getModule()->getDataLayout();
+// void GEPAddrCalculation::visitSExtInst(Instruction &I) {
+//// Getting datalayout
+// auto DL = I.getModule()->getDataLayout();
 
-    //auto op = dyn_cast<llvm::CastInst>(&I);
-    //DEBUG(dbgs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n");
-    //DEBUG(dbgs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n");
+// auto op = dyn_cast<llvm::CastInst>(&I);
+// DEBUG(dbgs() << DL.getTypeAllocSize(op->getSrcTy()) * 8 << "\n");
+// DEBUG(dbgs() << DL.getTypeAllocSize(op->getDestTy()) * 8 << "\n");
 //}
 
-//void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
-    //assert(I.getNumOperands() <= 3 &&
-           //"Gep with more than 2 operand is not supported");
+// void GEPAddrCalculation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
+// assert(I.getNumOperands() <= 3 &&
+//"Gep with more than 2 operand is not supported");
 
-    //// Dumping the instruction
-    //DEBUG(I.print(errs(), true));
+//// Dumping the instruction
+// DEBUG(I.print(errs(), true));
 
-    //// Getting datalayout
-    //auto DL = I.getModule()->getDataLayout();
-    //uint32_t numByte = 0;
-    //uint64_t start_align = 0;
-    //uint64_t end_align = 0;
+//// Getting datalayout
+// auto DL = I.getModule()->getDataLayout();
+// uint32_t numByte = 0;
+// uint64_t start_align = 0;
+// uint64_t end_align = 0;
 
-    //auto src_type = I.getSourceElementType();
-    //auto tar_type = I.getResultElementType();
-    //DEBUG(src_type->print(errs(), true));
-    //if (src_type->isStructTy()) {
-        //auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
-        //for (auto _element : src_struct_type->elements()) {
-            //errs() << "Num byte: " << DL.getTypeAllocSize(_element) << "\n";
-        //}
-    //} else if (src_type->isArrayTy()) {
-        //auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
-        //errs() << src_array_type->getArrayNumElements() << "\n";
-        //errs() << "Num byte: "
-               //<< DL.getTypeAllocSize(src_array_type->getArrayElementType())
-               //<< "\n";
-    //}
+// auto src_type = I.getSourceElementType();
+// auto tar_type = I.getResultElementType();
+// DEBUG(src_type->print(errs(), true));
+// if (src_type->isStructTy()) {
+// auto src_struct_type = dyn_cast<llvm::StructType>(src_type);
+// for (auto _element : src_struct_type->elements()) {
+// errs() << "Num byte: " << DL.getTypeAllocSize(_element) << "\n";
+//}
+//} else if (src_type->isArrayTy()) {
+// auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
+// errs() << src_array_type->getArrayNumElements() << "\n";
+// errs() << "Num byte: "
+//<< DL.getTypeAllocSize(src_array_type->getArrayElementType())
+//<< "\n";
+//}
 //}
 
-//bool GEPAddrCalculation::runOnModule(Module &M) {
-    //for (auto &ff : M) {
-        //if (ff.getName() == this->function_name) visit(&ff);
-    //}
-    //return false;
+// bool GEPAddrCalculation::runOnModule(Module &M) {
+// for (auto &ff : M) {
+// if (ff.getName() == this->function_name) visit(&ff);
+//}
+// return false;
 //}
 
 namespace helpers {

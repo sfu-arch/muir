@@ -1,13 +1,14 @@
 #include <stdio.h>
 
-void test16(unsigned j) {
+unsigned test16(unsigned j) {
+    unsigned foo = 0;
   for (unsigned i = 0; i < 5; ++i) {
-    unsigned foo = i;
-    foo = foo * i;
+    foo = foo * i + j;
   }
+  return foo;
 }
 
 int main() {
-  test16(100);
-  printf("%d\n", 0);
+  unsigned res = test16(100);
+  printf("Result: %d\n", res);
 }

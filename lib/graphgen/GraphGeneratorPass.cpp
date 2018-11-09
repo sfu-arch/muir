@@ -1,4 +1,4 @@
-#define DEBUG_TYPE "lx"
+#define DEBUG_TYPE "graph"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -17,9 +17,9 @@
 
 #include <iostream>
 
+#include "AliasEdgeWriter.h"
 #include "Dandelion/Node.h"
 #include "GraphGeneratorPass.h"
-#include "AliasEdgeWriter.h"
 
 using namespace llvm;
 using namespace std;
@@ -134,13 +134,11 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         _value)) {
-
                     if (map_value_node.find(_value) == map_value_node.end())
                         assert(!"Couldn't find the live-in source");
                     if (map_value_node.find(&I) == map_value_node.end())
                         assert(!"Couldn't find the live-in target");
 
-                    
                     auto new_live_in = _loop_node->insertLiveInArgument(_value);
                     auto _src = map_value_node[_value];
                     auto _tar = map_value_node[&I];
@@ -219,16 +217,16 @@ void UpdateInnerLiveInConnections(
                     auto _parent_loop_node =
                         loop_value_node[_loop->getParentLoop()];
 
-
-                    //We don't count inputs to PHI nodes as live-in, because their value
-                    //needs to be run only once
+                    // We don't count inputs to PHI nodes as live-in, because
+                    // their value
+                    // needs to be run only once
                     //
-                    if((isa<llvm::PHINode>(&I))) {
+                    if ((isa<llvm::PHINode>(&I))) {
                         DEBUG(I.dump());
                         DEBUG(_value->dump());
                         continue;
                     }
-                    
+
                     auto new_live_in = _loop_node->insertLiveInArgument(_value);
 
                     Node *_src = nullptr;
@@ -933,6 +931,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                         return false;
                 });
 
+            // TODO I don't know why sometimes there is no ending instruciton
+            // add here, need to investigate latter
+            if (_tar_exit_br_inst_it == *_le->inputControl_end()) {
+                assert(!"Don't run loop-simplify pass optimization on LL file,"
+                        "we don't support this type of loop structure right now!\n");
+            }
+
             DEBUG(dyn_cast<BranchNode>(_tar_exit_br_inst_it.first)
                       ->getInstruction()
                       ->dump());
@@ -1070,9 +1075,9 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
 void GraphGeneratorPass::connectingAliasEdges(Function &F) {
     auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
 
-    for(auto edge : alias_context->AliasEdgesMap){
+    for (auto edge : alias_context->MustAliasEdgesMap) {
         auto _src = map_value_node[edge.getFirst()];
-        for(auto end_edge : edge.getSecond()){
+        for (auto end_edge : edge.getSecond()) {
             auto _tar = map_value_node[end_edge];
 
             _src->addControlOutputPort(_tar);
@@ -1080,8 +1085,6 @@ void GraphGeneratorPass::connectingAliasEdges(Function &F) {
         }
     }
 }
-
-
 
 /**
  * All the initializations for function members
@@ -1094,7 +1097,7 @@ void GraphGeneratorPass::init(Function &F) {
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);
-    connectingAliasEdges(F);
+    // connectingAliasEdges(F);
 
     // Printing the graph
     dependency_graph->optimizationPasses();
