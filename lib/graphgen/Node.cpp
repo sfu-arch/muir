@@ -1159,6 +1159,9 @@ std::string BinaryOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _name(this->getName());
     switch (_pt) {
         case PrintType::Scala:
+            if(this->getOpCodeName() == "ashr")
+                WARNING("Make sure shift ordering is correct");
+
             std::replace(_name.begin(), _name.end(), '.', '_');
             if (_idx == 0)
                 _text = "$name.io.LeftIO";

@@ -21,8 +21,8 @@
 #include "Dandelion/Node.h"
 #include "GraphGeneratorPass.h"
 
-using namespace llvm;
 using namespace std;
+using namespace llvm;
 using namespace graphgen;
 using namespace dandelion;
 
