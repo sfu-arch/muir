@@ -3865,6 +3865,7 @@ std::string BitcastNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumOuts = "
                 "$num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$type", "BitCastNode");
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
 
