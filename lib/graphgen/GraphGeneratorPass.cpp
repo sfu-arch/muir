@@ -633,14 +633,47 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         this->dependency_graph->insertConstFPNode(*const_value);
                     map_value_node[operand] = _const_node;
 
-                    _const_node->addControlInputPort(
-                        this->map_value_node[ins_it->getParent()]);
-                    this->map_value_node[ins_it->getParent()]
-                        ->addControlOutputPort(_const_node);
+                    /**
+                      * Constant values should get their
+                      * enable signal from
+                      * their incoming BB
+                    */
+                    if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
+                        DEBUG(operand->dump());
+                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
-                    dyn_cast<SuperNode>(
-                        this->map_value_node[ins_it->getParent()])
-                        ->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
+                        _const_node->addControlInputPort(
+                            this->map_value_node[_phi_ins->getIncomingBlock(
+                                c)]);
+
+                        this->map_value_node[_phi_ins->getIncomingBlock(c)]
+                            ->addControlOutputPort(_const_node);
+
+                        dyn_cast<SuperNode>(
+                            this->map_value_node[_phi_ins->getIncomingBlock(c)])
+                            ->addconstFPNode(
+                                dyn_cast<ConstFPNode>(_const_node));
+
+                    } else {
+                        _const_node->addControlInputPort(
+                            this->map_value_node[ins_it->getParent()]);
+                        this->map_value_node[ins_it->getParent()]
+                            ->addControlOutputPort(_const_node);
+                        dyn_cast<SuperNode>(
+                            this->map_value_node[ins_it->getParent()])
+                            ->addconstFPNode(
+                                dyn_cast<ConstFPNode>(_const_node));
+                    }
+
+                    //_const_node->addControlInputPort(
+                        //this->map_value_node[ins_it->getParent()]);
+                    //this->map_value_node[ins_it->getParent()]
+                        //->addControlOutputPort(_const_node);
+
+                    //dyn_cast<SuperNode>(
+                        //this->map_value_node[ins_it->getParent()])
+                        //->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
                 } else if (auto undef_value =
                                dyn_cast<llvm::UndefValue>(operand)) {
                     // TODO define an undef node instead of uisng empty const
@@ -993,7 +1026,6 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         _loop_node->setEndingInstructions();
 
         for (auto _en_instruction : _loop_node->endings()) {
-
             // We look for the ending branch instruction of each store node
             auto _en = _en_instruction->getInstruction();
             auto &_br_ins = map_value_node[&_en_instruction->getInstruction()

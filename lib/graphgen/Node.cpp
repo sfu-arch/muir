@@ -2097,9 +2097,9 @@ std::string LoadNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Successor($id)";
+            _text = "$name.io.PredOp($id)";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
+            helperReplace(_text, "$id", _id - 1);
 
             break;
         case PrintType::Dot:
@@ -2216,9 +2216,9 @@ std::string StoreNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Sucessor($id)";
+            _text = "$name.io.PredOp($id)";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
+            helperReplace(_text, "$id", _id - 1);
 
             break;
         case PrintType::Dot:
