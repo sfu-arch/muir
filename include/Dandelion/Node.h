@@ -1412,6 +1412,8 @@ class ConstFPNode : public Node {
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
         : Node(Node::ConstFPTy, _ni), parent_const_fp(_cfp) {
+            //TODO Check the actual value of f, right now I only make sure
+            //the tool doesn't break in cases that I don't support
         if (parent_const_fp->getValueAPF().isZero())
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isNegative())
