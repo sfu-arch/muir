@@ -1412,7 +1412,14 @@ class ConstFPNode : public Node {
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
         : Node(Node::ConstFPTy, _ni), parent_const_fp(_cfp) {
-        value.f = parent_const_fp->getValueAPF().convertToDouble();
+        if (parent_const_fp->getValueAPF().isZero())
+            value.f = 0;
+        else if (parent_const_fp->getValueAPF().isNegative())
+            value.f = 0;
+        else if(parent_const_fp->getValueAPF().isInteger())
+            value.f = parent_const_fp->getValueAPF().convertToDouble();
+        else
+            value.f = 0;
     }
 
     // Define classof function so that we can use dyn_cast function

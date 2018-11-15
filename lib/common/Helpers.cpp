@@ -438,13 +438,20 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     } else if (src_type->isIntegerTy() || src_type->isDoubleTy() ||
                src_type->isFloatTy()) {
         tmp_align.push_back(DL.getTypeAllocSize(src_type));
-
-    } else {
+    }
+    else if(src_type->isPointerTy()){
+        tmp_align.push_back(DL.getTypeAllocSize(src_type));
+    }
+    else {
         // Dumping the instruction
         DEBUG(errs() << PURPLE("[DEBUG] "));
+        DEBUG(errs() << "Instruction: ");
         DEBUG(I.print(errs(), true));
         DEBUG(errs() << "\n");
+        DEBUG(errs() << PURPLE("[DEBUG] "));
+        DEBUG(errs() << "Operand: ");
         DEBUG(src_type->print(errs(), true));
+        DEBUG(errs() << "\n");
         assert(!"GepInformation pass doesn't support this type of input");
     }
 

@@ -3863,7 +3863,8 @@ std::string BitcastNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out))\n\n";
+                "$num_out, ID = $id))\n\n";
+            helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$type", "BitCastNode");
             helperReplace(_text, "$num_out",

@@ -232,7 +232,9 @@ bool AliasEdgeWriter::runOnModule(Module &M) {
         }
     }
 
-    assert(Map.size() == 1 && "Only one extracted function at the moment");
+    if(Map.size() == 0)
+        return false;
+    //assert(Map.size() == 1 && "Only one extracted function at the moment");
 
     for (auto &KV : Map) {
         assert(KV.second.size() == 1 && "Only one call site at the moment");

@@ -629,6 +629,8 @@ void GraphGeneratorPass::findDataPort(Function &F) {
 
                 } else if (auto const_value =
                                dyn_cast<llvm::ConstantFP>(operand)) {
+                    DEBUG(errs() << PURPLE("[DEBUG] "));
+                    DEBUG(operand->dump());
                     _const_node =
                         this->dependency_graph->insertConstFPNode(*const_value);
                     map_value_node[operand] = _const_node;
@@ -667,13 +669,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                     }
 
                     //_const_node->addControlInputPort(
-                        //this->map_value_node[ins_it->getParent()]);
-                    //this->map_value_node[ins_it->getParent()]
-                        //->addControlOutputPort(_const_node);
+                    // this->map_value_node[ins_it->getParent()]);
+                    // this->map_value_node[ins_it->getParent()]
+                    //->addControlOutputPort(_const_node);
 
-                    //dyn_cast<SuperNode>(
-                        //this->map_value_node[ins_it->getParent()])
-                        //->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
+                    // dyn_cast<SuperNode>(
+                    // this->map_value_node[ins_it->getParent()])
+                    //->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
                 } else if (auto undef_value =
                                dyn_cast<llvm::UndefValue>(operand)) {
                     // TODO define an undef node instead of uisng empty const
