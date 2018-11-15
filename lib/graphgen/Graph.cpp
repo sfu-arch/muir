@@ -577,7 +577,8 @@ void Graph::printSharedConnections(PrintType _pt) {
                            PrintType::Scala,
                            this->getFPUNode()
                                ->returnMemoryReadOutputPortIndex(_fd_node)
-                               .getID());
+                               .getID())
+                    << "\n\n";
             }
             break;
         }
