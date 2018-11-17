@@ -1,4 +1,4 @@
-; ModuleID = './test_09_conv2d_a_ir_4.bc'
+; ModuleID = 'test_09_conv2d_a_ir_4.bc'
 source_filename = "./09_conv2d_a_ir_4.bc"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux_gnu"
