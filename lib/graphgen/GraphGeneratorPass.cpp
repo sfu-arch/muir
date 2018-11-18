@@ -70,8 +70,9 @@ uint32_t returnNumPred(BasicBlock *BB) {
  */
 bool definedInCaller(const SetVector<BasicBlock *> &Blocks, Value *V) {
     if (isa<Argument>(V)) return true;
-    if (Instruction *I = dyn_cast<Instruction>(V))
+    if (Instruction *I = dyn_cast<Instruction>(V)) {
         if (!Blocks.count(I->getParent())) return true;
+    }
     return false;
 }
 
@@ -130,6 +131,22 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
             // Detecting Live-ins
             for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
                 Value *_value = *OI;
+
+                auto *N = I.getMetadata("UID");
+                auto *S = dyn_cast<MDString>(N->getOperand(0));
+                //errs() << S->getString();
+
+                if (isa<llvm::PHINode>(I) && S->getString() == "47") {
+                    errs() << PURPLE("[DEBUG] ");
+                    errs() << "Phi instruciton: ";
+                    I.dump();
+                    errs() << PURPLE("[DEBUG] ");
+                    errs() << "Operand: ";
+                    errs() << PURPLE("[DEBUG] ");
+                    errs() << "Metadata: ";
+                    errs() << "\n";
+                    _value->dump();
+                }
                 if (definedInCaller(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),

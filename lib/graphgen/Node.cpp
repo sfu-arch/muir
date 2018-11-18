@@ -377,14 +377,14 @@ std::string SuperNode::printDefinition(PrintType pt) {
                         "  val $name = Module(new $type("
                         "NumInputs = $num_in, "
                         "NumOuts = "
-                        "$num_out, NumPhi=$num_phi, BID = $bid))\n\n";
+                        "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
                     helperReplace(_text, "$type", "BasicBlockNode");
                     break;
                 case SuperNodeType::LoopHead:
                     _text =
                         "  val $name = Module(new $type("
                         "NumOuts = "
-                        "$num_out, NumPhi=$num_phi, BID = $bid))\n\n";
+                        "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
                     helperReplace(
                         _text, "$type",
                         HWoptLevel == '1' ? "LoopFastHead" : "LoopHead");
@@ -503,15 +503,15 @@ std::string MemoryNode::printDefinition(PrintType pt) {
         case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $reg_type(ID=$id, Size=$size, "
-                "NReads=$num_read, NWrites=$num_write)\n"
-                "\t\t (WControl=new "
-                "WriteMemoryController(NumOps=$write_num_op, "
-                "BaseSize=$read_base_size, NumEntries=$read_num_entries))\n"
-                "\t\t (RControl=new ReadMemoryController(NumOps=$read_num_op, "
-                "BaseSize=$write_base_size, "
-                "NumEntries=$write_num_entries))\n"
-                "\t\t (RWArbiter=new ReadWriteArbiter()))"
+                "  val $name = Module(new $reg_type(ID = $id, Size = $size, "
+                "NReads = $num_read, NWrites = $num_write)\n"
+                "  (WControl = new "
+                "WriteMemoryController(NumOps = $write_num_op, "
+                "BaseSize = $read_base_size, NumEntries = $read_num_entries))\n"
+                "  (RControl = new ReadMemoryController(NumOps = $read_num_op, "
+                "BaseSize = $write_base_size, "
+                "NumEntries = $write_num_entries))\n"
+                "  (RWArbiter = new ReadWriteArbiter()))"
                 "\n\n"
                 "  io.MemReq <> $name.io.MemReq\n"
                 "  $name.io.MemResp <> io.MemResp\n\n";
@@ -745,7 +745,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$type", "SplitCallNew");
             helperReplace(_text, "$id", std::to_string(this->getID()));
             helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->live_ins()), ",");
+                          make_argument_port(this->live_ins()), ", ");
             // TODO: uncomment if you update the list shape.
 
             break;
@@ -1100,7 +1100,7 @@ std::string BinaryOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1406,7 +1406,7 @@ std::string FcmpNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1565,7 +1565,7 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign=false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1950,14 +1950,14 @@ std::string ReturnNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(retTypes=List($<input_list>), "
+                "  val $name = Module(new $type(retTypes = List($<input_list>), "
                 "ID = $id))\n\n";
             helperReplace(_text, "$type", "RetNode2");
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$<input_list>",
                           std::vector<uint32_t>(this->numDataInputPort(), 32),
-                          ",");
+                          ", ");
 
             break;
         case PrintType::Dot:
@@ -2054,9 +2054,9 @@ std::string LoadNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumPredOps=$npo, "
-                "NumSuccOps=$nso, "
-                "NumOuts=$num_out, ID=$id, RouteID=$rid))\n\n";
+                "  val $name = Module(new $type(NumPredOps = $npo, "
+                "NumSuccOps = $nso, "
+                "NumOuts = $num_out, ID = $id, RouteID = $rid))\n\n";
             helperReplace(_text, "$type", "UnTypLoad");
 
             helperReplace(_text, "$name", _name.c_str());
@@ -2192,9 +2192,9 @@ std::string StoreNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumPredOps=$npo, "
-                "NumSuccOps=$nso, "
-                "ID=$id, RouteID=$rid))\n\n";
+                "  val $name = Module(new $type(NumPredOps = $npo, "
+                "NumSuccOps = $nso, "
+                "ID = $id, RouteID = $rid))\n\n";
             helperReplace(_text, "$type", "UnTypStore");
 
             helperReplace(_text, "$name", _name.c_str());
@@ -2819,8 +2819,8 @@ std::string GepNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumIns = $num_ins, "
-                "NumOuts=$num_out, "
-                "ID=$id)(ElementSize = $size, ArraySize = $array))\n\n";
+                "NumOuts = $num_out, "
+                "ID = $id)(ElementSize = $size, ArraySize = $array))\n\n";
             helperReplace(_text, "$type", "GepNode");
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", std::to_string(this->getID()));
@@ -2963,15 +2963,15 @@ std::string LoopNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumIns=List($<input_vector>), "
+                "  val $name = Module(new $type(NumIns = List($<input_vector>), "
                 "NumOuts = "
-                "$num_out, NumExits=$num_exit, ID = $id))\n\n";
+                "$num_out, NumExits = $num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type",
                           HWoptLevel == '1' ? "LoopBlock" : "LoopBlock");
             helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->live_ins()), ",");
+                          make_argument_port(this->live_ins()), ", ");
             helperReplace(_text, "$num_out", this->numLiveOut());
             helperReplace(_text, "$num_exit", this->numControlInputPort() - 2);
 

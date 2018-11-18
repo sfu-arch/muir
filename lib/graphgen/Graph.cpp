@@ -654,9 +654,10 @@ void Graph::printClosingclass(PrintType _pt) {
 void Graph::printScalaMainClass() {
     // Printing Tests class
     string _command =
-        "import java.io.{File, FileWriter}\n"
+        "import java.io.{File, FileWriter}\n\n"
         "object $class_nameMain extends App {\n"
-        "  val dir = new File(\"RTL/$class_name\") ; dir.mkdirs\n"
+        "  val dir = new File(\"RTL/$class_name\");\n"
+        "  dir.mkdirs\n"
         "  implicit val p = config.Parameters.root((new "
         "MiniConfig).toInstance)\n"
         "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new "
