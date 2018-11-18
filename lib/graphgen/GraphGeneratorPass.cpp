@@ -132,21 +132,6 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
             for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
                 Value *_value = *OI;
 
-                auto *N = I.getMetadata("UID");
-                auto *S = dyn_cast<MDString>(N->getOperand(0));
-                //errs() << S->getString();
-
-                if (isa<llvm::PHINode>(I) && S->getString() == "47") {
-                    errs() << PURPLE("[DEBUG] ");
-                    errs() << "Phi instruciton: ";
-                    I.dump();
-                    errs() << PURPLE("[DEBUG] ");
-                    errs() << "Operand: ";
-                    errs() << PURPLE("[DEBUG] ");
-                    errs() << "Metadata: ";
-                    errs() << "\n";
-                    _value->dump();
-                }
                 if (definedInCaller(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
@@ -226,6 +211,23 @@ void UpdateInnerLiveInConnections(
         for (auto &I : *B) {
             for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
                 Value *_value = *OI;
+
+                auto *N = I.getMetadata("UID");
+                auto *S = dyn_cast<MDString>(N->getOperand(0));
+
+                if (isa<llvm::PHINode>(I) && S->getString() == "47") {
+                    auto *N = dyn_cast<Instruction>(OI)->getMetadata("UID");
+                    auto *S = dyn_cast<MDString>(N->getOperand(0));
+
+                    errs() << PURPLE("[DEBUG] ");
+                    errs() << "Phi instruciton: ";
+                    I.dump();
+                    errs() << PURPLE("[DEBUG] ");
+                    errs() << "Operand: ";
+                    _value->dump();
+                    errs() << "Meta:  " << S->getString() << "\n";
+                }
+
                 if (definedInCaller(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
@@ -234,15 +236,17 @@ void UpdateInnerLiveInConnections(
                     auto _parent_loop_node =
                         loop_value_node[_loop->getParentLoop()];
 
+                    // TODO: This part needs to be re-thinked!
+                    //
                     // We don't count inputs to PHI nodes as live-in, because
                     // their value
                     // needs to be run only once
                     //
-                    if ((isa<llvm::PHINode>(&I))) {
-                        DEBUG(I.dump());
-                        DEBUG(_value->dump());
-                        continue;
-                    }
+                    //if ((isa<llvm::PHINode>(&I))) {
+                        //DEBUG(I.dump());
+                        //DEBUG(_value->dump());
+                        //continue;
+                    //}
 
                     auto new_live_in = _loop_node->insertLiveInArgument(_value);
 
@@ -1063,20 +1067,23 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
     for (auto &L : getOuterLoops(loop_info)) {
         // At this stage we know that outer loop dominante all other loops
         // therefore each live-in for subLoops is a live-in for the outer
-        // loop as well. We first connect all the live-ins to the outer loop
+        // loop as well.
+        // We first connect all the live-ins to the outer loop
         // and then iteratively go trought the subloops and update the
         // connections.
         auto _loop_node = loop_value_node[&*L];
         UpdateLiveInConnections(L, _loop_node, map_value_node);
         UpdateLiveOutConnections(L, _loop_node, map_value_node);
 
-        std::queue<Loop *> _loop_queue;
+        std::list<Loop *> _loop_list;
 
-        for (auto _l : L->getSubLoopsVector()) _loop_queue.push(_l);
+        for (auto _l : L->getSubLoops()) {
+            _loop_list.push_back(_l);
+        }
 
-        while (!_loop_queue.empty()) {
-            auto _sub_loop = _loop_queue.front();
-            _loop_queue.pop();
+        while (!_loop_list.empty()) {
+            auto _sub_loop = _loop_list.front();
+            _loop_list.pop_front();
 
             UpdateInnerLiveInConnections(_sub_loop, loop_value_node,
                                          map_value_node);
@@ -1084,7 +1091,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                                           map_value_node);
 
             for (auto _tmp_sub : _sub_loop->getSubLoopsVector()) {
-                _loop_queue.push(_tmp_sub);
+                _loop_list.push_back(_tmp_sub);
             }
         }
     }
