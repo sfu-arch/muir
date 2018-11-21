@@ -168,6 +168,10 @@ class Node {
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
+    uint32_t numMemReqPort() { return read_port_data.memory_req_port.size(); }
+    uint32_t numMemRespPort() { return read_port_data.memory_resp_port.size(); }
+
+
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
     }
@@ -870,9 +874,12 @@ class FaddOperatorNode : public InstructionNode {
 };
 
 class FdiveOperatorNode : public InstructionNode {
+   private:
+    uint32_t route_id;
+
    public:
     FdiveOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins), route_id(0) {}
 
     // Overloading isa<>, dyn_cast from llvm
     static bool classof(const InstructionNode *I) {
@@ -881,6 +888,9 @@ class FdiveOperatorNode : public InstructionNode {
     static bool classof(const Node *T) {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
+
+    auto getRouteID() { return route_id; }
+    void setRouteID(uint32_t _id) { route_id = _id; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
@@ -1412,13 +1422,13 @@ class ConstFPNode : public Node {
    public:
     ConstFPNode(NodeInfo _ni, llvm::ConstantFP *_cfp = nullptr)
         : Node(Node::ConstFPTy, _ni), parent_const_fp(_cfp) {
-            //TODO Check the actual value of f, right now I only make sure
-            //the tool doesn't break in cases that I don't support
+        // TODO Check the actual value of f, right now I only make sure
+        // the tool doesn't break in cases that I don't support
         if (parent_const_fp->getValueAPF().isZero())
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isNegative())
             value.f = 0;
-        else if(parent_const_fp->getValueAPF().isInteger())
+        else if (parent_const_fp->getValueAPF().isInteger())
             value.f = parent_const_fp->getValueAPF().convertToDouble();
         else
             value.f = 0;

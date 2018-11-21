@@ -11,12 +11,19 @@
 # define _SEIDEL_2D_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(TINY_DATASET) && !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
 #  define LARGE_DATASET
 # endif
 
 # if !defined(TSTEPS) && !defined(N)
 /* Define sample dataset sizes. */
+
+#  ifdef TINY_DATASET
+#   define TSTEPS 10
+#   define N 20
+#  endif
+
+
 #  ifdef MINI_DATASET
 #   define TSTEPS 20
 #   define N 40

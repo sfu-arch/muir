@@ -17,6 +17,7 @@
 /* Include polybench common header. */
 #include <polybench.h>
 
+#define TINY_DATASET
 /* Include benchmark-specific header. */
 #include "seidel-2d.h"
 

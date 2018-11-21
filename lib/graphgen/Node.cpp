@@ -1284,7 +1284,7 @@ std::string FdiveOperatorNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$route_id", 0);
+            helperReplace(_text, "$route_id", this->getRouteID());
             helperReplace(_text, "$type", "FPDivSqrtNode");
             helperReplace(_text, "$opcode", this->getOpCodeName());
 
