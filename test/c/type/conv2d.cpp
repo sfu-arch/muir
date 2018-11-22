@@ -5,7 +5,7 @@
 
 #include "tile.h"
 #include "vector.h"
-#include <cassert>
+#include <assert.h>
 Tile_T in;
 Tile_T out;
 int filter[3][3] =
