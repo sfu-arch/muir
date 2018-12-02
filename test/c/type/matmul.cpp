@@ -18,9 +18,9 @@ void matmul(Tile_T A[][NTiles], Tile_T B[][NTiles], Tile_T C[][NTiles]) {
             Tile_T* b   = loadTile(&B[i][j]);
             Tile_T *mul = mulTile(a,b);
             storeTile(addTile(&C[i][j],mul),&C[i][j]);
-            destroy(mul);
-            destroy(a);
-            destroy(b);
+            //destroy(mul);
+            //destroy(a);
+            //destroy(b);
             }
         }
     }

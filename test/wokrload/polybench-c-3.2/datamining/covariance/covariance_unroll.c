@@ -5,7 +5,7 @@
  * Contact: Louis-Noel Pouchet <pouchet@cse.ohio-state.edu>
  * Web address: http://polybench.sourceforge.net
  */
-#define TINY_DATASET
+#define SMALL_DATASET
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
