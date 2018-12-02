@@ -171,7 +171,6 @@ class Node {
     uint32_t numMemReqPort() { return read_port_data.memory_req_port.size(); }
     uint32_t numMemRespPort() { return read_port_data.memory_resp_port.size(); }
 
-
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
     }
@@ -879,7 +878,8 @@ class FdiveOperatorNode : public InstructionNode {
 
    public:
     FdiveOperatorNode(NodeInfo _ni, llvm::Instruction *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins), route_id(0) {}
+        : InstructionNode(_ni, InstructionNode::FdiveInstructionTy, _ins),
+          route_id(0) {}
 
     // Overloading isa<>, dyn_cast from llvm
     static bool classof(const InstructionNode *I) {
@@ -1428,10 +1428,11 @@ class ConstFPNode : public Node {
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isNegative())
             value.f = 0;
-        else if (parent_const_fp->getValueAPF().isInteger())
-            value.f = parent_const_fp->getValueAPF().convertToDouble();
-        else
-            value.f = 0;
+        else if (parent_const_fp->getValueAPF().isInteger()) {
+            value.f = parent_const_fp->getValueAPF().convertToFloat();
+        } else
+            value.f = parent_const_fp->getValueAPF().convertToFloat();
+            //value.f = 0;
     }
 
     // Define classof function so that we can use dyn_cast function

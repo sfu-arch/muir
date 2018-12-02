@@ -261,4 +261,4 @@ bool AliasEdgeWriter::doFinalization(Module &M) {
 }
 
 char AliasEdgeWriter::ID = 0;
-RegisterPass<AliasEdgeWriter> X("aew", "Print memory aliases");
+RegisterPass<AliasEdgeWriter> NN("aew", "Print memory aliases");
