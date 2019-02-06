@@ -285,7 +285,10 @@ void Graph::printSharedModules(PrintType _pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
-            outCode << memory_unit->printDefinition(PrintType::Scala);
+            if(memory_unit->isInitilized())
+                outCode << memory_unit->printDefinition(PrintType::Scala);
+            else
+                outCode << memory_unit->printUninitilizedUnit(PrintType::Scala);
             if (stack_allocator->numReadDataInputPort() > 0)
                 outCode << stack_allocator->printDefinition(PrintType::Scala);
             if (floating_point_unit->numReadDataInputPort() > 0)

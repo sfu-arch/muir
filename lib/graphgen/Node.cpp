@@ -369,7 +369,7 @@ std::string SuperNode::printDefinition(PrintType pt) {
                 case SuperNodeType::NoMask:
                     helperReplace(_text, "$type",
                                   HWoptLevel == '1'
-                                      ? "BasicBlockNoMaskNodeMerge"
+                                      ? "BasicBlockNoMaskFastNode"
                                       : "BasicBlockNoMaskNode");
                     break;
                 case SuperNodeType::Mask:
@@ -630,6 +630,25 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
 
     return _text;
 }
+
+std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "  //Remember if there is no mem operation io memreq/memresp should be grounded\n"
+                "  io.MemReq  <> DontCare\n"
+                "  io.MemResp <> DontCare\n\n";
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 //                            ContainerNode Class

@@ -534,11 +534,16 @@ class MemoryNode : public Node {
         return T->getType() == Node::MemoryUnitTy;
     }
 
+    bool isInitilized(){
+        return (this->numMemReqPort() && this->numMemRespPort());
+    }
+
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printMemReadInput(PrintType, uint32_t) override;
     virtual std::string printMemReadOutput(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
     virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
+    std::string printUninitilizedUnit(PrintType);
 };
 
 /**
