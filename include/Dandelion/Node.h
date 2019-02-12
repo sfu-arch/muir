@@ -54,7 +54,7 @@ struct PortID {
     PortID(uint32_t _id) : ID(_id) {}
 
     uint32_t getID() { return ID; }
-    uint32_t setID(uint32_t _id) { ID = _id; }
+    void setID(uint32_t _id) { ID = _id; }
 
     bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
 };
@@ -119,7 +119,7 @@ class Node {
     MemoryPort write_port_data;
 
    public:  // Public methods
-    Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
+    Node(NodeType _nt, NodeInfo _ni) : node_type(_nt), info(_ni) {}
 
     PortID returnDataInputPortIndex(Node *);
     PortID returnControlInputPortIndex(Node *);
@@ -364,7 +364,7 @@ class SuperNode : public Node {
     using PhiNodeList = std::list<PhiSelectNode *>;
     using ConstIntNodeList = std::list<ConstIntNode *>;
     using CosntFPNodeList = std::list<ConstFPNode *>;
-    enum SuperNodeType { Mask, NoMask, LoopHead };
+    enum SuperNodeType { Mask, NoMask };
 
    private:
     llvm::BasicBlock *basic_block;
@@ -428,7 +428,7 @@ class SuperNode : public Node {
 
 class ArgumentNode : public Node {
    public:
-    enum ArgumentType { LiveIn = 0, LiveOut, FunctionArgument };
+    enum ArgumentType { LiveIn = 0, LiveOut, CarryDepen, FunctionArgument };
 
    private:
     ArgumentType arg_type;
@@ -470,6 +470,7 @@ class ContainerNode : public Node {
     ContainType con_type;
     RegisterList live_in;
     RegisterList live_out;
+    RegisterList carry_depen;
 
    public:
     explicit ContainerNode(NodeInfo _nf)
@@ -487,12 +488,16 @@ class ContainerNode : public Node {
 
     ArgumentNode *insertLiveInArgument(llvm::Value *);
     ArgumentNode *insertLiveOutArgument(llvm::Value *);
+    ArgumentNode *insertFunctionArgument(llvm::Value *);
+    ArgumentNode *insertCarryArgument(llvm::Value *);
 
     uint32_t findLiveInIndex(ArgumentNode *);
     uint32_t findLiveOutIndex(ArgumentNode *);
+    uint32_t findLiveCarryDepenIndex(ArgumentNode *);
 
     uint32_t numLiveIn() { return live_in.size(); }
     uint32_t numLiveOut() { return live_out.size(); }
+    uint32_t numCarryDepen() { return carry_depen.size(); }
 
     auto live_in_begin() { return this->live_in.begin(); }
     auto live_in_end() { return this->live_in.end(); }
@@ -506,8 +511,15 @@ class ContainerNode : public Node {
         return helpers::make_range(live_out_begin(), live_out_end());
     }
 
+    auto carry_depen_begin() { return this->carry_depen.begin(); }
+    auto carry_depen_end() { return this->carry_depen.end(); }
+    auto carry_depens() {
+        return helpers::make_range(carry_depen_begin(), carry_depen_end());
+    }
+
     Node *findLiveIn(llvm::Value *);
     Node *findLiveOut(llvm::Value *);
+    Node *findCarryDepen(llvm::Value *);
 };
 
 /**
@@ -534,7 +546,7 @@ class MemoryNode : public Node {
         return T->getType() == Node::MemoryUnitTy;
     }
 
-    bool isInitilized(){
+    bool isInitilized() {
         return (this->numMemReqPort() && this->numMemRespPort());
     }
 
@@ -611,13 +623,19 @@ class FloatingPointNode : public Node {
  */
 class LoopNode : public ContainerNode {
    private:
-    enum PortType { Active = 0, Enable, EndEnable, LatchEnable, LoopExit };
+    enum PortType {
+        Active_Loop_start = 0,
+        Active_loop_back,
+        Loop_back,
+        Loop_finish,
+        Enable,
+        LoopExit
+    };
 
-    std::list<std::pair<Node *, PortType>> port_type;
-    LoopNode *parent_loop;
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
     std::list<InstructionNode *> ending_instructions;
+    std::list<std::pair<Node *, PortType>> port_type;
 
     SuperNode *head_node;
     SuperNode *latch_node;
@@ -632,7 +650,6 @@ class LoopNode : public ContainerNode {
    public:
     explicit LoopNode(NodeInfo _nf)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
-          parent_loop(nullptr),
           head_node(nullptr),
           latch_node(nullptr),
           exit_node(std::list<SuperNode *>()),
@@ -642,10 +659,8 @@ class LoopNode : public ContainerNode {
         // resizeControlOutputPort(LOOPCONTROL);
     }
 
-    explicit LoopNode(NodeInfo _nf, LoopNode *_p_l, SuperNode *_hnode,
-                      SuperNode *_lnode)
+    explicit LoopNode(NodeInfo _nf, SuperNode *_hnode, SuperNode *_lnode)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
-          parent_loop(_p_l),
           head_node(_hnode),
           latch_node(_lnode),
           outer_loop(false) {
@@ -656,7 +671,6 @@ class LoopNode : public ContainerNode {
     explicit LoopNode(NodeInfo _nf, SuperNode *_hnode, SuperNode *_lnode,
                       std::list<SuperNode *> _ex)
         : ContainerNode(_nf, ContainerNode::LoopNodeTy),
-          parent_loop(nullptr),
           head_node(_hnode),
           latch_node(_lnode),
           exit_node(_ex),
@@ -665,10 +679,6 @@ class LoopNode : public ContainerNode {
         // resizeControlInputPort(LOOPCONTROL);
         // resizeControlOutputPort(LOOPCONTROL);
     }
-
-    auto getParentLoopNode() { return parent_loop; }
-    void setOuterLoop() { outer_loop = true; }
-    bool isOuterLoop() { return outer_loop; }
 
     // Define classof function so that we can use dyn_cast function
     static bool classof(const Node *T) {
@@ -696,7 +706,7 @@ class LoopNode : public ContainerNode {
     void setLatchNode(SuperNode *_n) { latch_node = _n; }
 
     /**
-     * Make sure that loop enable signal is always set to index 0
+     * Enable signl connects forward edge to the loop node
      */
     void setEnableLoopSignal(Node *_n) {
         addControlInputPort(_n);
@@ -704,11 +714,11 @@ class LoopNode : public ContainerNode {
     }
 
     /**
-     * Make sure the loop enable signal is always set to index 0
+     * Connect output enable signal to loop head node
      */
-    void setActiveOutputLoopSignal(Node *_n) {
+    void setActiveStartOutputLoopSignal(Node *_n) {
         addControlOutputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::Active));
+        port_type.push_back(std::make_pair(_n, PortType::Active_Loop_start));
     }
 
     /**
@@ -726,21 +736,19 @@ class LoopNode : public ContainerNode {
     /**
      * Make sure that loop latch enable signal is always fix to index 1
      */
-    void setLoopLatchEnable(Node *_n) {
+    void setActiveBackOutputLoopSignal(Node *_n) {
         addControlInputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::LatchEnable));
+        port_type.push_back(std::make_pair(_n, PortType::Active_loop_back));
     }
 
     /**
-     * Make sure that loop end enable signal is always fix to index 1
+     * Connecting loop exit control signals.
+     * This signal is connected from loop head node, to Exit basic blocks
      */
     void setLoopEndEnable(Node *_n) {
         addControlOutputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::EndEnable));
+        port_type.push_back(std::make_pair(_n, PortType::LoopExit));
     }
-    // void setLoopEndEnable(Node *_n, uint32_t i) {
-    // addControlOutputPortIndex(_n, i);
-    //}
 
     /**
      * Make sure that loop exit points are always starting from index 2
@@ -750,6 +758,9 @@ class LoopNode : public ContainerNode {
         port_type.push_back(std::make_pair(_n, PortType::LoopExit));
         return addControlInputPort(_n);
     }
+
+    void setOuterLoop() { this->outer_loop = true; }
+    bool isOuterLoop() { return this->outer_loop; }
 
     // TODO the function should move to private section and get calls inside the
     // init fuctions
@@ -952,12 +963,12 @@ class BranchNode : public InstructionNode {
     list<std::pair<Node *, PredicateResult>> output_predicate;
 
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : ending_loop(false),
-          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins),
+          ending_loop(false) {}
 
     BranchNode(NodeInfo _ni, bool _loop, llvm::BranchInst *_ins = nullptr)
-        : ending_loop(_loop),
-          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins),
+          ending_loop(_loop) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -1437,7 +1448,7 @@ class ConstFPNode : public Node {
             value.f = parent_const_fp->getValueAPF().convertToFloat();
         } else
             value.f = parent_const_fp->getValueAPF().convertToFloat();
-            //value.f = 0;
+        // value.f = 0;
     }
 
     // Define classof function so that we can use dyn_cast function

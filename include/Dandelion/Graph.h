@@ -72,7 +72,7 @@ class Graph {
     Node *out_node;
 
     // Keep track of nodes and values
-    //std::map<llvm::Value *, Node *> map_value_node;
+    // std::map<llvm::Value *, Node *> map_value_node;
 
    public:
     explicit Graph(NodeInfo _n_info)
@@ -80,27 +80,27 @@ class Graph {
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          graph_empty(false),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          function_ptr(nullptr),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
-          graph_empty(false),
           outCode(llvm::outs()),
-          function_ptr(nullptr),
           out_node(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          graph_empty(false),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
-          graph_empty(false),
           outCode(_output),
-          function_ptr(nullptr),
-          out_node(nullptr) {}
+          out_node(nullptr),
+          function_ptr(nullptr) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output,
                    llvm::Function *_fn)
         : graph_info(_n_info),
@@ -128,7 +128,7 @@ class Graph {
     bool isEmpty() { return graph_empty; }
     auto getMemoryUnit() const { return memory_unit.get(); }
     auto getStackAllocator() const { return stack_allocator.get(); }
-    auto getFPUNode() const {return floating_point_unit.get();}
+    auto getFPUNode() const { return floating_point_unit.get(); }
 
     // InstructionList *getInstructionList();
     auto instList_begin() { return this->inst_list.cbegin(); }
@@ -167,10 +167,9 @@ class Graph {
     InstructionNode *insertSelectNode(llvm::SelectInst &);
     InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
-    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
-    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
+    // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
+    // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
     InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepInfo);
-
 
     InstructionNode *insertLoadNode(llvm::LoadInst &);
     InstructionNode *insertStoreNode(llvm::StoreInst &);
