@@ -635,14 +635,7 @@ class LoopNode : public ContainerNode {
     std::list<InstructionNode *> instruction_list;
     std::list<SuperNode *> basic_block_list;
     std::list<InstructionNode *> ending_instructions;
-
-    //Loop specific ports
-    std::list<Node *> in_enable;
-    std::list<Node *> in_loop_back;
-    std::list<Node *> in_loop_finish;
-
-    std::list<Node *> out_activate_loop_start;
-    std::list<Node *> out_activate_loop_back;
+    std::list<std::pair<Node *, PortType>> port_type;
 
     SuperNode *head_node;
     SuperNode *latch_node;
@@ -717,7 +710,7 @@ class LoopNode : public ContainerNode {
      */
     void setEnableLoopSignal(Node *_n) {
         addControlInputPort(_n);
-        in_enable.push_back(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Enable));
     }
 
     /**
@@ -725,7 +718,7 @@ class LoopNode : public ContainerNode {
      */
     void setActiveStartOutputLoopSignal(Node *_n) {
         addControlOutputPort(_n);
-        out_activate_loop_start.push_back(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Active_Loop_start));
     }
 
     /**
@@ -745,6 +738,7 @@ class LoopNode : public ContainerNode {
      */
     void setActiveBackOutputLoopSignal(Node *_n) {
         addControlInputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Active_loop_back));
     }
 
     /**
@@ -753,6 +747,7 @@ class LoopNode : public ContainerNode {
      */
     void setLoopEndEnable(Node *_n) {
         addControlOutputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::LoopExit));
     }
 
     /**
@@ -760,7 +755,7 @@ class LoopNode : public ContainerNode {
      */
     PortID pushLoopExitLatch(Node *_n) {
         assert(numControlInputPort() > 1 && "Error in loop control signal!");
-        //port_type.push_back(std::make_pair(_n, PortType::LoopExit));
+        port_type.push_back(std::make_pair(_n, PortType::LoopExit));
         return addControlInputPort(_n);
     }
 

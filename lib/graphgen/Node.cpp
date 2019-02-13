@@ -3061,36 +3061,29 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
     return _text;
 }
 
-/**
- * I basically overloaded term of output enable signal as output control signal
- * for "for" loop nodes. Therefore, for printing enable signals
- * we need to search trough the other containers to find the type of input
- * node
- */
 std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
     string _text;
     auto node = this->returnControlOutputPortNode(_id);
-    _text = "FIXME";
-    //auto node_t =
-        //find_if(port_type.begin(), port_type.end(),
-                //[node](auto _nt) -> bool { return _nt.first == node; });
+    auto node_t =
+        find_if(port_type.begin(), port_type.end(),
+                [node](auto _nt) -> bool { return _nt.first == node; });
 
-    //switch (_pt) {
-        //case PrintType::Scala:
-            //if (node_t->second == PortType::LoopExit)
-                //_text = "$name.io.endEnable";
-            //else if (node_t->second == PortType::Active_Loop_start)
-                //_text = "$name.io.activate";
-            //else if (node_t->second == PortType::Enable)
-                //_text = "$name.io.AAAA";
-            ////_text = "UKNOWN";
-            //helperReplace(_text, "$name", _name.c_str());
-            //break;
-        //default:
-            //break;
-    //}
+    switch (_pt) {
+        case PrintType::Scala:
+            if (node_t->second == PortType::LoopExit)
+                _text = "$name.io.endEnable";
+            else if (node_t->second == PortType::Active_Loop_start)
+                _text = "$name.io.activate";
+            else if (node_t->second == PortType::Enable)
+                _text = "$name.io.AAAA";
+            //_text = "UKNOWN";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
 
     return _text;
 }
