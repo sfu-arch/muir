@@ -3,6 +3,7 @@
 int test03(unsigned int a, unsigned int b, int n){
     unsigned int sum = a;
     int i;
+
     for(i = 0 ; i < n; i++)
         sum = (sum+a)*b;
     return sum;

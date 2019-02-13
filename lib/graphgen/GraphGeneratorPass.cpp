@@ -489,7 +489,7 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
-            this->dependency_graph->getSplitCall()->insertFunctionArgument(
+            this->dependency_graph->getSplitCall()->insertLiveInArgument(
                 &f_arg);
     }
 
@@ -626,13 +626,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
-                            this->map_value_node[ins_it->getParent()]);
+                            this->map_value_node[_phi_ins->getIncomingBlock(
+                                c)]);
 
-                        this->map_value_node[ins_it->getParent()]
+                        this->map_value_node[_phi_ins->getIncomingBlock(c)]
                             ->addControlOutputPort(_const_node);
 
                         dyn_cast<SuperNode>(
-                            this->map_value_node[ins_it->getParent()])
+                            this->map_value_node[_phi_ins->getIncomingBlock(c)])
                             ->addconstIntNode(
                                 dyn_cast<ConstIntNode>(_const_node));
 
@@ -917,9 +918,9 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Change the type of loop head basic block
         // Since we know that there is a backedge
-        //_l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
+        _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
 
-        // Find forward edge to the loop head basic block
+        // Try to find forward edge to the loop head basic block
         auto _src_forward_br_inst_it = *std::find_if(
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto const _node_it) {
@@ -927,7 +928,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it.first)->getInstruction());
             });
 
-        // Find the backedge to the loop head basic block
+        // Try to find the backedge to the loop head basic block
         auto _src_back_br_inst_it = *std::find_if(
             _l_head->inputControl_begin(), _l_head->inputControl_end(),
             [&L](auto const _node_it) {
@@ -935,14 +936,11 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                     dyn_cast<BranchNode>(_node_it.first)->getInstruction());
             });
 
-        //Mapping all the exit nodes to their graph nodes
         std::list<SuperNode *> _list_exit;
         std::transform(_l_exit_blocks.begin(), _l_exit_blocks.end(),
                        std::back_inserter(_list_exit),
                        [](auto _l_e) -> SuperNode * { return _l_e.second; });
 
-
-        //Making for loop
         auto _new_loop = std::make_unique<LoopNode>(
             NodeInfo(c, "Loop_" + std::to_string(c)),
             dyn_cast<SuperNode>(map_value_node[L->getHeader()]),
@@ -954,20 +952,13 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         loop_value_node[&*L] = _loop_node;
 
-        //Connect forward branch to enable signal of for loop
         _loop_node->setEnableLoopSignal(_src_forward_br_inst_it.first);
-
-        //Connect activate output signal of for loop to the loop head node
-        _loop_node->setActiveStartOutputLoopSignal(_l_head);
-
-        //Modifying graph and replacing forward branch to the head basic block
-        //with new loop node connections
+        _loop_node->setActiveOutputLoopSignal(_l_head);
         _l_head->replaceControlInputNode(_src_forward_br_inst_it.first,
                                          _loop_node);
         _src_forward_br_inst_it.first->replaceControlOutputNode(_l_head,
                                                                 _loop_node);
 
-        //Connecting loop exit basic blocks.
         uint32_t _index = 0;
         for (auto _l : _list_exit) {
             _loop_node->setLoopEndEnable(_l);
@@ -975,7 +966,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Connect the latch ending branch to loopNode
         if (auto _latch_br = dyn_cast<BranchNode>(_src_back_br_inst_it.first)) {
-            _loop_node->setActiveBackOutputLoopSignal(_latch_br);
+            _loop_node->setLoopLatchEnable(_latch_br);
             _latch_br->addControlOutputPort(_loop_node);
             // Check wether branch instruction is conditional
             if (_latch_br->getInstruction()->getNumOperands() > 0) {

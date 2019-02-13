@@ -119,10 +119,8 @@ PortID Node::returnDataOutputPortIndex(Node *_node) {
         this->port_data.data_output_port.begin(),
         this->port_data.data_output_port.end(),
         [&_node](auto &arg) -> bool { return arg.first == _node; });
-    if (ff == this->port_data.data_output_port.end()){
+    if (ff == this->port_data.data_output_port.end())
         assert(!"Node doesn't exist\n");
-        return PortID();
-    }
 
     return find_if(this->port_data.data_output_port.begin(),
                    this->port_data.data_output_port.end(),
@@ -382,6 +380,15 @@ std::string SuperNode::printDefinition(PrintType pt) {
                         "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
                     helperReplace(_text, "$type", "BasicBlockNode");
                     break;
+                case SuperNodeType::LoopHead:
+                    _text =
+                        "  val $name = Module(new $type("
+                        "NumOuts = "
+                        "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
+                    helperReplace(
+                        _text, "$type",
+                        HWoptLevel == '1' ? "LoopFastHead" : "LoopHead");
+                    break;
             }
 
             helperReplace(_text, "$name", _name.c_str());
@@ -406,7 +413,11 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if (this->getNodeType() == SuperNode::Mask)
+            if (this->getNodeType() == SuperNode::LoopHead && _id == 0)
+                _text = "$name.io.activate";
+            else if (this->getNodeType() == SuperNode::LoopHead && _id == 1)
+                _text = "$name.io.loopBack";
+            else if (this->getNodeType() == SuperNode::Mask)
                 _text = "$name.io.predicateIn($id)";
             else
                 _text = HWoptLevel == '1' ? "$name.io.predicateIn($id)"
@@ -468,7 +479,7 @@ std::string SuperNode::printActivateEnable(PrintType pt) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.activate_loop_start";
+            _text = "$name.io.activate";
             helperReplace(_text, "$name", _name.c_str());
             // helperReplace(_text, "$id", _id);
 
@@ -627,7 +638,7 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             _text = "  //Remember if there is no mem operation io memreq/memresp should be grounded\n"
-                "  io.MemReq <> DontCare\n"
+                "  io.MemReq  <> DontCare\n"
                 "  io.MemResp <> DontCare\n\n";
             break;
         default:
@@ -690,7 +701,6 @@ ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
     return ff->get();
 }
 
-
 ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
     auto ff = std::find_if(live_out.begin(), live_out.end(),
                            [&_val](auto &arg) -> bool {
@@ -710,46 +720,6 @@ ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
     return ff->get();
 }
 
-ArgumentNode *ContainerNode::insertCarryArgument(llvm::Value *_val) {
-    auto ff = std::find_if(carry_depen.begin(), carry_depen.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == carry_depen.end()) {
-        carry_depen.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(carry_depen.size(), _val->getName().str()),
-            ArgumentNode::CarryDepen, this, _val));
-
-        ff = std::find_if(carry_depen.begin(), carry_depen.end(),
-                          [&_val](auto &arg) -> bool {
-                              return arg.get()->getArgumentValue() == _val;
-                          });
-    }
-
-    return ff->get();
-}
-
-ArgumentNode *ContainerNode::insertFunctionArgument(llvm::Value *_val) {
-    auto ff = std::find_if(live_out.begin(), live_out.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == live_out.end()) {
-        live_out.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_out.size(), _val->getName().str()),
-            ArgumentNode::FunctionArgument, this, _val));
-
-        ff = std::find_if(live_out.begin(), live_out.end(),
-                          [&_val](auto &arg) -> bool {
-                              return arg.get()->getArgumentValue() == _val;
-                          });
-    }
-
-    return ff->get();
-}
-
-
-
 uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
     auto arg_find = std::find_if(
         live_in.begin(), live_in.end(),
@@ -767,17 +737,6 @@ uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
     ptrdiff_t pos = std::distance(live_out.begin(), arg_find);
     return pos;
 }
-
-uint32_t ContainerNode::findLiveCarryDepenIndex(ArgumentNode *_arg_node) {
-    auto arg_find = std::find_if(
-        carry_depen.begin(), carry_depen.end(),
-        [_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
-
-    ptrdiff_t pos = std::distance(carry_depen.begin(), arg_find);
-    return pos;
-}
-
-
 
 //===----------------------------------------------------------------------===//
 //                            CallSpliter Class
@@ -837,7 +796,7 @@ std::string SplitCallNode::printOutputData(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out.data.elements(\"field$id\")";
+            _text = "$name.io.Out.data(\"field$id\")";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _idx);
 
@@ -993,6 +952,7 @@ std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
  * Returning address of the parent instruction
  */
 Instruction *InstructionNode::getInstruction() {
+    if (this == nullptr) return nullptr;
     return this->parent_instruction;
 }
 
@@ -1035,7 +995,7 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
             switch (this->getArgType()) {
                 case ArgumentNode::LiveIn: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.InLiveIn($id)";
+                    _text = "$call.io.In($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(_text, "$id", _idx);
@@ -1081,7 +1041,7 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
             switch (this->getArgType()) {
                 case ArgumentNode::LiveIn: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.$out.elements(\"field$num\")($id)";
+                    _text = "$call.io.$out.data(\"field$num\")($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(
@@ -1091,7 +1051,7 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                     // this->parent_call_node->findLiveInIndex(this));
                     if (this->parent_call_node->getContainerType() ==
                         ContainerNode::LoopNodeTy)
-                        helperReplace(_text, "$out", "OutLiveIn");
+                        helperReplace(_text, "$out", "liveIn");
                     else
                         helperReplace(_text, "$out", "Out");
 
@@ -1114,7 +1074,7 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                 }
                 case ArgumentNode::FunctionArgument: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.$out.data.elements(\"field$id\")($id)";
+                    _text = "$call.io.$out.data(\"field$id\")($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(
@@ -1581,7 +1541,7 @@ std::string ConstFPNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -1906,7 +1866,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumInputs = $num_in, "
                     "NumOutputs = $num_out, ID = $id))\n\n";
 
-            helperReplace(_text, "$type", "PhiFastNode");
+            helperReplace(_text, "$type", "PhiFastNode2");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$num_out",
@@ -2430,7 +2390,7 @@ std::string ConstIntNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ConstFastNode");
+            helperReplace(_text, "$type", "ConstNode");
             helperReplace(_text, "$val", this->getValue());
 
             break;
@@ -2448,7 +2408,7 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -3027,7 +2987,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
                 "$num_out, NumExits = $num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "LoopBlockNode");
+            helperReplace(_text, "$type",
+                          HWoptLevel == '1' ? "LoopBlock" : "LoopBlock");
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ", ");
             helperReplace(_text, "$num_out", this->numLiveOut());
@@ -3051,7 +3012,7 @@ std::string LoopNode::printOutputEnable(PrintType _pt) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.Out.activate_loop_start";
+            _text = "$name.io.Out.endEnable";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:
@@ -3072,9 +3033,9 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
 
     switch (_pt) {
         case PrintType::Scala:
-            if (node_t->second == PortType::LoopExit)
+            if (node_t->second == PortType::EndEnable)
                 _text = "$name.io.endEnable";
-            else if (node_t->second == PortType::Active_Loop_start)
+            else if (node_t->second == PortType::Active)
                 _text = "$name.io.activate";
             else if (node_t->second == PortType::Enable)
                 _text = "$name.io.AAAA";
@@ -3572,7 +3533,7 @@ std::string CallInNode::printDefinition(PrintType _pt) {
         std::vector<uint32_t> _arg_count;
         for (auto &l : _list) {
             _arg_count.push_back(32);
-            DEBUG(errs() << "AMIRALI\n");
+            errs() << "AMIRALI\n";
         }
         return _arg_count;
     };
