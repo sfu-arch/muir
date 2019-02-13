@@ -270,17 +270,6 @@ class Node {
     void addControlInputPortIndex(Node *_n, uint32_t _id) {
         port_control.control_input_port.push_back(std::make_pair(_n, _id));
 
-        // if (port_control.control_input_port.size() == _id)
-        // port_control.control_input_port.push_back(_n);
-        // else if (port_control.control_input_port.size() < _id) {
-        // port_control.control_input_port.resize(_id);
-        // port_control.control_input_port.push_back(_n);
-        //}
-
-        // auto it = port_control.control_input_port.begin();
-        // std::advance(it, _id);
-        // std::replace(port_control.control_input_port.begin(),
-        // port_control.control_input_port.end(), *it, _n);
     }
 
     /**
@@ -288,17 +277,6 @@ class Node {
      */
     void addControlOutputPortIndex(Node *_n, uint32_t _id) {
         port_control.control_output_port.push_back(std::make_pair(_n, _id));
-        // if (port_control.control_output_port.size() == _id)
-        // port_control.control_output_port.push_back(_n);
-        // else if (port_control.control_output_port.size() < _id) {
-        // port_control.control_output_port.resize(_id);
-        // port_control.control_output_port.push_back(_n);
-        //}
-
-        // auto it = port_control.control_output_port.begin();
-        // std::advance(it, _id);
-        // std::replace(port_control.control_output_port.begin(),
-        // port_control.control_output_port.end(), *it, _n);
     }
 
    public:
@@ -309,6 +287,11 @@ class Node {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
+    virtual std::string printInputEnable(PrintType, std::pair<Node*, PortID>) {
+        return this->info.Name +
+               std::string(" EnableInput with ID Not defined!");
+    }
+
     virtual std::string printInputEnable(PrintType) {
         return this->info.Name + std::string(" EnableInput Not defined!");
     }
@@ -421,6 +404,7 @@ class SuperNode : public Node {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
+    virtual std::string printInputEnable(PrintType, std::pair<Node *, PortID>) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printMaskOutput(PrintType, uint32_t);
     std::string printActivateEnable(PrintType);
@@ -1595,10 +1579,6 @@ class SyncNode : public InstructionNode {
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
-    // virtual std::string printInputEnable(PrintType) override;
-    // virtual std::string printOutputData(PrintType, uint32_t) override;
-    // virtual std::string printOutputData(PrintType) override;
-    // virtual std::string printInputData(PrintType, uint32_t) override;
 };
 
 class BitcastNode : public InstructionNode {
@@ -1615,12 +1595,8 @@ class BitcastNode : public InstructionNode {
     }
 
     virtual std::string printDefinition(PrintType) override;
-    // virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    // virtual std::string printInputEnable(PrintType) override;
-    // virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
-    // virtual std::string printOutputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
 };
 

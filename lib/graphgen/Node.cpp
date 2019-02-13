@@ -368,9 +368,8 @@ std::string SuperNode::printDefinition(PrintType pt) {
             switch (this->getNodeType()) {
                 case SuperNodeType::NoMask:
                     helperReplace(_text, "$type",
-                                  HWoptLevel == '1'
-                                      ? "BasicBlockNoMaskFastNode"
-                                      : "BasicBlockNoMaskNode");
+                                  HWoptLevel == '1' ? "BasicBlockNoMaskFastNode"
+                                                    : "BasicBlockNoMaskNode");
                     break;
                 case SuperNodeType::Mask:
                     _text =
@@ -379,15 +378,6 @@ std::string SuperNode::printDefinition(PrintType pt) {
                         "NumOuts = "
                         "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
                     helperReplace(_text, "$type", "BasicBlockNode");
-                    break;
-                case SuperNodeType::LoopHead:
-                    _text =
-                        "  val $name = Module(new $type("
-                        "NumOuts = "
-                        "$num_out, NumPhi = $num_phi, BID = $bid))\n\n";
-                    helperReplace(
-                        _text, "$type",
-                        HWoptLevel == '1' ? "LoopFastHead" : "LoopHead");
                     break;
             }
 
@@ -425,6 +415,37 @@ std::string SuperNode::printInputEnable(PrintType pt, uint32_t _id) {
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string SuperNode::printInputEnable(PrintType pt,
+                                        std::pair<Node *, PortID> _node) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            if (this->getNodeType() == SuperNode::LoopHead &&
+                _node.second.getID() == 0)
+                _text = "$name.io.activate";
+            else if (this->getNodeType() == SuperNode::LoopHead &&
+                     _node.second.getID() == 1)
+                _text = "$name.io.loopBack";
+            else if (this->getNodeType() == SuperNode::Mask)
+                _text = "$name.io.predicateIn($id)";
+            else
+                _text = HWoptLevel == '1' ? "$name.io.predicateIn($id)"
+                                          : "$name.io.predicateIn";
+
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _node.second.getID());
 
             break;
         case PrintType::Dot:
@@ -637,8 +658,10 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "  //Remember if there is no mem operation io memreq/memresp should be grounded\n"
-                "  io.MemReq  <> DontCare\n"
+            _text =
+                "  //Remember if there is no mem operation io memreq/memresp "
+                "should be grounded\n"
+                "  io.MemReq <> DontCare\n"
                 "  io.MemResp <> DontCare\n\n";
             break;
         default:
@@ -647,8 +670,6 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
 
     return _text;
 }
-
-
 
 //===----------------------------------------------------------------------===//
 //                            ContainerNode Class
@@ -1178,7 +1199,7 @@ std::string BinaryOperatorNode::printInputData(PrintType _pt, uint32_t _idx) {
     string _name(this->getName());
     switch (_pt) {
         case PrintType::Scala:
-            if(this->getOpCodeName() == "ashr")
+            if (this->getOpCodeName() == "ashr")
                 WARNING("Make sure shift ordering is correct");
 
             std::replace(_name.begin(), _name.end(), '.', '_');
@@ -1866,7 +1887,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
                     "  val $name = Module(new $type(NumInputs = $num_in, "
                     "NumOutputs = $num_out, ID = $id))\n\n";
 
-            helperReplace(_text, "$type", "PhiFastNode2");
+            helperReplace(_text, "$type", "PhiFastNode");
             helperReplace(_text, "$num_in",
                           std::to_string(this->numDataInputPort()));
             helperReplace(_text, "$num_out",
@@ -1969,7 +1990,8 @@ std::string ReturnNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(retTypes = List($<input_list>), "
+                "  val $name = Module(new $type(retTypes = "
+                "List($<input_list>), "
                 "ID = $id))\n\n";
             helperReplace(_text, "$type", "RetNode2");
             helperReplace(_text, "$name", _name.c_str());
@@ -2390,7 +2412,7 @@ std::string ConstIntNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ConstNode");
+            helperReplace(_text, "$type", "ConstFastNode");
             helperReplace(_text, "$val", this->getValue());
 
             break;
@@ -2408,7 +2430,7 @@ std::string ConstIntNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out($id)";
+            _text = "$name.io.Out";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
@@ -2982,16 +3004,18 @@ std::string LoopNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(NumIns = List($<input_vector>), "
-                "NumOuts = "
-                "$num_out, NumExits = $num_exit, ID = $id))\n\n";
+                "  val $name = Module(new $type(NumIns = "
+                "List($<input_vector>), "
+                "NumOuts = List($<num_out>), "
+                "NumCarry = List($<num_carry>), "
+                "NumExits = $num_exit, ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type",
-                          HWoptLevel == '1' ? "LoopBlock" : "LoopBlock");
+            helperReplace(_text, "$type", "LoopBlockNode");
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(this->live_ins()), ", ");
-            helperReplace(_text, "$num_out", this->numLiveOut());
+            helperReplace(_text, "$<num_out>",
+                          make_argument_port(this->live_outs()), ", ");
             helperReplace(_text, "$num_exit", this->numControlInputPort() - 2);
 
             // TODO update the exit points!

@@ -314,27 +314,14 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
             for (auto &_s_node : super_node_list) {
                 for (auto _enable_iterator : _s_node->input_control_range()) {
                     auto _input_node = dyn_cast<Node>(_enable_iterator.first);
-                    // auto _input_index = std::distance(
-                    //_s_node->inputControl_begin(), _enable_iterator);
-
-                    // Finding super node
-                    // auto ff =
-                    // std::find_if(_input_node->outputControl_begin(),
-                    //_input_node->outputControl_end(),
-                    //[&_s_node](auto &arg) -> bool {
-                    // return _s_node.get() == &*arg;
-                    //});
-
                     auto _input_index = _enable_iterator.second;
-                    //_s_node->returnControlInputPortIndex(_input_node);
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
 
                     this->outCode
                         << "  "
-                        << _s_node->printInputEnable(PrintType::Scala,
-                                                     _input_index.getID())
+                        << _s_node->printInputEnable(PrintType::Scala, _enable_iterator)
                         << " <> "
                         << _input_node->printOutputEnable(PrintType::Scala,
                                                           _output_index.getID())

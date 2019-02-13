@@ -626,14 +626,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
-                            this->map_value_node[_phi_ins->getIncomingBlock(
-                                c)]);
+                            this->map_value_node[_phi_ins->getParent()]);
 
-                        this->map_value_node[_phi_ins->getIncomingBlock(c)]
+                        this->map_value_node[_phi_ins->getParent()]
                             ->addControlOutputPort(_const_node);
 
                         dyn_cast<SuperNode>(
-                            this->map_value_node[_phi_ins->getIncomingBlock(c)])
+                            this->map_value_node[_phi_ins->getParent()])
                             ->addconstIntNode(
                                 dyn_cast<ConstIntNode>(_const_node));
 
@@ -667,14 +666,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
-                            this->map_value_node[_phi_ins->getIncomingBlock(
-                                c)]);
+                            this->map_value_node[_phi_ins->getParent()]);
 
-                        this->map_value_node[_phi_ins->getIncomingBlock(c)]
+                        this->map_value_node[_phi_ins->getParent()]
                             ->addControlOutputPort(_const_node);
 
                         dyn_cast<SuperNode>(
-                            this->map_value_node[_phi_ins->getIncomingBlock(c)])
+                            this->map_value_node[_phi_ins->getParent()])
                             ->addconstFPNode(
                                 dyn_cast<ConstFPNode>(_const_node));
 
@@ -918,7 +916,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Change the type of loop head basic block
         // Since we know that there is a backedge
-        _l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
+        //_l_head->setNodeType(SuperNode::SuperNodeType::LoopHead);
 
         // Try to find forward edge to the loop head basic block
         auto _src_forward_br_inst_it = *std::find_if(
