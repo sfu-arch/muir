@@ -314,7 +314,6 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
             for (auto &_s_node : super_node_list) {
                 for (auto _enable_iterator : _s_node->input_control_range()) {
                     auto _input_node = dyn_cast<Node>(_enable_iterator.first);
-                    auto _input_index = _enable_iterator.second;
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
@@ -1219,21 +1218,6 @@ InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-    return ff->get();
-}
-
-/**
- * Insert a new function argument
- */
-ArgumentNode *Graph::insertFunctionArgument(Argument &AR) {
-    arg_list.push_back(std::make_unique<ArgumentNode>(
-        NodeInfo(arg_list.size(), AR.getName().str() + "_arg"),
-        ArgumentNode::FunctionArgument, this->getSplitCall(), &AR));
-
-    auto ff = std::find_if(arg_list.begin(), arg_list.end(),
-                           [&AR](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == &AR;
-                           });
     return ff->get();
 }
 

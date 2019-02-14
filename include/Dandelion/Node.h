@@ -56,8 +56,7 @@ struct PortID {
     uint32_t getID() { return ID; }
     uint32_t setID(uint32_t _id) { ID = _id; }
 
-    bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
-};
+    bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; } };
 
 using PortEntry = std::pair<Node *, PortID>;
 
@@ -283,6 +282,8 @@ class Node {
     virtual std::string printDefinition(PrintType) {
         return this->info.Name + std::string(" Definition is Not defined!");
     }
+
+    [[deprecated("Replaced by pair<Node*, PortID>")]]
     virtual std::string printInputEnable(PrintType, uint32_t) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
@@ -301,6 +302,10 @@ class Node {
     virtual std::string printOutputEnable(PrintType, uint32_t) {
         return this->info.Name +
                std::string(" -> EnableOutput with ID Not defined!");
+    }
+    virtual std::string printOutputEnable(PrintType, std::pair<Node*, PortID>) {
+        return this->info.Name +
+               std::string(" EnableInput with ID Not defined!");
     }
     virtual std::string printInputData(PrintType) {
         return this->info.Name + std::string(" -> DataInput Not defined!");
@@ -347,7 +352,7 @@ class SuperNode : public Node {
     using PhiNodeList = std::list<PhiSelectNode *>;
     using ConstIntNodeList = std::list<ConstIntNode *>;
     using CosntFPNodeList = std::list<ConstFPNode *>;
-    enum SuperNodeType { Mask, NoMask, LoopHead };
+    enum SuperNodeType { Mask, NoMask};
 
    private:
     llvm::BasicBlock *basic_block;
@@ -403,16 +408,16 @@ class SuperNode : public Node {
     void setNodeType(SuperNodeType _t) { this->type = _t; }
 
     virtual std::string printDefinition(PrintType) override;
-    virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType, std::pair<Node *, PortID>) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, std::pair<Node *, PortID>) override;
     virtual std::string printMaskOutput(PrintType, uint32_t);
     std::string printActivateEnable(PrintType);
 };
 
 class ArgumentNode : public Node {
    public:
-    enum ArgumentType { LiveIn = 0, LiveOut, FunctionArgument };
+    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut};
 
    private:
     ArgumentType arg_type;
