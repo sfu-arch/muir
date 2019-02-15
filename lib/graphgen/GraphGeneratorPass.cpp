@@ -141,7 +141,8 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
                     if (map_value_node.find(&I) == map_value_node.end())
                         assert(!"Couldn't find the live-in target");
 
-                    auto new_live_in = _loop_node->insertLiveInArgument(_value);
+                    auto new_live_in = _loop_node->insertArgument(
+                        _value, ArgumentNode::LoopLiveIn);
                     auto _src = map_value_node[_value];
                     auto _tar = map_value_node[&I];
 
@@ -182,7 +183,8 @@ void UpdateLiveOutConnections(Loop *_loop, LoopNode *_loop_node,
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         U)) {
-                    auto new_live_out = _loop_node->insertLiveOutArgument(U);
+                    auto new_live_out = _loop_node->insertArgument(
+                        U, ArgumentNode::LoopLiveOut);
 
                     auto _src = map_value_node[&I];
                     auto _tar = map_value_node[U];
@@ -242,19 +244,19 @@ void UpdateInnerLiveInConnections(
                     // their value
                     // needs to be run only once
                     //
-                    //if ((isa<llvm::PHINode>(&I))) {
-                        //DEBUG(I.dump());
-                        //DEBUG(_value->dump());
-                        //continue;
+                    // if ((isa<llvm::PHINode>(&I))) {
+                    // DEBUG(I.dump());
+                    // DEBUG(_value->dump());
+                    // continue;
                     //}
 
-                    auto new_live_in = _loop_node->insertLiveInArgument(_value);
+                    auto new_live_in = _loop_node->insertArgument(_value, ArgumentNode::LoopLiveIn);
 
                     Node *_src = nullptr;
-                    if (_parent_loop_node->findLiveIn(_value) == nullptr)
+                    if (_parent_loop_node->findNode(_value) == nullptr)
                         _src = map_value_node[_value];
                     else
-                        _src = _parent_loop_node->findLiveIn(_value);
+                        _src = _parent_loop_node->findNode(_value);
                     auto _tar = map_value_node[&I];
 
                     // TODO later we need to get ride of these lines
@@ -287,18 +289,16 @@ void UpdateInnerLiveOutConnections(
             auto _loop_node = loop_value_node[_loop];
             auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
 
-            /**
-             * The function needs these steps:
-             * 1) Detect Live-outs
-             * 2) Insert a new Live-outs into loop header
-             * 3) Update the dependencies
-             */
+            // The function needs these steps:
+            // 1) Detect Live-outs
+            // 2) Insert a new Live-outs into loop header
+            // 3) Update the dependencies
             for (auto *U : I.users()) {
                 if (!definedInRegion(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         U)) {
-                    auto new_live_out = _loop_node->insertLiveOutArgument(U);
+                    auto new_live_out = _loop_node->insertArgument(U, ArgumentNode::LoopLiveOut);
 
                     auto _src = map_value_node[&I];
                     auto _tar = map_value_node[U];
@@ -452,7 +452,7 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         assert(!"No gep information");
     }
 
-    auto src_type = I.getSourceElementType();
+    // auto src_type = I.getSourceElementType();
     map_value_node[&I] =
         this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepAddress[&I]);
     if (map_value_node.count(&I) == 0) {
@@ -489,8 +489,8 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
-            this->dependency_graph->getSplitCall()->insertLiveInArgument(
-                &f_arg);
+            this->dependency_graph->getSplitCall()->insertArgument(
+                &f_arg, ArgumentNode::LiveIn);
     }
 
     // this->dependency_graph.setNumSplitCallInput(F.arg_size());
@@ -758,15 +758,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
             // TODO right now we consider all the connections to the cache or
             // regfile
             // We need a pass to trace the pointers
-            auto _dst_req_idx =
-                this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
-                    _ld_node);
-            auto _src_resp_idx =
-                this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
-                    _ld_node);
-            auto _src_req_idx = _ld_node->addReadMemoryReqPort(
+            this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
+                _ld_node);
+            this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
+                _ld_node);
+            _ld_node->addReadMemoryReqPort(
                 this->dependency_graph->getMemoryUnit());
-            auto _dst_resp_idx = _ld_node->addReadMemoryRespPort(
+            _ld_node->addReadMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
 
         }
@@ -775,15 +773,13 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         //
         else if (auto _st_node = dyn_cast<StoreNode>(
                      this->map_value_node.find(&*ins_it)->second)) {
-            auto _dst_req_idx =
-                this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
-                    _st_node);
-            auto _src_resp_idx =
-                this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
-                    _st_node);
-            auto _src_req_idx = _st_node->addWriteMemoryReqPort(
+            this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
+                _st_node);
+            this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
+                _st_node);
+            _st_node->addWriteMemoryReqPort(
                 this->dependency_graph->getMemoryUnit());
-            auto _dst_resp_idx = _st_node->addWriteMemoryRespPort(
+            _st_node->addWriteMemoryRespPort(
                 this->dependency_graph->getMemoryUnit());
         }
 
@@ -791,29 +787,28 @@ void GraphGeneratorPass::findDataPort(Function &F) {
         //
         else if (auto _alloca_node = dyn_cast<AllocaNode>(
                      this->map_value_node.find(&*ins_it)->second)) {
-            auto _dst_req_idx = this->dependency_graph->getStackAllocator()
-                                    ->addReadMemoryReqPort(_alloca_node);
-            auto _src_resp_idx = this->dependency_graph->getStackAllocator()
-                                     ->addReadMemoryRespPort(_alloca_node);
-            auto _src_req_idx = _alloca_node->addReadMemoryReqPort(
+            this->dependency_graph->getStackAllocator()->addReadMemoryReqPort(
+                _alloca_node);
+            this->dependency_graph->getStackAllocator()->addReadMemoryRespPort(
+                _alloca_node);
+            _alloca_node->addReadMemoryReqPort(
                 this->dependency_graph->getStackAllocator());
-            auto _dst_resp_idx = _alloca_node->addReadMemoryRespPort(
+            _alloca_node->addReadMemoryRespPort(
                 this->dependency_graph->getStackAllocator());
         }
 
         // Connection FPNode operations
         else if (auto _fpdiv_node = dyn_cast<FdiveOperatorNode>(
                      this->map_value_node.find(&*ins_it)->second)) {
-            _fpdiv_node->setRouteID(this->dependency_graph->getFPUNode()->numMemReqPort());
-            auto _dst_req_idx =
-                this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
-                    _fpdiv_node);
-            auto _src_resp_idx =
-                this->dependency_graph->getFPUNode()->addReadMemoryRespPort(
-                    _fpdiv_node);
-            auto _src_req_idx = _fpdiv_node->addReadMemoryReqPort(
+            _fpdiv_node->setRouteID(
+                this->dependency_graph->getFPUNode()->numMemReqPort());
+            this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
+                _fpdiv_node);
+            this->dependency_graph->getFPUNode()->addReadMemoryRespPort(
+                _fpdiv_node);
+            _fpdiv_node->addReadMemoryReqPort(
                 this->dependency_graph->getFPUNode());
-            auto _dst_resp_idx = _fpdiv_node->addReadMemoryRespPort(
+            _fpdiv_node->addReadMemoryRespPort(
                 this->dependency_graph->getFPUNode());
         }
 
@@ -833,11 +828,9 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         // Find the entry basic block and connect it to the split node
         if (&BB == &F.getEntryBlock()) {
             auto _en_bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
-            auto _src_idx =
-                this->dependency_graph->getSplitCall()->addControlOutputPort(
-                    _en_bb);
-            auto _dst_idx = _en_bb->addControlInputPort(
-                this->dependency_graph->getSplitCall());
+            this->dependency_graph->getSplitCall()->addControlOutputPort(
+                _en_bb);
+            _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
         }
         // Here we check wether the basicblock is reached from multiple places.
         // If it has been reached from multiple places it means it CAN have a
@@ -957,7 +950,6 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         _src_forward_br_inst_it.first->replaceControlOutputNode(_l_head,
                                                                 _loop_node);
 
-        uint32_t _index = 0;
         for (auto _l : _list_exit) {
             _loop_node->setLoopEndEnable(_l);
         }
@@ -1049,7 +1041,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         for (auto _en_instruction : _loop_node->endings()) {
             // We look for the ending branch instruction of each store node
-            auto _en = _en_instruction->getInstruction();
+            _en_instruction->getInstruction();
             auto &_br_ins = map_value_node[&_en_instruction->getInstruction()
                                                 ->getParent()
                                                 ->getInstList()

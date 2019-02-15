@@ -25,10 +25,10 @@
                   << "\033[1;33m" << x << " \033[0m" << std::endl; \
     } while (0)
 
-#define ASSERTION(x)                                 \
-    do {                                             \
-        std::cout << "\033[1;35m" << x << "\033[0m"; \
-    } while (0)  //<< "\033[1;33m" << x << " \033[0m" << std::endl; \
+#define ASSERTION(x)                                     \
+    do {                                                 \
+        std::cout << "\033[1;35m" << x << "\033[0m";     \
+        << "\033[1;33m" << x << " \033[0m" << std::endl; \
     } while (0)
 
 #define PURPLE(x) "\033[1;35m" << x << "\033[0m";

@@ -441,7 +441,8 @@ std::string SuperNode::printOutputEnable(PrintType pt, uint32_t _id) {
     return _text;
 }
 
-std::string SuperNode::printOutputEnable(PrintType pt,std::pair<Node*, PortID> _node) {
+std::string SuperNode::printOutputEnable(PrintType pt,
+                                         std::pair<Node *, PortID> _node) {
     string _text;
     string _name(this->getName());
     switch (pt) {
@@ -459,10 +460,6 @@ std::string SuperNode::printOutputEnable(PrintType pt,std::pair<Node*, PortID> _
     }
     return _text;
 }
-
-
-
-
 
 std::string SuperNode::printMaskOutput(PrintType pt, uint32_t _id) {
     string _text;
@@ -664,14 +661,33 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
 //                            ContainerNode Class
 //===----------------------------------------------------------------------===//
 
-Node *ContainerNode::findLiveIn(llvm::Value *_val) {
-    auto ff = std::find_if(live_in.begin(), live_in.end(),
+ArgumentNode *ContainerNode::insertArgument(llvm::Value *_val,
+                                            ArgumentNode::ArgumentType _type) {
+    auto ff = std::find_if(arg_list.begin(), arg_list.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
                            });
-    if (ff == live_in.end()) {
+    if (ff == arg_list.end()) {
+        arg_list.push_back(std::make_unique<ArgumentNode>(
+            NodeInfo(arg_list.size(), _val->getName().str()), _type, this,
+            _val));
+
+        ff = std::find_if(arg_list.begin(), arg_list.end(),
+                          [&_val](auto &arg) -> bool {
+                              return arg.get()->getArgumentValue() == _val;
+                          });
+    }
+
+    return ff->get();
+}
+
+Node *ContainerNode::findNode(llvm::Value *_val) {
+    auto ff = std::find_if(arg_list.begin(), arg_list.end(),
+                           [&_val](auto &arg) -> bool {
+                               return arg.get()->getArgumentValue() == _val;
+                           });
+    if (ff == arg_list.end()) {
         DEBUG(_val->print(errs(), true));
-        // WARNING(!"Couldn't find the live-in");
         return nullptr;
         // assert(!"Couldn't find the live-in");
     }
@@ -679,74 +695,106 @@ Node *ContainerNode::findLiveIn(llvm::Value *_val) {
     return ff->get();
 }
 
-Node *ContainerNode::findLiveOut(llvm::Value *_val) {
-    auto ff = std::find_if(live_out.begin(), live_out.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
+uint32_t ContainerNode::findArgumentIndex(ArgumentNode *_arg_node) {
+    auto _arg_type = _arg_node->getArgType();
+    RegisterList _local_list;
 
-    if (ff == live_out.end()) {
-        // WARNING(!"Couldn't find the live-in");
-        return nullptr;
-    }
-    return ff->get();
-}
+    auto find_function = [_arg_type](auto &node) {
+        if (node->getArgType() == _arg_type) return true;
+    };
 
-ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
-    auto ff = std::find_if(live_in.begin(), live_in.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == live_in.end()) {
-        live_in.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_in.size(), _val->getName().str()),
-            ArgumentNode::LiveIn, this, _val));
+    std::copy_if(arg_list.begin(), arg_list.end(),
+                 std::back_inserter(_local_list), find_function);
 
-        ff = std::find_if(live_in.begin(), live_in.end(),
-                          [&_val](auto &arg) -> bool {
-                              return arg.get()->getArgumentValue() == _val;
-                          });
-    }
-
-    return ff->get();
-}
-
-ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
-    auto ff = std::find_if(live_out.begin(), live_out.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == live_out.end()) {
-        live_out.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_out.size(), _val->getName().str()),
-            ArgumentNode::LiveOut, this, _val));
-
-        ff = std::find_if(live_out.begin(), live_out.end(),
-                          [&_val](auto &arg) -> bool {
-                              return arg.get()->getArgumentValue() == _val;
-                          });
-    }
-
-    return ff->get();
-}
-
-uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
     auto arg_find = std::find_if(
-        live_in.begin(), live_in.end(),
+        _local_list.begin(), _local_list.end(),
         [_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
 
-    ptrdiff_t pos = std::distance(live_in.begin(), arg_find);
+    ptrdiff_t pos = std::distance(_local_list.begin(), arg_find);
     return pos;
 }
 
-uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
-    auto arg_find = std::find_if(
-        live_out.begin(), live_out.end(),
-        [_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
+uint32_t ContainerNode::numArgList(ArgumentNode::ArgumentType type) {
+    RegisterList _local_list;
 
-    ptrdiff_t pos = std::distance(live_out.begin(), arg_find);
-    return pos;
+    auto find_function = [type](auto &node) {
+        if (node->getArgType() == type) return true;
+    };
+
+    std::copy_if(arg_list.begin(), arg_list.end(),
+                 std::back_inserter(_local_list), find_function);
+
+    return _local_list.size();
 }
+
+// Node *ContainerNode::findLiveOut(llvm::Value *_val) {
+// auto ff = std::find_if(live_out.begin(), live_out.end(),
+//[&_val](auto &arg) -> bool {
+// return arg.get()->getArgumentValue() == _val;
+//});
+
+// if (ff == live_out.end()) {
+//// WARNING(!"Couldn't find the live-in");
+// return nullptr;
+//}
+// return ff->get();
+//}
+
+// ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
+// auto ff = std::find_if(live_in.begin(), live_in.end(),
+//[&_val](auto &arg) -> bool {
+// return arg.get()->getArgumentValue() == _val;
+//});
+// if (ff == live_in.end()) {
+// live_in.push_back(std::make_unique<ArgumentNode>(
+// NodeInfo(live_in.size(), _val->getName().str()),
+// ArgumentNode::LiveIn, this, _val));
+
+// ff = std::find_if(live_in.begin(), live_in.end(),
+//[&_val](auto &arg) -> bool {
+// return arg.get()->getArgumentValue() == _val;
+//});
+//}
+
+// return ff->get();
+//}
+
+// ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
+// auto ff = std::find_if(live_out.begin(), live_out.end(),
+//[&_val](auto &arg) -> bool {
+// return arg.get()->getArgumentValue() == _val;
+//});
+// if (ff == live_out.end()) {
+// live_out.push_back(std::make_unique<ArgumentNode>(
+// NodeInfo(live_out.size(), _val->getName().str()),
+// ArgumentNode::LiveOut, this, _val));
+
+// ff = std::find_if(live_out.begin(), live_out.end(),
+//[&_val](auto &arg) -> bool {
+// return arg.get()->getArgumentValue() == _val;
+//});
+//}
+
+// return ff->get();
+//}
+
+// uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
+// auto arg_find = std::find_if(
+// live_in.begin(), live_in.end(),
+//[_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
+
+// ptrdiff_t pos = std::distance(live_in.begin(), arg_find);
+// return pos;
+//}
+
+// uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
+// auto arg_find = std::find_if(
+// live_out.begin(), live_out.end(),
+//[_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
+
+// ptrdiff_t pos = std::distance(live_out.begin(), arg_find);
+// return pos;
+//}
 
 //===----------------------------------------------------------------------===//
 //                            CallSpliter Class
@@ -763,8 +811,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
     };
 
     switch (_pt) {
-        case PrintType::Scala:
-
+        case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(List($<input_vector>)))\n"
@@ -773,11 +820,22 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$type", "SplitCallNew");
             helperReplace(_text, "$id", std::to_string(this->getID()));
+
+            // TODO make a list of liveins first
+            auto find_function = [](auto &node) {
+                if (node->getArgType() == ArgumentNode::LiveIn) return true;
+            };
+            RegisterList _local_list;
+
+            std::copy_if(arg_list_begin(), arg_list_end(),
+                         std::back_inserter(_local_list), find_function);
+
             helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->live_ins()), ", ");
-            // TODO: uncomment if you update the list shape.
+                          make_argument_port(_local_list), ", ");
 
             break;
+        }
+
         default:
             assert(!"Don't support!");
     }
@@ -1020,6 +1078,24 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
                     helperReplace(_text, "$id", _idx);
                     break;
                 }
+                case ArgumentNode::LoopLiveIn: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.InLiveIn($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+
+                    break;
+                }
+                case ArgumentNode::LoopLiveOut: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.LoopliveOut($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+
                 default:
                     assert(!"Unrecognized argument node type!");
                     break;
@@ -1043,19 +1119,13 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
             switch (this->getArgType()) {
                 case ArgumentNode::LiveIn: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.$out.data(\"field$num\")($id)";
+                    _text = "$call.io.$out.data.elements(\"field$num\")($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
-                        //                        this->parent_call_node->findLiveOutIndex(this));
-                        this->parent_call_node->findLiveInIndex(this));
-                    // this->parent_call_node->findLiveInIndex(this));
-                    if (this->parent_call_node->getContainerType() ==
-                        ContainerNode::LoopNodeTy)
-                        helperReplace(_text, "$out", "liveIn");
-                    else
-                        helperReplace(_text, "$out", "Out");
+                        this->parent_call_node->findArgumentIndex(this));
+                    helperReplace(_text, "$out", "Out");
 
                     helperReplace(_text, "$id", _idx);
 
@@ -1068,12 +1138,45 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
-                        this->parent_call_node->findLiveInIndex(this));
+                        this->parent_call_node->findArgumentIndex(this));
                     helperReplace(_text, "$out", "Out");
 
                     helperReplace(_text, "$id", _idx);
                     break;
                 }
+                case ArgumentNode::LoopLiveIn: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$out.elements(\"field$num\")($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        //                        this->parent_call_node->findLiveOutIndex(this));
+                        this->parent_call_node->findArgumentIndex(this));
+                    if (this->parent_call_node->getContainerType() ==
+                        ContainerNode::LoopNodeTy)
+                        helperReplace(_text, "$out", "OutLiveIn");
+                    else
+                        helperReplace(_text, "$out", "Out");
+
+                    helperReplace(_text, "$id", _idx);
+
+                    break;
+                }
+                case ArgumentNode::LoopLiveOut: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$outLoop($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        this->parent_call_node->findArgumentIndex(this));
+                    helperReplace(_text, "$out", "Out");
+
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+
                 default:
                     assert(!"Unrecognized type of node\n");
                     break;
@@ -2980,11 +3083,12 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "LoopBlockNode");
-            helperReplace(_text, "$<input_vector>",
-                          make_argument_port(this->live_ins()), ", ");
-            helperReplace(_text, "$<num_out>",
-                          make_argument_port(this->live_outs()), ", ");
-            helperReplace(_text, "$num_exit", this->numControlInputPort() - 2);
+            // helperReplace(_text, "$<input_vector>",
+            // make_argument_port(this->live_ins()), ", ");
+            // helperReplace(_text, "$<num_out>",
+            // make_argument_port(this->live_outs()), ", ");
+            // helperReplace(_text, "$num_exit", this->numControlInputPort() -
+            // 2);
 
             // TODO update the exit points!
             // helperReplace(_text, "num_exit", 1);

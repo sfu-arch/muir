@@ -54,9 +54,10 @@ struct PortID {
     PortID(uint32_t _id) : ID(_id) {}
 
     uint32_t getID() { return ID; }
-    uint32_t setID(uint32_t _id) { ID = _id; }
+    void setID(uint32_t _id) { ID = _id; }
 
-    bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; } };
+    bool operator==(const PortID &rhs) const { return this->ID == rhs.ID; }
+};
 
 using PortEntry = std::pair<Node *, PortID>;
 
@@ -118,7 +119,7 @@ class Node {
     MemoryPort write_port_data;
 
    public:  // Public methods
-    Node(NodeType _nt, NodeInfo _ni) : info(_ni), node_type(_nt) {}
+    Node(NodeType _nt, NodeInfo _ni) : node_type(_nt), info(_ni) {}
 
     PortID returnDataInputPortIndex(Node *);
     PortID returnControlInputPortIndex(Node *);
@@ -268,7 +269,6 @@ class Node {
      */
     void addControlInputPortIndex(Node *_n, uint32_t _id) {
         port_control.control_input_port.push_back(std::make_pair(_n, _id));
-
     }
 
     /**
@@ -283,12 +283,12 @@ class Node {
         return this->info.Name + std::string(" Definition is Not defined!");
     }
 
-    [[deprecated("Replaced by pair<Node*, PortID>")]]
-    virtual std::string printInputEnable(PrintType, uint32_t) {
+    [[deprecated("Replaced by pair<Node*, PortID>")]] virtual std::string
+    printInputEnable(PrintType, uint32_t) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
-    virtual std::string printInputEnable(PrintType, std::pair<Node*, PortID>) {
+    virtual std::string printInputEnable(PrintType, std::pair<Node *, PortID>) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
@@ -303,7 +303,8 @@ class Node {
         return this->info.Name +
                std::string(" -> EnableOutput with ID Not defined!");
     }
-    virtual std::string printOutputEnable(PrintType, std::pair<Node*, PortID>) {
+    virtual std::string printOutputEnable(PrintType,
+                                          std::pair<Node *, PortID>) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
@@ -352,7 +353,7 @@ class SuperNode : public Node {
     using PhiNodeList = std::list<PhiSelectNode *>;
     using ConstIntNodeList = std::list<ConstIntNode *>;
     using CosntFPNodeList = std::list<ConstFPNode *>;
-    enum SuperNodeType { Mask, NoMask};
+    enum SuperNodeType { Mask, NoMask };
 
    private:
     llvm::BasicBlock *basic_block;
@@ -408,16 +409,18 @@ class SuperNode : public Node {
     void setNodeType(SuperNodeType _t) { this->type = _t; }
 
     virtual std::string printDefinition(PrintType) override;
-    virtual std::string printInputEnable(PrintType, std::pair<Node *, PortID>) override;
+    virtual std::string printInputEnable(PrintType,
+                                         std::pair<Node *, PortID>) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
-    virtual std::string printOutputEnable(PrintType, std::pair<Node *, PortID>) override;
+    virtual std::string printOutputEnable(PrintType,
+                                          std::pair<Node *, PortID>) override;
     virtual std::string printMaskOutput(PrintType, uint32_t);
     std::string printActivateEnable(PrintType);
 };
 
 class ArgumentNode : public Node {
    public:
-    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut};
+    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut };
 
    private:
     ArgumentType arg_type;
@@ -453,12 +456,11 @@ class ArgumentNode : public Node {
 class ContainerNode : public Node {
    public:
     enum ContainType { LoopNodeTy = 0, SplitCallTy };
-    using RegisterList = std::list<std::unique_ptr<ArgumentNode>>;
+    using RegisterList = std::list<std::shared_ptr<ArgumentNode>>;
 
    private:
     ContainType con_type;
-    RegisterList live_in;
-    RegisterList live_out;
+    RegisterList arg_list;
 
    public:
     explicit ContainerNode(NodeInfo _nf)
@@ -474,29 +476,21 @@ class ContainerNode : public Node {
 
     uint32_t getContainerType() const { return con_type; }
 
-    ArgumentNode *insertLiveInArgument(llvm::Value *);
-    ArgumentNode *insertLiveOutArgument(llvm::Value *);
+    ArgumentNode *insertArgument(llvm::Value *Value,
+                                 ArgumentNode::ArgumentType Type);
 
-    uint32_t findLiveInIndex(ArgumentNode *);
-    uint32_t findLiveOutIndex(ArgumentNode *);
+    Node * findNode(llvm::Value *_val);
+    uint32_t findArgumentIndex(ArgumentNode *);
 
-    uint32_t numLiveIn() { return live_in.size(); }
-    uint32_t numLiveOut() { return live_out.size(); }
+    uint32_t numArgList(ArgumentNode::ArgumentType type);
 
-    auto live_in_begin() { return this->live_in.begin(); }
-    auto live_in_end() { return this->live_in.end(); }
-    auto live_ins() {
-        return helpers::make_range(live_in_begin(), live_in_end());
+    auto arg_list_begin() { return this->arg_list.begin(); }
+    auto arg_list_end() { return this->arg_list.end(); }
+    auto arg_lists() {
+        return helpers::make_range(arg_list_begin(), arg_list_end());
     }
 
-    auto live_out_begin() { return this->live_out.begin(); }
-    auto live_out_end() { return this->live_out.end(); }
-    auto live_outs() {
-        return helpers::make_range(live_out_begin(), live_out_end());
-    }
-
-    Node *findLiveIn(llvm::Value *);
-    Node *findLiveOut(llvm::Value *);
+    //Node *findArg(llvm::Value *);
 };
 
 /**
@@ -523,7 +517,7 @@ class MemoryNode : public Node {
         return T->getType() == Node::MemoryUnitTy;
     }
 
-    bool isInitilized(){
+    bool isInitilized() {
         return (this->numMemReqPort() && this->numMemRespPort());
     }
 
@@ -941,12 +935,12 @@ class BranchNode : public InstructionNode {
     list<std::pair<Node *, PredicateResult>> output_predicate;
 
     BranchNode(NodeInfo _ni, llvm::BranchInst *_ins = nullptr)
-        : ending_loop(false),
-          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins),
+          ending_loop(false) {}
 
     BranchNode(NodeInfo _ni, bool _loop, llvm::BranchInst *_ins = nullptr)
-        : ending_loop(_loop),
-          InstructionNode(_ni, InstType::BranchInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstType::BranchInstructionTy, _ins),
+          ending_loop(_loop) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::BranchInstructionTy;
@@ -1426,7 +1420,7 @@ class ConstFPNode : public Node {
             value.f = parent_const_fp->getValueAPF().convertToFloat();
         } else
             value.f = parent_const_fp->getValueAPF().convertToFloat();
-            //value.f = 0;
+        // value.f = 0;
     }
 
     // Define classof function so that we can use dyn_cast function

@@ -52,9 +52,6 @@ class Graph {
     // List of the edges between nodes inside the graph
     EdgeList edge_list;
 
-    bool graph_empty;
-    llvm::Function *function_ptr;
-    llvm::raw_ostream &outCode;
 
     // Memory units inside each graph
     std::unique_ptr<MemoryNode> memory_unit;
@@ -68,11 +65,16 @@ class Graph {
     // Loop nodes
     LoopNodeList loop_nodes;
 
+    llvm::Function *function_ptr;
+
     // Out interface
     Node *out_node;
 
     // Keep track of nodes and values
-    //std::map<llvm::Value *, Node *> map_value_node;
+    // std::map<llvm::Value *, Node *> map_value_node;
+    //
+    llvm::raw_ostream &outCode;
+    bool graph_empty;
 
    public:
     explicit Graph(NodeInfo _n_info)
@@ -84,10 +86,10 @@ class Graph {
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
-          graph_empty(false),
-          outCode(llvm::outs()),
           function_ptr(nullptr),
-          out_node(nullptr) {}
+          out_node(nullptr),
+          outCode(llvm::outs()),
+          graph_empty(false) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
           split_call(
@@ -97,10 +99,10 @@ class Graph {
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
-          graph_empty(false),
-          outCode(_output),
           function_ptr(nullptr),
-          out_node(nullptr) {}
+          out_node(nullptr),
+          outCode(_output),
+          graph_empty(false) {}
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output,
                    llvm::Function *_fn)
         : graph_info(_n_info),
@@ -111,10 +113,10 @@ class Graph {
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
-          graph_empty(false),
-          outCode(_output),
           function_ptr(_fn),
-          out_node(nullptr) {}
+          out_node(nullptr),
+          outCode(_output),
+          graph_empty(false) {}
 
     void init(BasicBlockList &, InstructionList &, ArgumentList &,
               GlobalValueList &, ConstIntList &, EdgeList &);
@@ -128,7 +130,7 @@ class Graph {
     bool isEmpty() { return graph_empty; }
     auto getMemoryUnit() const { return memory_unit.get(); }
     auto getStackAllocator() const { return stack_allocator.get(); }
-    auto getFPUNode() const {return floating_point_unit.get();}
+    auto getFPUNode() const { return floating_point_unit.get(); }
 
     // InstructionList *getInstructionList();
     auto instList_begin() { return this->inst_list.cbegin(); }
@@ -167,10 +169,9 @@ class Graph {
     InstructionNode *insertSelectNode(llvm::SelectInst &);
     InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
-    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
-    //InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
+    // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
+    // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
     InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepInfo);
-
 
     InstructionNode *insertLoadNode(llvm::LoadInst &);
     InstructionNode *insertStoreNode(llvm::StoreInst &);

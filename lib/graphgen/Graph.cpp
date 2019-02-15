@@ -285,7 +285,7 @@ void Graph::printSharedModules(PrintType _pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Memory modules:\n");
             this->outCode << helperScalaPrintHeader("Printing Memory modules");
-            if(memory_unit->isInitilized())
+            if (memory_unit->isInitilized())
                 outCode << memory_unit->printDefinition(PrintType::Scala);
             else
                 outCode << memory_unit->printUninitilizedUnit(PrintType::Scala);
@@ -320,7 +320,8 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
 
                     this->outCode
                         << "  "
-                        << _s_node->printInputEnable(PrintType::Scala, _enable_iterator)
+                        << _s_node->printInputEnable(PrintType::Scala,
+                                                     _enable_iterator)
                         << " <> "
                         << _input_node->printOutputEnable(PrintType::Scala,
                                                           _output_index.getID())
@@ -693,8 +694,9 @@ void Graph::printScalaFunctionHeader() {
     // Print input call parameters
     _command = "    val in = Flipped(Decoupled(new Call(List(";
     _final_command.append((_command));
-    for (uint32_t c = 0; c < this->getSplitCall()->numLiveIn(); c++) {
-        if (c == this->getSplitCall()->numLiveIn() - 1)
+    for (uint32_t c = 0;
+         c < this->getSplitCall()->numArgList(ArgumentNode::LiveIn); c++) {
+        if (c == this->getSplitCall()->numArgList(ArgumentNode::LiveIn) - 1)
             _command = "32";
         else
             _command = "32, ";
@@ -883,8 +885,6 @@ InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
     return ff->get();
 }
 
-
-
 /**
  * Insert a new computation instruction
  */
@@ -901,8 +901,6 @@ InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
 
     return ff->get();
 }
-
-
 
 /**
  * Insert a new computation instruction
@@ -1026,10 +1024,9 @@ InstructionNode *Graph::insertBranchNode(BranchInst &I) {
  * Insert a new computation PhiNode
  */
 InstructionNode *Graph::insertPhiNode(PHINode &I) {
-
-    //TODO This is a hack, the ordering phi nodes are sometimes different
-    //In this way I'm catching if I need to have reverse ordering or not.
-    //it has to fixed properly
+    // TODO This is a hack, the ordering phi nodes are sometimes different
+    // In this way I'm catching if I need to have reverse ordering or not.
+    // it has to fixed properly
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         auto _op = I.getIncomingBlock(i);
@@ -1487,7 +1484,9 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
                 uint32_t c = 0;
-                for (auto &_live_in : _l_node->live_ins()) {
+                for (auto &_live_in : _l_node->arg_lists()) {
+                    if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
+                        continue;
                     for (auto &_data_in : _live_in->input_data_range()) {
                         this->outCode
                             << "  "
@@ -1507,7 +1506,9 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-in dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_in : _l_node->live_ins()) {
+                for (auto &_live_in : _l_node->arg_lists()) {
+                    if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
+                        continue;
                     for (auto &_data_out : _live_in->output_data_range()) {
                         if (isa<ArgumentNode>(_data_out.first)) continue;
                         this->outCode << "  "
@@ -1532,7 +1533,9 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-out dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_out : _l_node->live_outs()) {
+                for (auto &_live_out : _l_node->arg_lists()) {
+                    if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
+                        continue;
                     for (auto &_data_out : _live_out->input_data_range()) {
                         this->outCode << "  "
                                       << _live_out->printInputData(
@@ -1661,7 +1664,8 @@ void Graph::doInitialization() {
         }
     }
     for (auto &_loop : loop_nodes) {
-        for (auto &_l_out : _loop->live_outs()) {
+        for (auto &_l_out : _loop->arg_lists()) {
+            if (_l_out->getArgType() != ArgumentNode::LoopLiveOut) continue;
             for (auto &_child : _l_out->output_data_range()) {
                 this->insertEdge(
                     Edge::EdgeType::DataTypeEdge,
@@ -1675,7 +1679,8 @@ void Graph::doInitialization() {
         }
     }
 
-    for (auto &_arg : this->getSplitCall()->live_ins()) {
+    for (auto &_arg : this->getSplitCall()->arg_lists()) {
+        if (_arg->getArgType() != ArgumentNode::LiveIn) continue;
         for (auto &_node : _arg->output_data_range()) {
             if (isa<ArgumentNode>(_node.first)) continue;
             this->insertEdge(
