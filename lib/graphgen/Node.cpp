@@ -18,6 +18,7 @@ using namespace std;
 using namespace llvm;
 using namespace dandelion;
 using namespace helpers;
+using namespace std::placeholders;
 
 std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number) {
     auto sign = std::bitset<1>(_number.raw.sign);
@@ -1151,7 +1152,6 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
-                        //                        this->parent_call_node->findLiveOutIndex(this));
                         this->parent_call_node->findArgumentIndex(this));
                     if (this->parent_call_node->getContainerType() ==
                         ContainerNode::LoopNodeTy)
@@ -1165,13 +1165,13 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                 }
                 case ArgumentNode::LoopLiveOut: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.$outLoop($id)";
+                    _text = "$call.io.$out.elements(\"field$num\")($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
                         this->parent_call_node->findArgumentIndex(this));
-                    helperReplace(_text, "$out", "Out");
+                    helperReplace(_text, "$out", "OutLiveOut");
 
                     helperReplace(_text, "$id", _idx);
                     break;
@@ -3072,7 +3072,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
     };
 
     switch (_pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumIns = "
@@ -3083,10 +3083,29 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "LoopBlockNode");
-            // helperReplace(_text, "$<input_vector>",
-            // make_argument_port(this->live_ins()), ", ");
-            // helperReplace(_text, "$<num_out>",
-            // make_argument_port(this->live_outs()), ", ");
+
+            RegisterList _livein_list;
+            RegisterList _liveout_list;
+            auto find_function = [](auto &node,
+                                    ArgumentNode::ArgumentType type) {
+                if (node->getArgType() == type) return true;
+            };
+
+            std::copy_if(
+                arg_list_begin(), arg_list_end(),
+                std::back_inserter(_livein_list),
+                std::bind(find_function, _1, ArgumentNode::LoopLiveIn));
+
+            std::copy_if(
+                arg_list_begin(), arg_list_end(),
+                std::back_inserter(_liveout_list),
+                std::bind(find_function, _1, ArgumentNode::LoopLiveOut));
+
+            helperReplace(_text, "$<input_vector>",
+                          make_argument_port(_livein_list), ", ");
+
+            helperReplace(_text, "$<num_out>",
+                          make_argument_port(_liveout_list), ", ");
             // helperReplace(_text, "$num_exit", this->numControlInputPort() -
             // 2);
 
@@ -3094,6 +3113,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             // helperReplace(_text, "num_exit", 1);
 
             break;
+        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
