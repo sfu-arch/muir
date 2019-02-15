@@ -318,14 +318,23 @@ void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
 
-                    this->outCode
-                        << "  "
-                        << _s_node->printInputEnable(PrintType::Scala,
-                                                     _enable_iterator)
-                        << " <> "
-                        << _input_node->printOutputEnable(PrintType::Scala,
-                                                          _output_index.getID())
-                        << "\n\n";
+                    if (auto _loop_node = dyn_cast<LoopNode>(_enable_iterator.first)) {
+                        this->outCode
+                            << "  "
+                            << _s_node->printInputEnable(PrintType::Scala,
+                                                         _enable_iterator)
+                            << " <> ???"
+                            << "\n\n";
+                    } else {
+                        this->outCode
+                            << "  "
+                            << _s_node->printInputEnable(PrintType::Scala,
+                                                         _enable_iterator)
+                            << " <> "
+                            << _input_node->printOutputEnable(
+                                   PrintType::Scala, _output_index.getID())
+                            << "\n\n";
+                    }
                 }
             }
 
@@ -1098,41 +1107,6 @@ InstructionNode *Graph::insertGepNode(GetElementPtrInst &I, GepInfo _info) {
     return ff->get();
 }
 
-/**
- * Insert a new GEP node
- */
-// InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
-// GepArrayInfo _info) {
-// inst_list.push_back(std::make_unique<GepArrayNode>(
-// NodeInfo(inst_list.size(),
-//"Gep_" + I.getName().str() + to_string(inst_list.size())),
-//_info, &I));
-
-// auto ff = std::find_if(
-// inst_list.begin(), inst_list.end(),
-//[&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-// return ff->get();
-//}
-
-/**
- * Insert a new GEP node
- */
-// InstructionNode *Graph::insertGepNode(GetElementPtrInst &I,
-// GepStructInfo _info) {
-// inst_list.push_back(std::make_unique<GepStructNode>(
-// NodeInfo(inst_list.size(),
-//"gep" + I.getName().str() + to_string(inst_list.size())),
-//_info, &I));
-
-// auto ff = std::find_if(
-// inst_list.begin(), inst_list.end(),
-//[&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-// return ff->get();
-//}
-
-/**
- * Insert a new Bitcast node
- */
 InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
     inst_list.push_back(std::make_unique<BitcastNode>(
         NodeInfo(inst_list.size(),
@@ -1402,9 +1376,6 @@ void Graph::printLoopBranchEdges(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 for (auto _enable_iterator : _l_node->input_control_range()) {
                     auto _input_node = dyn_cast<Node>(&*_enable_iterator.first);
-
-                    // auto _input_index =
-                    //_l_node->returnControlInputPortIndex(_input_node);
 
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(

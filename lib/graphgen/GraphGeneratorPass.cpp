@@ -239,18 +239,8 @@ void UpdateInnerLiveInConnections(
                         loop_value_node[_loop->getParentLoop()];
 
                     // TODO: This part needs to be re-thinked!
-                    //
-                    // We don't count inputs to PHI nodes as live-in, because
-                    // their value
-                    // needs to be run only once
-                    //
-                    // if ((isa<llvm::PHINode>(&I))) {
-                    // DEBUG(I.dump());
-                    // DEBUG(_value->dump());
-                    // continue;
-                    //}
-
-                    auto new_live_in = _loop_node->insertArgument(_value, ArgumentNode::LoopLiveIn);
+                    auto new_live_in = _loop_node->insertArgument(
+                        _value, ArgumentNode::LoopLiveIn);
 
                     Node *_src = nullptr;
                     if (_parent_loop_node->findNode(_value) == nullptr)
@@ -298,7 +288,8 @@ void UpdateInnerLiveOutConnections(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         U)) {
-                    auto new_live_out = _loop_node->insertArgument(U, ArgumentNode::LoopLiveOut);
+                    auto new_live_out = _loop_node->insertArgument(
+                        U, ArgumentNode::LoopLiveOut);
 
                     auto _src = map_value_node[&I];
                     auto _tar = map_value_node[U];
@@ -484,7 +475,6 @@ void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
 void GraphGeneratorPass::visitFunction(Function &F) {
     dependency_graph->setFunction(&F);
 
-    // TODO
     // Here we make a graph
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
@@ -686,15 +676,6 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                             ->addconstFPNode(
                                 dyn_cast<ConstFPNode>(_const_node));
                     }
-
-                    //_const_node->addControlInputPort(
-                    // this->map_value_node[ins_it->getParent()]);
-                    // this->map_value_node[ins_it->getParent()]
-                    //->addControlOutputPort(_const_node);
-
-                    // dyn_cast<SuperNode>(
-                    // this->map_value_node[ins_it->getParent()])
-                    //->addconstFPNode(dyn_cast<ConstFPNode>(_const_node));
                 } else if (auto undef_value =
                                dyn_cast<llvm::UndefValue>(operand)) {
                     // TODO define an undef node instead of uisng empty const
@@ -837,14 +818,6 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         // value which is feeded from multiple places. But still we are not sure
         // and we have to make sure that if there is PHI node whithin the
         // basicblock.
-        // TODO: It's an uneccessary check point which we have to get ride of it
-        // latter
-        // if (dyn_cast<SuperNode>(this->map_value_node[&BB])
-        //->numControlInputPort() > 1) {
-        // auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB]);
-        //_bb->setNodeType(SuperNode::Mask);
-        //}
-
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
                 // Iterate over the basicblock's instructions
@@ -853,7 +826,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     _bb->addInstruction(_ins);
 
                     // TODO: Why we are skipping reattach node?
-                    // Because you don't need to make reattachnode's connecitons
+                    // Because you don't need to make reattach node's
+                    // connecitons
                     // they already exist.
                     if (auto reatach = dyn_cast<ReattachNode>(_ins)) continue;
 

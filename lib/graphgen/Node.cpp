@@ -3106,11 +3106,10 @@ std::string LoopNode::printDefinition(PrintType _pt) {
 
             helperReplace(_text, "$<num_out>",
                           make_argument_port(_liveout_list), ", ");
-            // helperReplace(_text, "$num_exit", this->numControlInputPort() -
-            // 2);
 
             // TODO update the exit points!
-            // helperReplace(_text, "num_exit", 1);
+            // helperReplace(_text, "$num_exit", this->numControlInputPort() -
+            // 2);
 
             break;
         }
@@ -3649,7 +3648,7 @@ std::string CallInNode::printDefinition(PrintType _pt) {
         std::vector<uint32_t> _arg_count;
         for (auto &l : _list) {
             _arg_count.push_back(32);
-            errs() << "AMIRALI\n";
+            DEBUG(errs() << "WRONG WRONG\n");
         }
         return _arg_count;
     };

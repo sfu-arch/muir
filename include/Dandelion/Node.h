@@ -654,9 +654,20 @@ class LoopNode : public ContainerNode {
     bool isOuterLoop() { return outer_loop; }
 
     // Define classof function so that we can use dyn_cast function
-    static bool classof(const Node *T) {
-        return T->getType() == Node::LoopNodeTy;
+    //static bool classof(const Node *T) {
+        //return T->getType() == Node::LoopNodeTy;
+    //}
+
+    static bool classof(const ContainerNode *I) {
+        return I->getContainerType() == ContainerNode::LoopNodeTy;
     }
+
+    static bool classof(const Node *T) {
+        return isa<ContainerNode>(T) && classof(cast<ContainerNode>(T));
+    }
+
+
+
 
     // Iterator over instucrion list
     auto ins_begin() { return instruction_list.begin(); }
