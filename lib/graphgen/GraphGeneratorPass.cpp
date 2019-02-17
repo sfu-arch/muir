@@ -930,7 +930,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // Connect the latch ending branch to loopNode
         if (auto _latch_br = dyn_cast<BranchNode>(_src_back_br_inst_it.first)) {
-            _loop_node->setLoopLatchEnable(_latch_br);
+            _loop_node->addLoopBackEdge(_latch_br);
             _latch_br->addControlOutputPort(_loop_node);
             // Check wether branch instruction is conditional
             if (_latch_br->getInstruction()->getNumOperands() > 0) {

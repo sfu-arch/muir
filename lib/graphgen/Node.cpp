@@ -242,6 +242,41 @@ std::list<PortEntry>::iterator Node::findControlOutputNode(Node *_node) {
                    [_node](auto &arg) -> bool { return arg.first == _node; });
 }
 
+std::list<PortEntry> Node::findDataInputNodeList(Node *_node) {
+    std::list<PortEntry> result;
+    copy_if(this->port_data.data_input_port.begin(),
+            this->port_data.data_input_port.end(), std::back_inserter(result),
+            [_node](auto &arg) -> bool { return arg.first == _node; });
+    return result;
+}
+
+std::list<PortEntry> Node::findDataOutputNodeList(Node *_node) {
+    std::list<PortEntry> result;
+    copy_if(this->port_data.data_output_port.begin(),
+            this->port_data.data_output_port.end(), std::back_inserter(result),
+            [_node](auto &arg) -> bool { return arg.first == _node; });
+    return result;
+}
+
+std::list<PortEntry> Node::findControlInputNodeList(Node *_node) {
+    std::list<PortEntry> result;
+    copy_if(this->port_control.control_input_port.begin(),
+            this->port_control.control_input_port.end(),
+            std::back_inserter(result),
+            [_node](auto &arg) -> bool { return arg.first == _node; });
+    return result;
+}
+
+std::list<PortEntry> Node::findControlOutputNodeList(Node *_node) {
+    std::list<PortEntry> result;
+    copy_if(this->port_control.control_output_port.begin(),
+            this->port_control.control_output_port.end(),
+            std::back_inserter(result),
+            [_node](auto &arg) -> bool { return arg.first == _node; });
+
+    return result;
+}
+
 void Node::removeNodeDataInputNode(Node *_node) {
     this->port_data.data_input_port.remove_if(
         [_node](auto &arg) -> bool { return arg.first == _node; });
@@ -395,6 +430,23 @@ std::string SuperNode::printDefinition(PrintType pt) {
         default:
             assert(!"Uknown print type!");
     }
+    return _text;
+}
+
+std::string SuperNode::printInputEnable(PrintType _pt, uint32_t _id) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+    switch (_pt) {
+        case PrintType::Scala:
+            _text = "$name.io.predicateIn($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
+            break;
+        default:
+            break;
+    }
+
     return _text;
 }
 
@@ -3148,13 +3200,52 @@ std::string LoopNode::printOutputEnable(PrintType _pt, uint32_t _id) {
 
     switch (_pt) {
         case PrintType::Scala:
-            if (node_t->second == PortType::EndEnable)
-                _text = "$name.io.endEnable";
-            else if (node_t->second == PortType::Active)
-                _text = "$name.io.activate";
+            if (node_t->second == PortType::LoopFinish)
+                _text = "$name.io.loopfinish";
+            else if (node_t->second == PortType::Active_Loop_Start)
+                _text = "$name.io.activate_loop_start";
             else if (node_t->second == PortType::Enable)
-                _text = "$name.io.AAAA";
+                _text = "$name.io.???";
             //_text = "UKNOWN";
+            helperReplace(_text, "$name", _name.c_str());
+            break;
+        default:
+            break;
+    }
+
+    return _text;
+}
+
+std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
+    string _name(this->getName());
+    std::replace(_name.begin(), _name.end(), '.', '_');
+    string _text;
+
+    auto port_equal = [](auto port_1, auto port_2) -> bool {
+        if ((port_1.first == port_2.first) &&
+            (port_1.second.getID() == port_2.second.getID()))
+            return true;
+        else
+            return false;
+    };
+    // auto node = this->returnControlOutputPortNode(_id);
+    // auto node_t =
+    // find_if(port_type.begin(), port_type.end(),
+    //[node](auto _nt) -> bool { return _nt.first == node; });
+
+    switch (_pt) {
+        case PrintType::Scala:
+            if(port_equal(this->activate_loop_start, _port))
+                _text = "$name.io.activate_loop_start";
+            else
+                _text = "$name.io.XXX";
+            // if (node_t->second == PortType::LoopFinish)
+            //_text = "$name.io.loopfinish";
+            // else if (node_t->second == PortType::Active_Loop_Start)
+            //_text = "$name.io.activate_loop_start";
+            // else if (node_t->second == PortType::Enable)
+            //_text = "$name.io.???";
+            ////_text = "UKNOWN";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:

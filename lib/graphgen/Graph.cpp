@@ -90,7 +90,8 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             printBasicBlocks(PrintType::Scala);
             printInstructions(PrintType::Scala);
             printConstants(PrintType::Scala);
-            printBasickBlockPredicateEdges(PrintType::Scala);
+            printBasickBlockInstructionPredicateEdges(PrintType::Scala);
+            printBasickBlockLoopPredicateEdges(PrintType::Scala);
             printParallelConnections(PrintType::Scala);
             printLoopBranchEdges(PrintType::Scala);
             printLoopEndingDependencies(PrintType::Scala);
@@ -303,39 +304,107 @@ void Graph::printSharedModules(PrintType _pt) {
 }
 
 /**
- * Print control signals
+ * Print control signals instruction
  */
-void Graph::printBasickBlockPredicateEdges(PrintType _pt) {
+void Graph::printBasickBlockInstructionPredicateEdges(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             DEBUG(dbgs() << "\t Printing Control signals:\n");
             this->outCode << helperScalaPrintHeader(
                 "Basicblock -> predicate instruction");
             for (auto &_s_node : super_node_list) {
+                // if (dyn_cast<LoopNode>(&_s_node)) continue;
                 for (auto _enable_iterator : _s_node->input_control_range()) {
+                    // We will print loop connections later
+                    if (isa<LoopNode>(_enable_iterator.first)) continue;
                     auto _input_node = dyn_cast<Node>(_enable_iterator.first);
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
                             _s_node.get());
 
-                    if (auto _loop_node = dyn_cast<LoopNode>(_enable_iterator.first)) {
-                        this->outCode
-                            << "  "
-                            << _s_node->printInputEnable(PrintType::Scala,
-                                                         _enable_iterator)
-                            << " <> ???"
-                            << "\n\n";
-                    } else {
-                        this->outCode
-                            << "  "
-                            << _s_node->printInputEnable(PrintType::Scala,
-                                                         _enable_iterator)
-                            << " <> "
-                            << _input_node->printOutputEnable(
-                                   PrintType::Scala, _output_index.getID())
-                            << "\n\n";
+                    this->outCode
+                        << "  "
+                        << _s_node->printInputEnable(PrintType::Scala,
+                                                     _enable_iterator)
+                        << " <> "
+                        << _input_node->printOutputEnable(PrintType::Scala,
+                                                          _output_index.getID())
+                        << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+/**
+ * Print control signals for loops
+ */
+void Graph::printBasickBlockLoopPredicateEdges(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Printing Control signals:\n");
+            this->outCode << helperScalaPrintHeader(
+                "Basicblock -> predicate loop");
+            for (auto &_s_node : super_node_list) {
+                std::set<Node *> unique_loop_nodes;
+                for (auto &node : _s_node->input_control_range()) {
+                    if (auto loop = dyn_cast<LoopNode>(node.first))
+                        unique_loop_nodes.insert(loop);
+                }
+                for (auto _l : unique_loop_nodes) {
+                    auto _list_input_enable =
+                        _s_node->findControlInputNodeList(_l);
+                    auto _list_output_enable =
+                        _l->findControlOutputNodeList(_s_node.get());
+
+                    assert(_list_input_enable.size() ==
+                               _list_output_enable.size() &&
+                           "Size of the input and output enable signals should "
+                           "be the same always!");
+
+                    auto _input_it = _list_input_enable.begin();
+                    auto _output_it = _list_output_enable.begin();
+
+                    for (uint32_t i = 0; i < _list_input_enable.size(); ++i) {
+                        std::advance(_input_it, i);
+                        std::advance(_output_it, i);
+                        this->outCode << "  "
+                                      << _output_it->first->printInputEnable(
+                                             PrintType::Scala, _output_it->second.getID())
+                                      << " <> "
+                                      << _input_it->first->printOutputEnable(PrintType::Scala, *_output_it)
+                                      << "\n\n";
                     }
                 }
+                // for(auto &_arg : _s_node->input_control_range()){
+                // unique_control_nodes.insert(_arg.first);
+                //}
+
+                // for (auto _enable_iterator : _s_node->input_control_range())
+                // {
+                // if (auto loop_node =
+                // dyn_cast<LoopNode>(_enable_iterator.first)) {
+                // auto _input_node =
+                // dyn_cast<Node>(_enable_iterator.first);
+                // auto _output_index =
+                //_input_node->returnControlOutputPortIndex(
+                //_s_node.get());
+
+                // this->outCode
+                //<< "  "
+                //<< _s_node->printInputEnable(PrintType::Scala,
+                //_enable_iterator)
+                //<< " <> FIXME"
+                ////<< _enable_iterator.first->printOutputEnable(
+                //// PrintType::Scala, _s_node)
+                //<< "\n\n";
+                //}
+                //}
             }
 
             break;

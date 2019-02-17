@@ -191,10 +191,19 @@ class Node {
         return write_port_data.memory_resp_port.size();
     }
 
+    // If there are multiple of the same node added to the list, this function
+    // only returns the first PortEntry
     std::list<PortEntry>::iterator findDataInputNode(Node *);
     std::list<PortEntry>::iterator findDataOutputNode(Node *);
     std::list<PortEntry>::iterator findControlInputNode(Node *);
     std::list<PortEntry>::iterator findControlOutputNode(Node *);
+
+    // If there are multiple of the same node added to the list, this function
+    // only returns a list of PortEntry
+    std::list<PortEntry> findDataInputNodeList(Node *);
+    std::list<PortEntry> findDataOutputNodeList(Node *);
+    std::list<PortEntry> findControlInputNodeList(Node *);
+    std::list<PortEntry> findControlOutputNodeList(Node *);
 
     void removeNodeDataInputNode(Node *);
     void removeNodeDataOutputNode(Node *);
@@ -283,8 +292,7 @@ class Node {
         return this->info.Name + std::string(" Definition is Not defined!");
     }
 
-    [[deprecated("Replaced by pair<Node*, PortID>")]] virtual std::string
-    printInputEnable(PrintType, uint32_t) {
+    virtual std::string printInputEnable(PrintType, uint32_t) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
@@ -299,12 +307,12 @@ class Node {
     virtual std::string printOutputEnable(PrintType) {
         return this->info.Name + std::string(" EnableOutput Not defined!");
     }
+
     virtual std::string printOutputEnable(PrintType, uint32_t) {
         return this->info.Name +
                std::string(" -> EnableOutput with ID Not defined!");
     }
-    virtual std::string printOutputEnable(PrintType,
-                                          std::pair<Node *, PortID>) {
+    virtual std::string printOutputEnable(PrintType, PortEntry) {
         return this->info.Name +
                std::string(" EnableInput with ID Not defined!");
     }
@@ -409,6 +417,7 @@ class SuperNode : public Node {
     void setNodeType(SuperNodeType _t) { this->type = _t; }
 
     virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printInputEnable(PrintType,
                                          std::pair<Node *, PortID>) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
@@ -479,7 +488,7 @@ class ContainerNode : public Node {
     ArgumentNode *insertArgument(llvm::Value *Value,
                                  ArgumentNode::ArgumentType Type);
 
-    Node * findNode(llvm::Value *_val);
+    Node *findNode(llvm::Value *_val);
     uint32_t findArgumentIndex(ArgumentNode *);
 
     uint32_t numArgList(ArgumentNode::ArgumentType type);
@@ -490,7 +499,7 @@ class ContainerNode : public Node {
         return helpers::make_range(arg_list_begin(), arg_list_end());
     }
 
-    //Node *findArg(llvm::Value *);
+    // Node *findArg(llvm::Value *);
 };
 
 /**
@@ -593,9 +602,19 @@ class FloatingPointNode : public Node {
  * LoopNode contains all the instructions and useful information about the loops
  */
 class LoopNode : public ContainerNode {
-   private:
-    enum PortType { Active = 0, Enable, EndEnable, LatchEnable, LoopExit };
+   public:
+    enum PortType {
+        Active_Loop_Start = 0,
+        Active_Loop_Back,
+        Enable,
+        LoopBack,
+        LoopFinish,
+        LoopExit
+    };
 
+    using PortList = std::list<std::pair<Node *, PortType>>;
+
+   private:
     std::list<std::pair<Node *, PortType>> port_type;
     LoopNode *parent_loop;
     std::list<InstructionNode *> instruction_list;
@@ -605,6 +624,11 @@ class LoopNode : public ContainerNode {
     SuperNode *head_node;
     SuperNode *latch_node;
     std::list<SuperNode *> exit_node;
+
+    // Set auxiliary information for ouput nodes
+    PortEntry activate_loop_start;
+    PortEntry activate_loop_back;
+    std::vector<PortEntry> loop_exits;
 
     bool outer_loop;
 
@@ -654,8 +678,8 @@ class LoopNode : public ContainerNode {
     bool isOuterLoop() { return outer_loop; }
 
     // Define classof function so that we can use dyn_cast function
-    //static bool classof(const Node *T) {
-        //return T->getType() == Node::LoopNodeTy;
+    // static bool classof(const Node *T) {
+    // return T->getType() == Node::LoopNodeTy;
     //}
 
     static bool classof(const ContainerNode *I) {
@@ -665,9 +689,6 @@ class LoopNode : public ContainerNode {
     static bool classof(const Node *T) {
         return isa<ContainerNode>(T) && classof(cast<ContainerNode>(T));
     }
-
-
-
 
     // Iterator over instucrion list
     auto ins_begin() { return instruction_list.begin(); }
@@ -701,8 +722,12 @@ class LoopNode : public ContainerNode {
      * Make sure the loop enable signal is always set to index 0
      */
     void setActiveOutputLoopSignal(Node *_n) {
+        auto _port_info = PortID(this->numControlOutputPort());
         addControlOutputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::Active));
+        port_type.push_back(std::make_pair(_n, PortType::Active_Loop_Start));
+
+        //Seting activate_loop_start
+        activate_loop_start = std::make_pair(_n, _port_info);
     }
 
     /**
@@ -720,9 +745,9 @@ class LoopNode : public ContainerNode {
     /**
      * Make sure that loop latch enable signal is always fix to index 1
      */
-    void setLoopLatchEnable(Node *_n) {
+    void addLoopBackEdge(Node *_n) {
         addControlInputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::LatchEnable));
+        port_type.push_back(std::make_pair(_n, PortType::LoopBack));
     }
 
     /**
@@ -730,7 +755,7 @@ class LoopNode : public ContainerNode {
      */
     void setLoopEndEnable(Node *_n) {
         addControlOutputPort(_n);
-        port_type.push_back(std::make_pair(_n, PortType::EndEnable));
+        port_type.push_back(std::make_pair(_n, PortType::LoopFinish));
     }
     // void setLoopEndEnable(Node *_n, uint32_t i) {
     // addControlOutputPortIndex(_n, i);
@@ -757,6 +782,7 @@ class LoopNode : public ContainerNode {
     virtual std::string printOutputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType, PortEntry) override;
 };
 
 /**

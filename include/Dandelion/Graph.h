@@ -9,6 +9,7 @@
 
 #include <fstream>
 #include <ostream>
+#include <set>
 
 #include "json/json.h"
 
@@ -224,7 +225,8 @@ class Graph {
     void printInstructions(PrintType);
     void printConstants(PrintType);
     void printSharedModules(PrintType);
-    void printBasickBlockPredicateEdges(PrintType);
+    void printBasickBlockInstructionPredicateEdges(PrintType);
+    void printBasickBlockLoopPredicateEdges(PrintType);
     void printBasickBLockInstructionEdges(PrintType);
     void printPhiNodesConnections(PrintType);
     void printMemInsConnections(PrintType _pt);
