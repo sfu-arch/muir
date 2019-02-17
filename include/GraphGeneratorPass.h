@@ -15,6 +15,7 @@
 #include "NodeType.h"
 
 #include "AliasEdgeWriter.h"
+#include "LoopClouser.h"
 
 #include "Dandelion/Edge.h"
 #include "Dandelion/Graph.h"
@@ -97,6 +98,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void updateLoopDependencies(llvm::LoopInfo &loop_info);
 
     // void makeLoopNodes(llvm::LoopInfo &loop_info);
+    void formLoopNodes(llvm::Function &);
     void findDataPort(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);
@@ -123,10 +125,11 @@ class GraphGeneratorPass : public llvm::ModulePass,
           code_out(out) {}
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-        AU.addRequired<helpers::GepInformation>();
+        //AU.addRequired<llvm::AAResultsWrapperPass>();
+        //AU.addRequired<aew::AliasEdgeWriter>();
         AU.addRequired<llvm::LoopInfoWrapperPass>();
-        AU.addRequired<llvm::AAResultsWrapperPass>();
-        AU.addRequired<aew::AliasEdgeWriter>();
+        AU.addRequired<helpers::GepInformation>();
+        AU.addRequired<loopclouser::LoopClouser>();
         AU.setPreservesAll();
     }
 

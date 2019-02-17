@@ -38,7 +38,7 @@ namespace graphgen {
 
 char GraphGeneratorPass::ID = 0;
 
-RegisterPass<GraphGeneratorPass> X("graphgen", "Generating xketch graph");
+RegisterPass<GraphGeneratorPass> X("graphgen", "Generating graph pass");
 }  // namespace graphgen
 
 template <typename Iter, typename Q>
@@ -1108,28 +1108,45 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     }
 }
 
-void GraphGeneratorPass::connectingAliasEdges(Function &F) {
-    auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
+//void GraphGeneratorPass::connectingAliasEdges(Function &F) {
+    //auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
 
-    for (auto edge : alias_context->MustAliasEdgesMap) {
-        auto _src = map_value_node[edge.getFirst()];
-        for (auto end_edge : edge.getSecond()) {
-            auto _tar = map_value_node[end_edge];
+    //for (auto edge : alias_context->MustAliasEdgesMap) {
+        //auto _src = map_value_node[edge.getFirst()];
+        //for (auto end_edge : edge.getSecond()) {
+            //auto _tar = map_value_node[end_edge];
 
-            _src->addControlOutputPort(_tar);
-            _tar->addControlInputPort(_src);
-        }
-    }
+            //_src->addControlOutputPort(_tar);
+            //_tar->addControlInputPort(_src);
+        //}
+    //}
+//}
+
+void GraphGeneratorPass::formLoopNodes(Function &F) {
+    auto loop_context = &getAnalysis<loopclouser::LoopClouser>();
+
+    //for (auto edge : alias_context->MustAliasEdgesMap) {
+        //auto _src = map_value_node[edge.getFirst()];
+        //for (auto end_edge : edge.getSecond()) {
+            //auto _tar = map_value_node[end_edge];
+
+            //_src->addControlOutputPort(_tar);
+            //_tar->addControlInputPort(_src);
+        //}
+    //}
 }
+
+
 
 /**
  * All the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
+    formLoopNodes(F);
     findDataPort(F);
     fillBasicBlockDependencies(F);
-    updateLoopDependencies(*LI);
+    //updateLoopDependencies(*LI);
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);

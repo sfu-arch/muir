@@ -11,9 +11,9 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/LegacyPassManager.h"
 //#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -55,6 +55,7 @@
 #include "Common.h"
 #include "GEPSplitter.h"
 #include "GraphGeneratorPass.h"
+#include "LoopClouser.h"
 #include "TargetLoopExtractor.h"
 
 using namespace llvm;
@@ -72,8 +73,8 @@ cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::Required, cl::cat{dandelionCategory});
 
 cl::opt<string> target_fn("fn-name", cl::desc("Target function name"),
-                           cl::value_desc("Function name"), cl::Required,
-                           cl::cat{dandelionCategory});
+                          cl::value_desc("Function name"), cl::Required,
+                          cl::cat{dandelionCategory});
 
 cl::opt<string> config_path("config", cl::desc("Target function name"),
                             cl::value_desc("config_file"), cl::Required,
@@ -92,12 +93,13 @@ cl::opt<bool> testCase("test-file", cl::desc("Printing Test file"),
                        cl::cat{dandelionCategory});
 
 cl::opt<string> outFile("o", cl::desc("tapas output file"),
-                        cl::value_desc("filename"), cl::init(""), cl::cat{dandelionCategory});
+                        cl::value_desc("filename"), cl::init(""),
+                        cl::cat{dandelionCategory});
 
-cl::opt<char> HWoptLevel(
-    "H", cl::desc("Optimization level. [-H0, -H1, -H2, or -H3] "
-                  "(default = '-H1')"),
-    cl::Prefix, cl::ZeroOrMore, cl::init('1'));
+cl::opt<char> HWoptLevel("H",
+                         cl::desc("Optimization level. [-H0, -H1, -H2, or -H3] "
+                                  "(default = '-H1')"),
+                         cl::Prefix, cl::ZeroOrMore, cl::init('1'));
 
 static cl::opt<char> optLevel(
     "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -258,9 +260,10 @@ static void extractLoops(Module &m) {
     pm.add(createTypeBasedAAWrapperPass());
     pm.add(createBreakCriticalEdgesPass());
     pm.add(createLoopSimplifyPass());
-    pm.add(new DominatorTreeWrapperPass());
     pm.add(new LoopInfoWrapperPass());
-    pm.add(new lx::TargetLoopExtractor());
+    pm.add(new DominatorTreeWrapperPass());
+    //pm.add(new lx::TargetLoopExtractor());
+    pm.add(new loopclouser::LoopClouser());
     pm.add(createVerifierPass());
     pm.run(m);
 
@@ -340,17 +343,25 @@ static void runGraphGen(Module &M) {
     // pm.add(new helpers::GEPAddrCalculation(target_fn));
     // pm.add(llvm::createLoopSimplifyPass());
     // pm.add(new helpers::CallInstSpliter(target_fn));
-    pm.add(createGlobalsAAWrapperPass());
-    pm.add(createSCEVAAWrapperPass());
-    pm.add(createScopedNoAliasAAWrapperPass());
-    pm.add(createCFLAndersAAWrapperPass());
-    pm.add(createAAResultsWrapperPass());
-    pm.add(new aew::AliasEdgeWriter());
+    pm.add(new llvm::AssumptionCacheTracker());
+    pm.add(createBreakCriticalEdgesPass());
+    pm.add(createLoopSimplifyPass());
+    pm.add(createLoopSimplifyPass());
+    pm.add(new LoopInfoWrapperPass());
+    pm.add(new DominatorTreeWrapperPass());
+    pm.add(new loopclouser::LoopClouser());
+
+    //pm.add(createBasicAAWrapperPass());
+    //pm.add(llvm::createTypeBasedAAWrapperPass());
+    //pm.add(createGlobalsAAWrapperPass());
+    //pm.add(createSCEVAAWrapperPass());
+    //pm.add(createScopedNoAliasAAWrapperPass());
+    //pm.add(createCFLAndersAAWrapperPass());
+    //pm.add(createAAResultsWrapperPass());
+    //pm.add(new aew::AliasEdgeWriter());
+
     pm.add((llvm::createStripDeadDebugInfoPass()));
     pm.add(new helpers::GepInformation(target_fn));
-    pm.add(new LoopInfoWrapperPass());
-    pm.add(createBasicAAWrapperPass());
-    pm.add(llvm::createTypeBasedAAWrapperPass());
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, target_fn), out));
     pm.add(createVerifierPass());
     pm.run(M);
@@ -395,12 +406,13 @@ int main(int argc, char **argv) {
             splitGeps(F);
     }
 
+    //extractLoops(*module);
     runGraphGen(*module);
 
     // Generating graph
     // graphGen(*module);
 
-     saveModule(*module, "final.bc");
+    saveModule(*module, "final.bc");
 
     return 0;
 }
