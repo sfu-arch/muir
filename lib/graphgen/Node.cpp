@@ -10,6 +10,7 @@
 #include <experimental/iterator>
 #include <iostream>
 #include <sstream>
+#include <regex>
 
 #define MEM_SIZE 32
 #define BASE_SIZE 2

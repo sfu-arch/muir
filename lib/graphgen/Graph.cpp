@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <regex>
 
 using namespace std;
 using namespace llvm;
@@ -905,6 +906,8 @@ void Graph::printScalaHeader(string config_path, string package_name) {
 SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     string fix_name = BB.getName().str();
     std::replace(fix_name.begin(), fix_name.end(), '-', '_');
+    fix_name = std::regex_replace(fix_name, std::regex("^\\."), "");
+    //outs() << a << "\n";
     super_node_list.push_back(std::make_unique<SuperNode>(
         NodeInfo(super_node_list.size(),
                  "bb_" + fix_name + to_string(super_node_list.size())),

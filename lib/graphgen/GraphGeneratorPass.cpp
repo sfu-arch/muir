@@ -1317,17 +1317,9 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
         for (auto _live_in : summary.live_in_ins) {
             auto new_live_in = _loop_node->insertArgument(
                 _live_in.getFirst(), ArgumentNode::LoopLiveIn);
-
-            // XXX MOVE THIS PART
-            // auto _src = map_value_node[_live_in.getFirst()];
-            //_src->addDataOutputPort(new_live_in);
-            // new_live_in->addDataInputPort(_src);
             for (auto _use : _live_in.getSecond()) {
                 loop_edge_map[std::make_pair(_live_in.getFirst(), _use)] =
                     new_live_in;
-                // auto _tar = map_value_node[_use];
-                // new_live_in->addDataOutputPort(_tar);
-                //_tar->addDataInputPort(new_live_in);
             }
         }
     }
