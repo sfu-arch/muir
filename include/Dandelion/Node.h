@@ -740,6 +740,18 @@ class LoopNode : public ContainerNode {
 
     }
 
+    void setActiveExitSignal(Node *_n){
+        auto _port_info = PortID(this->numControlOutputPort());
+        addControlOutputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::LoopExit));
+
+        //Seting activate_loop_start
+        loop_exits.push_back(std::make_pair(_n, _port_info));
+
+    }
+
+
+
 
     /**
      * Push supernode to the super node container

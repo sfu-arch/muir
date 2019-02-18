@@ -3216,19 +3216,28 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
         else
             return false;
     };
-    // auto node = this->returnControlOutputPortNode(_id);
-    // auto node_t =
-    // find_if(port_type.begin(), port_type.end(),
-    //[node](auto _nt) -> bool { return _nt.first == node; });
 
     switch (_pt) {
         case PrintType::Scala:
             if (port_equal(this->activate_loop_start, _port))
                 _text = "$name.io.activate_loop_start";
-            else if(port_equal(this->activate_loop_back, _port))
+            else if (port_equal(this->activate_loop_back, _port))
                 _text = "$name.io.activate_loop_back";
-            else
-                _text = "$name.io.XXX";
+            else {
+                auto out_port =
+                    find_if(this->loop_exits.begin(), this->loop_exits.end(),
+                            std::bind(port_equal, _1, _port));
+
+                if (out_port != this->loop_exits.end()) {
+                    _text = "$name.io.loopExit($id)";
+                    uint32_t pos =
+                        std::distance(this->loop_exits.begin(), out_port);
+                    helperReplace(_text, "$id", pos);
+
+                } else
+                    _text = "$name.io.XXX";
+            }
+
             // if (node_t->second == PortType::LoopFinish)
             //_text = "$name.io.loopfinish";
             // else if (node_t->second == PortType::Active_Loop_Start)

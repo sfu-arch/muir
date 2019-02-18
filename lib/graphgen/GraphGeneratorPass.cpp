@@ -1173,7 +1173,7 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
 //}
 //}
 
-void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
+void GraphGeneratorPass::buildLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
     uint32_t c_id = 0;
     for (auto &L : getLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
@@ -1243,10 +1243,10 @@ void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
         }
 
         //Connecting loop exit signals
-        //for(auto _exit_b : summary.exit_blocks){
-            //this->map_value_node[_exit_b]->addControlInputPort(_loop_node);
-            //_loop_node->addControlOutputPort(_exit_b);
-        //}
+        for(auto _exit_b : summary.exit_blocks){
+            this->map_value_node[_exit_b]->addControlInputPort(_loop_node);
+            _loop_node->setActiveExitSignal(this->map_value_node[_exit_b]);
+        }
     }
 }
 
@@ -1255,7 +1255,7 @@ void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
-    formLoopNodes(F, *LI);
+    buildLoopNodes(F, *LI);
     findPorts(F);
     fillBasicBlockDependencies(F);
     // updateLoopDependencies(*LI);
