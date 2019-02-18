@@ -3238,13 +3238,6 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
                     _text = "$name.io.XXX";
             }
 
-            // if (node_t->second == PortType::LoopFinish)
-            //_text = "$name.io.loopfinish";
-            // else if (node_t->second == PortType::Active_Loop_Start)
-            //_text = "$name.io.activate_loop_start";
-            // else if (node_t->second == PortType::Enable)
-            //_text = "$name.io.???";
-            ////_text = "UKNOWN";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:
