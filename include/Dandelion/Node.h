@@ -730,6 +730,17 @@ class LoopNode : public ContainerNode {
         activate_loop_start = std::make_pair(_n, _port_info);
     }
 
+    void setActiveBackSignal(Node *_n){
+        auto _port_info = PortID(this->numControlOutputPort());
+        addControlOutputPort(_n);
+        port_type.push_back(std::make_pair(_n, PortType::Active_Loop_Back));
+
+        //Seting activate_loop_start
+        activate_loop_back = std::make_pair(_n, _port_info);
+
+    }
+
+
     /**
      * Push supernode to the super node container
      */

@@ -1215,6 +1215,10 @@ void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
                 this->map_value_node[summary.loop_back]);
         }
 
+        _loop_node->setActiveBackSignal(this->map_value_node[summary.header]);
+        this->map_value_node[summary.header]->addControlInputPort(_loop_node);
+
+        // Connecting exit signals
         for (auto _l_f : summary.loop_finish) {
             if (_l_f->getNumOperands() > 0) {
                 auto _f = std::find(
@@ -1237,8 +1241,12 @@ void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
                     this->map_value_node[_l_f]);
             }
         }
-        // Read loop summaries
-        //
+
+        //Connecting loop exit signals
+        //for(auto _exit_b : summary.exit_blocks){
+            //this->map_value_node[_exit_b]->addControlInputPort(_loop_node);
+            //_loop_node->addControlOutputPort(_exit_b);
+        //}
     }
 }
 

@@ -3225,6 +3225,8 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
         case PrintType::Scala:
             if (port_equal(this->activate_loop_start, _port))
                 _text = "$name.io.activate_loop_start";
+            else if(port_equal(this->activate_loop_back, _port))
+                _text = "$name.io.activate_loop_back";
             else
                 _text = "$name.io.XXX";
             // if (node_t->second == PortType::LoopFinish)
