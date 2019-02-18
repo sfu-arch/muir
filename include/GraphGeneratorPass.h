@@ -39,15 +39,24 @@ using EdgeList = std::list<Edge>;
 namespace graphgen {
 
 struct LoopSummary {
+    // Control information
     llvm::Instruction *enable;
     llvm::Instruction *loop_back;
-    llvm::SetVector<llvm::Instruction *>loop_finish;
+    llvm::SetVector<llvm::Instruction *> loop_finish;
 
     llvm::BasicBlock *header;
     llvm::SmallVector<llvm::BasicBlock *, 8> exit_blocks;
 
+    // Data information
+    //
+    // Live-in
+    llvm::SetVector<llvm::Loop *> sub_loops;
+    llvm::DenseMap<llvm::Value *,
+                   llvm::SmallVector<llvm::Instruction *, 8>>
+        live_in_ins;
+    llvm::DenseMap<llvm::Value *, llvm::Loop *> live_in_loop;
 
-    LoopSummary() : enable(nullptr), loop_back(nullptr){}
+    LoopSummary() : enable(nullptr), loop_back(nullptr) {}
 };
 
 class GraphGeneratorPass : public llvm::ModulePass,
@@ -57,9 +66,10 @@ class GraphGeneratorPass : public llvm::ModulePass,
    public:
     std::unique_ptr<Graph> dependency_graph;
 
-
     llvm::DenseMap<llvm::Loop *, LoopSummary> loop_sum;
-    llvm::DenseMap<llvm::Instruction *, llvm::SmallVector<llvm::BasicBlock *, 8> > blacklist_control_edge;
+    llvm::DenseMap<llvm::Instruction *,
+                   llvm::SmallVector<llvm::BasicBlock *, 8>>
+        blacklist_control_edge;
 
    private:
     std::map<llvm::Value *, Node *> map_value_node;
@@ -141,17 +151,17 @@ class GraphGeneratorPass : public llvm::ModulePass,
           code_out(out) {}
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-        //AU.addRequired<llvm::AAResultsWrapperPass>();
-        //AU.addRequired<aew::AliasEdgeWriter>();
+        // AU.addRequired<llvm::AAResultsWrapperPass>();
+        // AU.addRequired<aew::AliasEdgeWriter>();
         AU.addRequired<llvm::LoopInfoWrapperPass>();
         AU.addRequired<helpers::GepInformation>();
-        //AU.addRequired<loopclouser::LoopClouser>();
+        // AU.addRequired<loopclouser::LoopClouser>();
         AU.setPreservesAll();
     }
 
     // virtual bool runOnFunction(llvm::Function &) override;
     virtual bool runOnModule(llvm::Module &m) override;
-    LoopSummary summarizeLoop(llvm::Loop*, llvm::LoopInfo&);
+    LoopSummary summarizeLoop(llvm::Loop *, llvm::LoopInfo &);
 };
 }  // namespace graphgen
 

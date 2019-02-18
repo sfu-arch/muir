@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
+#include <experimental/numeric>
 #include <iostream>
 
 #include "AliasEdgeWriter.h"
@@ -40,6 +41,19 @@ char GraphGeneratorPass::ID = 0;
 
 RegisterPass<GraphGeneratorPass> X("graphgen", "Generating graph pass");
 }  // namespace graphgen
+
+// Right now I couldn't move to C++17 because of tapir, so I used a simulated
+// implementation of transform_reduce from C++17
+// later on by moving to c++, this function is not needed anymore
+template <class InputIt, class T, class BinaryOp, class UnaryOp>
+T transform_reduce(InputIt first, InputIt last, T init, BinaryOp binop,
+                   UnaryOp unary_op) {
+    T generalizedSum = init;
+    for (auto iter = first; iter != last; iter++) {
+        generalizedSum = binop(unary_op(*iter), generalizedSum);
+    }
+    return generalizedSum;
+}
 
 template <typename Iter, typename Q>
 void push_range(Q &q, Iter begin, Iter end) {
@@ -351,6 +365,39 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 summary.loop_finish.insert(_bb_ex_it->getTerminator());
                 blacklist_control_edge[_bb_ex_it->getTerminator()].push_back(
                     _bb_it);
+            }
+        }
+    }
+
+    // 3)Get all the sub-loops
+    for (auto SL : L->getSubLoops()) {
+        findAllLoops(SL, summary.sub_loops);
+    }
+
+    // 4)Extracting all the live-ins
+    for (auto &bb : L->blocks()) {
+        for (auto &ins : *bb) {
+            for (auto &op : ins.operands()) {
+                bool is_live_in = isa<Argument>(&*op);
+                if (auto _inst = dyn_cast<Instruction>(op))
+                    is_live_in = !L->contains(_inst) ? true : false;
+
+                // If the value is live-in, we need to check if
+                // subloops contain the instruction or not (not the operand).
+                if (is_live_in) {
+                    bool contain = transform_reduce(
+                        L->getSubLoopsVector().begin(),
+                        L->getSubLoopsVector().end(), false,
+                        [](auto _l, auto _r) { return _l | _r; },
+                        [&ins, &op, &summary](auto _sub_l) {
+                            if (_sub_l->contains(&ins)) {
+                                summary.live_in_loop[op] = _sub_l;
+                                return true;
+                            } else
+                                return false;
+                        });
+                    if (!contain) summary.live_in_ins[op].push_back(&ins);
+                }
             }
         }
     }
@@ -1162,18 +1209,8 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
 // void GraphGeneratorPass::connectingAliasEdges(Function &F) {
 // auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
 
-// for (auto edge : alias_context->MustAliasEdgesMap) {
-// auto _src = map_value_node[edge.getFirst()];
-// for (auto end_edge : edge.getSecond()) {
-// auto _tar = map_value_node[end_edge];
-
-//_src->addControlOutputPort(_tar);
-//_tar->addControlInputPort(_src);
-//}
-//}
-//}
-
-void GraphGeneratorPass::buildLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
+void GraphGeneratorPass::buildLoopNodes(Function &F,
+                                        llvm::LoopInfo &loop_info) {
     uint32_t c_id = 0;
     for (auto &L : getLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
@@ -1242,12 +1279,15 @@ void GraphGeneratorPass::buildLoopNodes(Function &F, llvm::LoopInfo &loop_info) 
             }
         }
 
-        //Connecting loop exit signals
-        for(auto _exit_b : summary.exit_blocks){
+        // Connecting loop exit signals
+        for (auto _exit_b : summary.exit_blocks) {
             this->map_value_node[_exit_b]->addControlInputPort(_loop_node);
             _loop_node->setActiveExitSignal(this->map_value_node[_exit_b]);
         }
     }
+
+
+    //Connecting live-in values
 }
 
 /**
@@ -1273,9 +1313,8 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
         if (F.getName() == target_fn) {
-            // Iterating over function's loops and start from
-            // most inner loop to make it as a function call
-            // and re-run the extraction, untill there is no other loops
+            // Iterating over loops, and extracting loops information
+            // before running anyother analysis
             auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
             auto loops = getLoops(LI);
 
@@ -1288,7 +1327,6 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
                         loop_sum.count(L) == 0) {
                         this->loop_sum.insert(
                             std::make_pair(L, summarizeLoop(L, LI)));
-                        outs() << "FIND LOOP\n";
                     }
                 }
 
