@@ -137,6 +137,7 @@ PortID Node::returnDataInputPortIndex(Node *_node) {
 
     if (ff == this->port_data.data_input_port.end())
         assert(!"Node doesn't exist\n");
+
     return find_if(this->port_data.data_input_port.begin(),
                    this->port_data.data_input_port.end(),
                    [&_node](auto &arg) -> bool { return arg.first == _node; })
@@ -144,6 +145,16 @@ PortID Node::returnDataInputPortIndex(Node *_node) {
 }
 
 PortID Node::returnControlOutputPortIndex(Node *_node) {
+    auto ff = std::find_if(
+        this->port_control.control_output_port.begin(),
+        this->port_control.control_output_port.end(),
+        [&_node](auto &arg) -> bool { return arg.first == _node; });
+
+    if (ff == this->port_control.control_output_port.end())
+        assert(!"Node doesn't exist\n");
+
+
+
     return find_if(this->port_control.control_output_port.begin(),
                    this->port_control.control_output_port.end(),
                    [&_node](auto &arg) -> bool { return arg.first == _node; })

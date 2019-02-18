@@ -51,8 +51,7 @@ struct LoopSummary {
     //
     // Live-in
     llvm::SetVector<llvm::Loop *> sub_loops;
-    llvm::DenseMap<llvm::Value *,
-                   llvm::SmallVector<llvm::Instruction *, 8>>
+    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         live_in_ins;
     llvm::DenseMap<llvm::Value *, llvm::Loop *> live_in_loop;
 
@@ -70,6 +69,10 @@ class GraphGeneratorPass : public llvm::ModulePass,
     llvm::DenseMap<llvm::Instruction *,
                    llvm::SmallVector<llvm::BasicBlock *, 8>>
         blacklist_control_edge;
+
+    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
+        blacklist_data_edge;
+    std::map<std::pair<llvm::Value* , llvm::Value*>, ArgumentNode *> loop_edge_map;
 
    private:
     std::map<llvm::Value *, Node *> map_value_node;
