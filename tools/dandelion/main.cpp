@@ -55,7 +55,7 @@
 #include "Common.h"
 #include "GEPSplitter.h"
 #include "GraphGeneratorPass.h"
-#include "LoopClouser.h"
+//#include "LoopClouser.h"
 #include "TargetLoopExtractor.h"
 
 using namespace llvm;
@@ -263,7 +263,7 @@ static void extractLoops(Module &m) {
     pm.add(new LoopInfoWrapperPass());
     pm.add(new DominatorTreeWrapperPass());
     //pm.add(new lx::TargetLoopExtractor());
-    pm.add(new loopclouser::LoopClouser());
+    //pm.add(new loopclouser::LoopClouser());
     pm.add(createVerifierPass());
     pm.run(m);
 
@@ -339,17 +339,17 @@ static void runGraphGen(Module &M) {
 
     legacy::PassManager pm;
     // Usefull passes
-    // pm.add(llvm::createCFGSimplificationPass());
     // pm.add(new helpers::GEPAddrCalculation(target_fn));
     // pm.add(llvm::createLoopSimplifyPass());
     // pm.add(new helpers::CallInstSpliter(target_fn));
     pm.add(new llvm::AssumptionCacheTracker());
-    pm.add(createBreakCriticalEdgesPass());
+    //pm.add(createBreakCriticalEdgesPass());
+    //pm.add(createLoopSimplifyPass());
     pm.add(createLoopSimplifyPass());
-    pm.add(createLoopSimplifyPass());
+    //pm.add(llvm::createCFGSimplificationPass());
     pm.add(new LoopInfoWrapperPass());
     pm.add(new DominatorTreeWrapperPass());
-    pm.add(new loopclouser::LoopClouser());
+    //pm.add(new loopclouser::LoopClouser());
 
     //pm.add(createBasicAAWrapperPass());
     //pm.add(llvm::createTypeBasedAAWrapperPass());
@@ -406,13 +406,10 @@ int main(int argc, char **argv) {
             splitGeps(F);
     }
 
-    //extractLoops(*module);
+    labelFunctions(*module);
     runGraphGen(*module);
 
-    // Generating graph
-    // graphGen(*module);
-
-    saveModule(*module, "final.bc");
+    saveModule(*module, target_fn + ".final.bc");
 
     return 0;
 }

@@ -317,6 +317,47 @@ void UpdateInnerLiveOutConnections(
     }
 }
 
+/**
+ * TODO: Right now we don't run loop simplify pass, because of cross checking
+ * with our old output, but next step is to run simplify pass
+ * because of the gauranties that the pass gives us
+ */
+LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
+    LoopSummary summary;
+
+    // Check if loop is in a simplify form
+    if (!L->isLoopSimplifyForm()) {
+        errs() << "[llvm-clouser] Loop not in Simplify Form\n";
+    }
+
+    // Start filling loop summary
+    // 1)Loop enable signal and backward edge these two are always uniqu,
+    summary.header = L->getHeader();
+    for (auto _bb_it : llvm::predecessors(L->getHeader())) {
+        // Forward edge
+        if (!L->contains(_bb_it)) summary.enable = _bb_it->getTerminator();
+        // Backward edge
+        else
+            summary.loop_back = _bb_it->getTerminator();
+        blacklist_control_edge[_bb_it->getTerminator()].push_back(
+            L->getHeader());
+    }
+
+    // 2)Looping exit branches
+    L->getExitBlocks(summary.exit_blocks);
+    for (auto _bb_it : summary.exit_blocks) {
+        for (auto _bb_ex_it : llvm::predecessors(_bb_it)) {
+            if (L->contains(_bb_ex_it)) {
+                summary.loop_finish.insert(_bb_ex_it->getTerminator());
+                blacklist_control_edge[_bb_ex_it->getTerminator()].push_back(
+                    _bb_it);
+            }
+        }
+    }
+
+    return summary;
+}
+
 bool GraphGeneratorPass::doInitialization(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
@@ -499,9 +540,11 @@ void GraphGeneratorPass::visitFunction(Function &F) {
  * If the input is constant value we find the value and make a ConstNode for
  * that value
  */
-void GraphGeneratorPass::findDataPort(Function &F) {
+void GraphGeneratorPass::findPorts(Function &F) {
     // Check wether we already have iterated over the instructions
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
+
+    // auto loop_context = &getAnalysis<loopclouser::LoopClouser>();
 
     // Connecting function arguments to the spliter
     for (auto _fun_arg_it = this->dependency_graph->funarg_begin();
@@ -529,6 +572,14 @@ void GraphGeneratorPass::findDataPort(Function &F) {
                 // 1) First find the basicblock node
                 // 2) Add bb as a control output
                 // 3) Add ins as a control input
+
+                // First we check if the edes is listed as blacklist
+                auto find = false;
+                for (auto _b_edge : blacklist_control_edge[&*ins_it]) {
+                    if (_b_edge == operand) find = true;
+                }
+                if (find) continue;
+
                 auto _node_dest = this->map_value_node.find(
                     operand);  // it should be supernode
                 assert(isa<SuperNode>(_node_dest->second) &&
@@ -917,7 +968,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         loop_value_node[&*L] = _loop_node;
 
-        _loop_node->setEnableLoopSignal(_src_forward_br_inst_it.first);
+        _loop_node->setInputControlLoopSignal(_src_forward_br_inst_it.first);
         _loop_node->setActiveOutputLoopSignal(_l_head);
         _l_head->replaceControlInputNode(_src_forward_br_inst_it.first,
                                          _loop_node);
@@ -1108,45 +1159,98 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     }
 }
 
-//void GraphGeneratorPass::connectingAliasEdges(Function &F) {
-    //auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
+// void GraphGeneratorPass::connectingAliasEdges(Function &F) {
+// auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
 
-    //for (auto edge : alias_context->MustAliasEdgesMap) {
-        //auto _src = map_value_node[edge.getFirst()];
-        //for (auto end_edge : edge.getSecond()) {
-            //auto _tar = map_value_node[end_edge];
+// for (auto edge : alias_context->MustAliasEdgesMap) {
+// auto _src = map_value_node[edge.getFirst()];
+// for (auto end_edge : edge.getSecond()) {
+// auto _tar = map_value_node[end_edge];
 
-            //_src->addControlOutputPort(_tar);
-            //_tar->addControlInputPort(_src);
-        //}
-    //}
+//_src->addControlOutputPort(_tar);
+//_tar->addControlInputPort(_src);
+//}
+//}
 //}
 
-void GraphGeneratorPass::formLoopNodes(Function &F) {
-    auto loop_context = &getAnalysis<loopclouser::LoopClouser>();
+void GraphGeneratorPass::formLoopNodes(Function &F, llvm::LoopInfo &loop_info) {
+    uint32_t c_id = 0;
+    for (auto &L : getLoops(loop_info)) {
+        auto _new_loop = std::make_unique<LoopNode>(
+            NodeInfo(c_id, "Loop_" + std::to_string(c_id)));
 
-    //for (auto edge : alias_context->MustAliasEdgesMap) {
-        //auto _src = map_value_node[edge.getFirst()];
-        //for (auto end_edge : edge.getSecond()) {
-            //auto _tar = map_value_node[end_edge];
+        // Insert loop node
+        auto _loop_node =
+            this->dependency_graph->insertLoopNode(std::move(_new_loop));
 
-            //_src->addControlOutputPort(_tar);
-            //_tar->addControlInputPort(_src);
-        //}
-    //}
+        loop_value_node[&*L] = _loop_node;
+
+        auto summary = loop_sum[&*L];
+
+        // Connect enable
+        this->map_value_node[summary.enable]->addControlOutputPort(_loop_node);
+        _loop_node->setInputControlLoopSignal(
+            this->map_value_node[summary.enable]);
+
+        _loop_node->setActiveOutputLoopSignal(
+            this->map_value_node[summary.header]);
+        map_value_node[summary.header]->addControlInputPort(_loop_node);
+
+        // Connecting backedge
+        if (summary.loop_back->getNumOperands() > 0) {
+            if (dyn_cast<BranchInst>(summary.loop_back)->getSuccessor(0) ==
+                summary.header) {
+                dyn_cast<BranchNode>(this->map_value_node[summary.loop_back])
+                    ->addTrueBranch(_loop_node);
+            } else {
+                dyn_cast<BranchNode>(this->map_value_node[summary.loop_back])
+                    ->addFalseBranch(_loop_node);
+            }
+            _loop_node->setInputControlLoopSignal(
+                this->map_value_node[summary.loop_back]);
+        } else {
+            this->map_value_node[summary.loop_back]->addControlOutputPort(
+                _loop_node);
+            _loop_node->setInputControlLoopSignal(
+                this->map_value_node[summary.loop_back]);
+        }
+
+        for (auto _l_f : summary.loop_finish) {
+            if (_l_f->getNumOperands() > 0) {
+                auto _f = std::find(
+                    summary.exit_blocks.begin(), summary.exit_blocks.end(),
+                    dyn_cast<BranchInst>(summary.loop_back)->getSuccessor(0));
+                if (_f != summary.exit_blocks.end()) {
+                    dyn_cast<BranchNode>(
+                        this->map_value_node[summary.loop_back])
+                        ->addTrueBranch(_loop_node);
+                } else {
+                    dyn_cast<BranchNode>(
+                        this->map_value_node[summary.loop_back])
+                        ->addFalseBranch(_loop_node);
+                }
+                _loop_node->setInputControlLoopSignal(
+                    this->map_value_node[summary.loop_back]);
+            } else {
+                this->map_value_node[_l_f]->addControlOutputPort(_loop_node);
+                _loop_node->setInputControlLoopSignal(
+                    this->map_value_node[_l_f]);
+            }
+        }
+        // Read loop summaries
+        //
+    }
 }
-
-
 
 /**
  * All the initializations for function members
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
-    formLoopNodes(F);
-    findDataPort(F);
+    formLoopNodes(F, *LI);
+    findPorts(F);
     fillBasicBlockDependencies(F);
-    //updateLoopDependencies(*LI);
+    // updateLoopDependencies(*LI);
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);
@@ -1161,6 +1265,27 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
         if (F.getName() == target_fn) {
+            // Iterating over function's loops and start from
+            // most inner loop to make it as a function call
+            // and re-run the extraction, untill there is no other loops
+            auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+            auto loops = getLoops(LI);
+
+            bool hasLoop = (loops.size() > 0);
+            do {
+                if (loops.size() == loop_sum.size()) break;
+
+                for (auto &L : loops) {
+                    if (L->getSubLoops().size() == 0 ||
+                        loop_sum.count(L) == 0) {
+                        this->loop_sum.insert(
+                            std::make_pair(L, summarizeLoop(L, LI)));
+                        outs() << "FIND LOOP\n";
+                    }
+                }
+
+            } while (hasLoop);
+
             stripDebugInfo(F);
             visit(F);
             init(F);

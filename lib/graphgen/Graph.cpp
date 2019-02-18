@@ -316,7 +316,9 @@ void Graph::printBasickBlockInstructionPredicateEdges(PrintType _pt) {
                 // if (dyn_cast<LoopNode>(&_s_node)) continue;
                 for (auto _enable_iterator : _s_node->input_control_range()) {
                     // We will print loop connections later
-                    if (isa<LoopNode>(_enable_iterator.first)) continue;
+                    if (isa<LoopNode>(_enable_iterator.first)) {
+                        continue;
+                    }
                     auto _input_node = dyn_cast<Node>(_enable_iterator.first);
                     auto _output_index =
                         _input_node->returnControlOutputPortIndex(
@@ -373,12 +375,14 @@ void Graph::printBasickBlockLoopPredicateEdges(PrintType _pt) {
                     for (uint32_t i = 0; i < _list_input_enable.size(); ++i) {
                         std::advance(_input_it, i);
                         std::advance(_output_it, i);
-                        this->outCode << "  "
-                                      << _output_it->first->printInputEnable(
-                                             PrintType::Scala, _output_it->second.getID())
-                                      << " <> "
-                                      << _input_it->first->printOutputEnable(PrintType::Scala, *_output_it)
-                                      << "\n\n";
+                        this->outCode
+                            << "  "
+                            << _output_it->first->printInputEnable(
+                                   PrintType::Scala, _output_it->second.getID())
+                            << " <> "
+                            << _input_it->first->printOutputEnable(
+                                   PrintType::Scala, *_output_it)
+                            << "\n\n";
                     }
                 }
                 // for(auto &_arg : _s_node->input_control_range()){

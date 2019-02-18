@@ -713,7 +713,7 @@ class LoopNode : public ContainerNode {
     /**
      * Make sure that loop enable signal is always set to index 0
      */
-    void setEnableLoopSignal(Node *_n) {
+    void setInputControlLoopSignal(Node *_n) {
         addControlInputPort(_n);
         port_type.push_back(std::make_pair(_n, PortType::Enable));
     }

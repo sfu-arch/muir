@@ -991,9 +991,6 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                 helperReplace(_text, "$id", _id);
             } else {
                 // The branch is CBranch and there is true and false outptut
-                //_text = "$name.io.Out($id)";
-                // helperReplace(_text, "$name", _name.c_str());
-                // helperReplace(_text, "$id", _id);
                 auto node = this->returnControlOutputPortNode(_id);
                 uint32_t false_index = 0;
                 uint32_t true_index = 0;
@@ -1018,6 +1015,9 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                                 _text = "$name.io.FalseOutput($id)";
                                 helperReplace(_text, "$name", _name.c_str());
                                 helperReplace(_text, "$id", false_index);
+                            } else {
+                                _text = "$name.io.CONDITIONAL?";
+                                helperReplace(_text, "$name", _name.c_str());
                             }
                             break;
                         }
@@ -1028,18 +1028,6 @@ std::string BranchNode::printOutputEnable(PrintType _pt, uint32_t _id) {
                     else
                         true_index++;
                 }
-                // auto ff = std::find_if(
-                // output_predicate.begin(), output_predicate.end(),
-                //[node](auto &arg) -> bool { return arg.first == node; });
-
-                // Getting port index
-                // uint32_t p_index = 0;
-                // for (auto _p : output_predicate) {
-                // if (_p.first == node && _p.second == ff->second)
-                // break;
-                // else if (_p.second == ff->second)
-                // p_index++;
-                //}
             }
             break;
         default:
@@ -3235,7 +3223,7 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
 
     switch (_pt) {
         case PrintType::Scala:
-            if(port_equal(this->activate_loop_start, _port))
+            if (port_equal(this->activate_loop_start, _port))
                 _text = "$name.io.activate_loop_start";
             else
                 _text = "$name.io.XXX";
@@ -3264,9 +3252,9 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
             if (_id == 0)
                 _text = "$name.io.enable";
             else if (_id == 1)
-                _text = "$name.io.latchEnable";
+                _text = "$name.io.loopBack";
             else if (_id >= 2)
-                _text = "$name.io.loopExit($id)";
+                _text = "$name.io.loopFinish($id)";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id - 2);

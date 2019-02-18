@@ -15,7 +15,7 @@
 #include "NodeType.h"
 
 #include "AliasEdgeWriter.h"
-#include "LoopClouser.h"
+//#include "LoopClouser.h"
 
 #include "Dandelion/Edge.h"
 #include "Dandelion/Graph.h"
@@ -38,12 +38,28 @@ using EdgeList = std::list<Edge>;
 
 namespace graphgen {
 
+struct LoopSummary {
+    llvm::Instruction *enable;
+    llvm::Instruction *loop_back;
+    llvm::SetVector<llvm::Instruction *>loop_finish;
+
+    llvm::BasicBlock *header;
+    llvm::SmallVector<llvm::BasicBlock *, 8> exit_blocks;
+
+
+    LoopSummary() : enable(nullptr), loop_back(nullptr){}
+};
+
 class GraphGeneratorPass : public llvm::ModulePass,
                            public llvm::InstVisitor<GraphGeneratorPass> {
     friend class InstVisitor<GraphGeneratorPass>;
 
    public:
     std::unique_ptr<Graph> dependency_graph;
+
+
+    llvm::DenseMap<llvm::Loop *, LoopSummary> loop_sum;
+    llvm::DenseMap<llvm::Instruction *, llvm::SmallVector<llvm::BasicBlock *, 8> > blacklist_control_edge;
 
    private:
     std::map<llvm::Value *, Node *> map_value_node;
@@ -98,8 +114,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void updateLoopDependencies(llvm::LoopInfo &loop_info);
 
     // void makeLoopNodes(llvm::LoopInfo &loop_info);
-    void formLoopNodes(llvm::Function &);
-    void findDataPort(llvm::Function &);
+    void formLoopNodes(llvm::Function &, llvm::LoopInfo &loop_info);
+    void findPorts(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);
     void connectingCalldependencies(llvm::Function &);
@@ -129,12 +145,13 @@ class GraphGeneratorPass : public llvm::ModulePass,
         //AU.addRequired<aew::AliasEdgeWriter>();
         AU.addRequired<llvm::LoopInfoWrapperPass>();
         AU.addRequired<helpers::GepInformation>();
-        AU.addRequired<loopclouser::LoopClouser>();
+        //AU.addRequired<loopclouser::LoopClouser>();
         AU.setPreservesAll();
     }
 
     // virtual bool runOnFunction(llvm::Function &) override;
     virtual bool runOnModule(llvm::Module &m) override;
+    LoopSummary summarizeLoop(llvm::Loop*, llvm::LoopInfo&);
 };
 }  // namespace graphgen
 
