@@ -13,3 +13,4 @@ tags
 *.dot
 *.scala
 *.ll
+compile_commands.json
