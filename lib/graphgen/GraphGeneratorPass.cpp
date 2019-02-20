@@ -430,6 +430,32 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
         }
     }
 
+    for (auto B : L->blocks()) {
+        for (auto &ins : *B) {
+            // Detecting Live-ins
+            for (auto user : ins.users()) {
+                // Checking for carry loop dependency
+                bool is_carry = false;
+                auto _inst_user = dyn_cast<Instruction>(user);
+                auto _tmp_inst_ptr = _inst_user;
+
+                //while ((_tmp_inst_ptr != &ins) &&
+                       //(L->contains(_tmp_inst_ptr))) {
+                    //_tmp_inst_ptr = _tmp_inst_ptr->getNextNode();
+                    //if (_tmp_inst_ptr == nullptr) break;
+                //}
+
+                //is_carry = (_tmp_inst_ptr == &ins) ? true : false;
+
+                if (is_carry) {
+                    summary.carry_dependencies[&ins].push_back(_inst_user);
+                    blacklist_carry_dependency_data_edge[&ins].push_back(
+                        dyn_cast<Instruction>(user));
+                }
+            }
+        }
+    }
+
     return summary;
 }
 
@@ -866,6 +892,30 @@ void GraphGeneratorPass::findPorts(Function &F) {
 
                     _live_out->addDataOutputPort(_node_dest->second);
                     _node_dest->second->addDataInputPort(_live_out);
+
+                    continue;
+                }
+
+                // carry dependencies
+                bool find_carry = false;
+                for (auto _data_src : blacklist_carry_dependency_data_edge) {
+                    for (auto _data_edge : _data_src.getSecond()) {
+                        if ((_data_src.getFirst() == operand) &&
+                            (_data_edge == &*ins_it))
+                            find_carry = true;
+                    }
+                }
+                if (find_carry) {
+                    auto _carry =
+                        loop_edge_map[std::make_pair(operand, &*ins_it)];
+
+                    //operand->dump();
+
+                    _node_src->second->addDataOutputPort(_carry);
+                    _carry->addDataInputPort(_node_src->second);
+
+                    _carry->addDataOutputPort(_node_dest->second);
+                    _node_dest->second->addDataInputPort(_carry);
 
                     continue;
                 }
@@ -1378,6 +1428,15 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
             for (auto _use : _live_out.getSecond()) {
                 loop_edge_map[std::make_pair(_live_out.getFirst(), _use)] =
                     new_live_out;
+            }
+        }
+
+        for (auto _carry_depen : summary.carry_dependencies) {
+            auto new_carry_depen = _loop_node->insertArgument(
+                _carry_depen.getFirst(), ArgumentNode::CarryDependency);
+            for (auto _use : _carry_depen.getSecond()) {
+                loop_edge_map[std::make_pair(_carry_depen.getFirst(), _use)] =
+                    new_carry_depen;
             }
         }
     }

@@ -9,8 +9,8 @@
 #include <algorithm>
 #include <experimental/iterator>
 #include <iostream>
-#include <sstream>
 #include <regex>
+#include <sstream>
 
 #define MEM_SIZE 32
 #define BASE_SIZE 2
@@ -153,8 +153,6 @@ PortID Node::returnControlOutputPortIndex(Node *_node) {
 
     if (ff == this->port_control.control_output_port.end())
         assert(!"Node doesn't exist\n");
-
-
 
     return find_if(this->port_control.control_output_port.begin(),
                    this->port_control.control_output_port.end(),
@@ -1148,6 +1146,14 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
                     helperReplace(_text, "$id", _idx);
                     break;
                 }
+                case ArgumentNode::CarryDependency: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.CarryDepenIn($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
 
                 default:
                     assert(!"Unrecognized argument node type!");
@@ -1228,6 +1234,21 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                     helperReplace(_text, "$id", _idx);
                     break;
                 }
+                case ArgumentNode::CarryDependency: {
+                    std::replace(_name.begin(), _name.end(), '.', '_');
+                    _text = "$call.io.$out.elements(\"field$num\")($id)";
+                    helperReplace(_text, "$call",
+                                  this->parent_call_node->getName());
+                    helperReplace(
+                        _text, "$num",
+                        this->parent_call_node->findArgumentIndex(this));
+                    helperReplace(_text, "$out", "CarryDepenOut");
+
+                    helperReplace(_text, "$id", _idx);
+                    break;
+                }
+
+
 
                 default:
                     assert(!"Unrecognized type of node\n");
@@ -3138,6 +3159,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
 
             RegisterList _livein_list;
             RegisterList _liveout_list;
+            RegisterList _carry_list;
+
             auto find_function = [](auto &node,
                                     ArgumentNode::ArgumentType type) {
                 if (node->getArgType() == type) return true;
@@ -3153,11 +3176,19 @@ std::string LoopNode::printDefinition(PrintType _pt) {
                 std::back_inserter(_liveout_list),
                 std::bind(find_function, _1, ArgumentNode::LoopLiveOut));
 
+            std::copy_if(
+                arg_list_begin(), arg_list_end(),
+                std::back_inserter(_carry_list),
+                std::bind(find_function, _1, ArgumentNode::CarryDependency));
+
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(_livein_list), ", ");
 
             helperReplace(_text, "$<num_out>",
                           make_argument_port(_liveout_list), ", ");
+
+            helperReplace(_text, "$<num_carry>",
+                          make_argument_port(_carry_list), ", ");
 
             // TODO update the exit points!
             // helperReplace(_text, "$num_exit", this->numControlInputPort() -

@@ -62,6 +62,10 @@ struct LoopSummary {
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
         live_out_loop;
 
+
+    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
+        carry_dependencies;
+
     LoopSummary() : enable(nullptr), loop_back(nullptr) {}
 };
 
@@ -82,6 +86,9 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         blacklist_loop_live_out_data_edge;
+
+    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
+        blacklist_carry_dependency_data_edge;
 
     std::map<std::pair<llvm::Value *, llvm::Value *>, ArgumentNode *>
         loop_edge_map;

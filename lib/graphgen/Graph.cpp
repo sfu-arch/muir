@@ -8,9 +8,9 @@
 #include "Dandelion/Node.h"
 
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
-#include <regex>
 
 using namespace std;
 using namespace llvm;
@@ -902,7 +902,7 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     string fix_name = BB.getName().str();
     std::replace(fix_name.begin(), fix_name.end(), '-', '_');
     fix_name = std::regex_replace(fix_name, std::regex("^\\."), "");
-    //outs() << a << "\n";
+    // outs() << a << "\n";
     super_node_list.push_back(std::make_unique<SuperNode>(
         NodeInfo(super_node_list.size(),
                  "bb_" + fix_name + to_string(super_node_list.size())),
@@ -1592,6 +1592,33 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                                              _data_out.first
                                                  ->returnDataOutputPortIndex(
                                                      _live_out.get())
+                                                 .getID())
+                                      << "\n\n";
+                    }
+                }
+            }
+
+            this->outCode << helperScalaPrintHeader(
+                "Loop Data carry dependencies");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_live_carry : _l_node->arg_lists()) {
+                    if (_live_carry->getArgType() !=
+                        ArgumentNode::CarryDependency)
+                        continue;
+                    for (auto &_data_out : _live_carry->input_data_range()) {
+                        this->outCode << "  "
+                                      << _live_carry->printInputData(
+                                             PrintType::Scala,
+                                             _live_carry
+                                                 ->returnDataInputPortIndex(
+                                                     _data_out.first)
+                                                 .getID())
+                                      << " <> "
+                                      << _data_out.first->printOutputData(
+                                             PrintType::Scala,
+                                             _data_out.first
+                                                 ->returnDataOutputPortIndex(
+                                                     _live_carry.get())
                                                  .getID())
                                       << "\n\n";
                     }

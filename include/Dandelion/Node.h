@@ -429,7 +429,7 @@ class SuperNode : public Node {
 
 class ArgumentNode : public Node {
    public:
-    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut };
+    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut, CarryDependency };
 
    private:
     ArgumentType arg_type;
