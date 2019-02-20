@@ -896,11 +896,6 @@ void Graph::printScalaHeader(string config_path, string package_name) {
 // InstructionList Graph::getInstructionList() { return &this->inst_list; }
 
 /**
- * Insert a new instruction
- */
-// void Graph::insertInstruction(llvm::Instruction &ins) {}
-
-/**
  * Insert a new basic block
  */
 SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
