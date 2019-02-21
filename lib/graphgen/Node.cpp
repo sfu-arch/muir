@@ -3190,6 +3190,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$<num_carry>",
                           make_argument_port(_carry_list), ", ");
 
+            outs() << "Size carry: " << _carry_list.size() << "\n";
+
             // TODO update the exit points!
             // helperReplace(_text, "$num_exit", this->numControlInputPort() -
             // 2);

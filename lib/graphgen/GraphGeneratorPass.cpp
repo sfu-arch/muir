@@ -436,18 +436,26 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
             for (auto user : ins.users()) {
                 // Checking for carry loop dependency
                 bool is_carry = false;
+                bool fail = false;
                 auto _inst_user = dyn_cast<Instruction>(user);
-                auto _tmp_inst_ptr = _inst_user;
 
-                //while ((_tmp_inst_ptr != &ins) &&
-                       //(L->contains(_tmp_inst_ptr))) {
-                    //_tmp_inst_ptr = _tmp_inst_ptr->getNextNode();
-                    //if (_tmp_inst_ptr == nullptr) break;
-                //}
-
-                //is_carry = (_tmp_inst_ptr == &ins) ? true : false;
+                for (auto _p_B : L->blocks()) {
+                    for (auto &_p_ins : *_p_B) {
+                        if (&_p_ins == &ins) {
+                            fail = true;
+                            break;
+                        }
+                        if(&_p_ins == user){
+                            is_carry = true;
+                            break;
+                        }
+                    }
+                    if (fail || is_carry) break;
+                }
 
                 if (is_carry) {
+                    //ins.dump();
+                    //_inst_user->dump();
                     summary.carry_dependencies[&ins].push_back(_inst_user);
                     blacklist_carry_dependency_data_edge[&ins].push_back(
                         dyn_cast<Instruction>(user));
@@ -905,11 +913,13 @@ void GraphGeneratorPass::findPorts(Function &F) {
                             find_carry = true;
                     }
                 }
+                if(find_carry){
+                    operand->dump();
+                    ins_it->dump();
+                }
                 if (find_carry) {
                     auto _carry =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];
-
-                    //operand->dump();
 
                     _node_src->second->addDataOutputPort(_carry);
                     _carry->addDataInputPort(_node_src->second);
@@ -1431,9 +1441,11 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
             }
         }
 
+        // Connecting carry values
         for (auto _carry_depen : summary.carry_dependencies) {
             auto new_carry_depen = _loop_node->insertArgument(
                 _carry_depen.getFirst(), ArgumentNode::CarryDependency);
+            _carry_depen.getFirst()->dump();
             for (auto _use : _carry_depen.getSecond()) {
                 loop_edge_map[std::make_pair(_carry_depen.getFirst(), _use)] =
                     new_carry_depen;
