@@ -724,8 +724,8 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
 //                            ContainerNode Class
 //===----------------------------------------------------------------------===//
 
-ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val,
-                                            ArgumentNode::ArgumentType _type) {
+ArgumentNode *ContainerNode::insertLiveInArgument(
+    llvm::Value *_val, ArgumentNode::ArgumentType _type) {
     auto ff = std::find_if(live_in.begin(), live_in.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
@@ -744,8 +744,8 @@ ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val,
     return ff->get();
 }
 
-ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val,
-                                            ArgumentNode::ArgumentType _type) {
+ArgumentNode *ContainerNode::insertLiveOutArgument(
+    llvm::Value *_val, ArgumentNode::ArgumentType _type) {
     auto ff = std::find_if(live_out.begin(), live_out.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
@@ -764,8 +764,8 @@ ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val,
     return ff->get();
 }
 
-ArgumentNode *ContainerNode::insertCarryDepenArgument(llvm::Value *_val,
-                                            ArgumentNode::ArgumentType _type) {
+ArgumentNode *ContainerNode::insertCarryDepenArgument(
+    llvm::Value *_val, ArgumentNode::ArgumentType _type) {
     auto ff = std::find_if(carry_depen.begin(), carry_depen.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
@@ -783,7 +783,6 @@ ArgumentNode *ContainerNode::insertCarryDepenArgument(llvm::Value *_val,
 
     return ff->get();
 }
-
 
 Node *ContainerNode::findLiveInNode(llvm::Value *_val) {
     auto ff = std::find_if(live_in.begin(), live_in.end(),
@@ -826,8 +825,6 @@ Node *ContainerNode::findCarryDepenNode(llvm::Value *_val) {
 
     return ff->get();
 }
-
-
 
 uint32_t ContainerNode::findLiveInArgumentIndex(ArgumentNode *_arg_node) {
     auto _arg_type = _arg_node->getArgType();
@@ -886,7 +883,6 @@ uint32_t ContainerNode::findCarryDepenArgumentIndex(ArgumentNode *_arg_node) {
     return pos;
 }
 
-
 uint32_t ContainerNode::numLiveInArgList(ArgumentNode::ArgumentType type) {
     RegisterList _local_list;
 
@@ -925,8 +921,6 @@ uint32_t ContainerNode::numCarryDepenArgList(ArgumentNode::ArgumentType type) {
 
     return _local_list.size();
 }
-
-
 
 // Node *ContainerNode::findLiveOut(llvm::Value *_val) {
 // auto ff = std::find_if(live_out.begin(), live_out.end(),
@@ -1261,7 +1255,7 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
                 }
                 case ArgumentNode::LiveOut: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.liveOut($id)";
+                    _text = "$call.io.InLiveOut($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(_text, "$id", _idx);
@@ -1278,7 +1272,7 @@ std::string ArgumentNode::printInputData(PrintType _pt, uint32_t _idx) {
                 }
                 case ArgumentNode::LoopLiveOut: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.LoopliveOut($id)";
+                    _text = "$call.io.InLiveOut($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(_text, "$id", _idx);
@@ -1379,7 +1373,8 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                                   this->parent_call_node->getName());
                     helperReplace(
                         _text, "$num",
-                        this->parent_call_node->findCarryDepenArgumentIndex(this));
+                        this->parent_call_node->findCarryDepenArgumentIndex(
+                            this));
                     helperReplace(_text, "$out", "CarryDepenOut");
 
                     helperReplace(_text, "$id", _idx);
@@ -2164,7 +2159,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
             else
                 _text =
                     "  val $name = Module(new $type(NumInputs = $num_in, "
-                    "NumOutputs = $num_out, ID = $id))\n\n";
+                    "NumOutputs = $num_out, ID = $id, Res = true))\n\n";
 
             helperReplace(_text, "$type", "PhiFastNode");
             helperReplace(_text, "$num_in",
@@ -3291,6 +3286,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "LoopBlockNode");
+            helperReplace(_text, "$num_exit", static_cast<uint32_t>(this->loop_exits.size()));
 
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(live_in_lists()), ", ");
@@ -3300,12 +3296,6 @@ std::string LoopNode::printDefinition(PrintType _pt) {
 
             helperReplace(_text, "$<num_carry>",
                           make_argument_port(carry_depen_lists()), ", ");
-
-            //outs() << "Size carry: " << .size() << "\n";
-
-            // TODO update the exit points!
-            // helperReplace(_text, "$num_exit", this->numControlInputPort() -
-            // 2);
 
             break;
         }
@@ -3412,7 +3402,7 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
             if (_id == 0)
                 _text = "$name.io.enable";
             else if (_id == 1)
-                _text = "$name.io.loopBack";
+                _text = "$name.io.loopBack(0)";
             else if (_id >= 2)
                 _text = "$name.io.loopFinish($id)";
 

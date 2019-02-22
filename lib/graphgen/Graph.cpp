@@ -379,7 +379,7 @@ void Graph::printBasickBlockLoopPredicateEdges(PrintType _pt) {
                         this->outCode
                             << "  "
                             << _output_it->first->printInputEnable(
-                                   PrintType::Scala, _output_it->second.getID())
+                                   PrintType::Scala, _input_it->second.getID())
                             << " <> "
                             << _input_it->first->printOutputEnable(
                                    PrintType::Scala, *_output_it)
