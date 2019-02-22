@@ -728,7 +728,7 @@ void Graph::printScalaMainClass() {
     // Printing Tests class
     string _command =
         "import java.io.{File, FileWriter}\n\n"
-        "object $class_nameMain extends App {\n"
+        "object $class_nameTop extends App {\n"
         "  val dir = new File(\"RTL/$class_name\");\n"
         "  dir.mkdirs\n"
         "  implicit val p = config.Parameters.root((new "
