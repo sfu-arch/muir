@@ -16,9 +16,15 @@ if (NOT CMAKE_BUILD_TYPE)
       STRING "Build type (default Debug):" FORCE)
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++14 -fno-rtti -Wall -fvisibility=hidde")
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++14 -fno-rtti -Wall -fvisibility=hidde -fdiagnostics-color=always")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fno-rtti -Wall \
-    -fno-omit-frame-pointer -Wno-unused-function")
+    -fno-omit-frame-pointer -Wno-unused-function -fdiagnostics-color=always")
 
 if(APPLE)
     set(CMAKE_MODULE_LINKER_FLAGS "-undefined dynamic_lookup")

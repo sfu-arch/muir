@@ -3405,6 +3405,8 @@ std::string LoopNode::printInputEnable(PrintType _pt, uint32_t _id) {
                 _text = "$name.io.loopBack(0)";
             else if (_id >= 2)
                 _text = "$name.io.loopFinish($id)";
+            else
+                _text = "XXXXXX";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id - 2);
