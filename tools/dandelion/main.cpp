@@ -406,7 +406,7 @@ int main(int argc, char **argv) {
             splitGeps(F);
     }
 
-    labelFunctions(*module);
+    //labelFunctions(*module);
     runGraphGen(*module);
 
     saveModule(*module, target_fn + ".final.bc");
