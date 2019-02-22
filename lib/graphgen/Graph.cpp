@@ -729,7 +729,7 @@ void Graph::printScalaMainClass() {
     string _command =
         "import java.io.{File, FileWriter}\n\n"
         "object $class_nameTop extends App {\n"
-        "  val dir = new File(\"RTL/$class_name\");\n"
+        "  val dir = new File(\"RTL/$class_nameTop\");\n"
         "  dir.mkdirs\n"
         "  implicit val p = config.Parameters.root((new "
         "MiniConfig).toInstance)\n"
