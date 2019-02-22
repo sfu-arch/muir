@@ -291,7 +291,7 @@ void UpdateInnerLiveOutConnections(
     for (auto B : _loop->blocks()) {
         for (auto &I : *B) {
             auto _loop_node = loop_value_node[_loop];
-            //auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
+            // auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
 
             // The function needs these steps:
             // 1) Detect Live-outs
@@ -445,7 +445,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                             fail = true;
                             break;
                         }
-                        if(&_p_ins == user){
+                        if (&_p_ins == user) {
                             is_carry = true;
                             break;
                         }
@@ -454,8 +454,6 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 }
 
                 if (is_carry) {
-                    //ins.dump();
-                    //_inst_user->dump();
                     summary.carry_dependencies[&ins].push_back(_inst_user);
                     blacklist_carry_dependency_data_edge[&ins].push_back(
                         dyn_cast<Instruction>(user));
@@ -632,8 +630,6 @@ void GraphGeneratorPass::visitFunction(Function &F) {
             this->dependency_graph->getSplitCall()->insertLiveInArgument(
                 &f_arg, ArgumentNode::LiveIn);
     }
-
-    // this->dependency_graph.setNumSplitCallInput(F.arg_size());
 
     // Filling function global nodes
     for (auto &g_var : F.getParent()->getGlobalList()) {
@@ -860,12 +856,19 @@ void GraphGeneratorPass::findPorts(Function &F) {
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
                 // Live in
+                // XXX BUG make sure you only add one edge for each live-in to
+                // the loop
                 bool find_live_in = false;
+                bool new_loop = true;
                 for (auto _data_src : blacklist_loop_live_in_data_edge) {
+                    uint32_t _cflag = 0;
                     for (auto _data_edge : _data_src.getSecond()) {
                         if ((_data_src.getFirst() == operand) &&
-                            (_data_edge == &*ins_it))
+                            (_data_edge == &*ins_it)) {
                             find_live_in = true;
+                            if (_cflag > 0) new_loop = false;
+                        }
+                        _cflag++;
                     }
                 }
 
@@ -873,8 +876,10 @@ void GraphGeneratorPass::findPorts(Function &F) {
                     auto _live_in =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];
 
-                    _node_src->second->addDataOutputPort(_live_in);
-                    _live_in->addDataInputPort(_node_src->second);
+                    if (new_loop) {
+                        _node_src->second->addDataOutputPort(_live_in);
+                        _live_in->addDataInputPort(_node_src->second);
+                    }
 
                     _live_in->addDataOutputPort(_node_dest->second);
                     _node_dest->second->addDataInputPort(_live_in);
