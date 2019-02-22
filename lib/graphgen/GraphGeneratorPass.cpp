@@ -155,7 +155,7 @@ void UpdateLiveInConnections(Loop *_loop, LoopNode *_loop_node,
                     if (map_value_node.find(&I) == map_value_node.end())
                         assert(!"Couldn't find the live-in target");
 
-                    auto new_live_in = _loop_node->insertArgument(
+                    auto new_live_in = _loop_node->insertLiveInArgument(
                         _value, ArgumentNode::LoopLiveIn);
                     auto _src = map_value_node[_value];
                     auto _tar = map_value_node[&I];
@@ -197,7 +197,7 @@ void UpdateLiveOutConnections(Loop *_loop, LoopNode *_loop_node,
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         U)) {
-                    auto new_live_out = _loop_node->insertArgument(
+                    auto new_live_out = _loop_node->insertLiveOutArgument(
                         U, ArgumentNode::LoopLiveOut);
 
                     auto _src = map_value_node[&I];
@@ -253,14 +253,14 @@ void UpdateInnerLiveInConnections(
                         loop_value_node[_loop->getParentLoop()];
 
                     // TODO: This part needs to be re-thinked!
-                    auto new_live_in = _loop_node->insertArgument(
+                    auto new_live_in = _loop_node->insertLiveInArgument(
                         _value, ArgumentNode::LoopLiveIn);
 
                     Node *_src = nullptr;
-                    if (_parent_loop_node->findNode(_value) == nullptr)
+                    if (_parent_loop_node->findLiveInNode(_value) == nullptr)
                         _src = map_value_node[_value];
                     else
-                        _src = _parent_loop_node->findNode(_value);
+                        _src = _parent_loop_node->findLiveInNode(_value);
                     auto _tar = map_value_node[&I];
 
                     // TODO later we need to get ride of these lines
@@ -291,7 +291,7 @@ void UpdateInnerLiveOutConnections(
     for (auto B : _loop->blocks()) {
         for (auto &I : *B) {
             auto _loop_node = loop_value_node[_loop];
-            auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
+            //auto _parent_loop_node = loop_value_node[_loop->getParentLoop()];
 
             // The function needs these steps:
             // 1) Detect Live-outs
@@ -302,7 +302,7 @@ void UpdateInnerLiveOutConnections(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
                         U)) {
-                    auto new_live_out = _loop_node->insertArgument(
+                    auto new_live_out = _loop_node->insertLiveOutArgument(
                         U, ArgumentNode::LoopLiveOut);
 
                     auto _src = map_value_node[&I];
@@ -629,7 +629,7 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     // Filling function argument nodes
     for (auto &f_arg : F.args()) {
         map_value_node[&f_arg] =
-            this->dependency_graph->getSplitCall()->insertArgument(
+            this->dependency_graph->getSplitCall()->insertLiveInArgument(
                 &f_arg, ArgumentNode::LiveIn);
     }
 
@@ -1423,7 +1423,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         // Connecting live-in values
         for (auto _live_in : summary.live_in_ins) {
-            auto new_live_in = _loop_node->insertArgument(
+            auto new_live_in = _loop_node->insertLiveInArgument(
                 _live_in.getFirst(), ArgumentNode::LoopLiveIn);
             for (auto _use : _live_in.getSecond()) {
                 loop_edge_map[std::make_pair(_live_in.getFirst(), _use)] =
@@ -1433,7 +1433,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         // Connecting live-outs values
         for (auto _live_out : summary.live_out_ins) {
-            auto new_live_out = _loop_node->insertArgument(
+            auto new_live_out = _loop_node->insertLiveOutArgument(
                 _live_out.getFirst(), ArgumentNode::LoopLiveOut);
             for (auto _use : _live_out.getSecond()) {
                 loop_edge_map[std::make_pair(_live_out.getFirst(), _use)] =
@@ -1443,9 +1443,8 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         // Connecting carry values
         for (auto _carry_depen : summary.carry_dependencies) {
-            auto new_carry_depen = _loop_node->insertArgument(
+            auto new_carry_depen = _loop_node->insertCarryDepenArgument(
                 _carry_depen.getFirst(), ArgumentNode::CarryDependency);
-            _carry_depen.getFirst()->dump();
             for (auto _use : _carry_depen.getSecond()) {
                 loop_edge_map[std::make_pair(_carry_depen.getFirst(), _use)] =
                     new_carry_depen;

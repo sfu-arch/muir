@@ -490,8 +490,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                                          return _s_node.get() == &*arg.first;
                                      });
 
-                    auto _input_index =
-                        std::distance(_output_node->inputControl_begin(), ff);
+                    // auto _input_index =
+                    // std::distance(_output_node->inputControl_begin(), ff);
 
                     if (ff == _output_node->inputControl_end())
                         assert(!"Couldn't find the control edge\n");
@@ -778,8 +778,10 @@ void Graph::printScalaFunctionHeader() {
     _command = "    val in = Flipped(Decoupled(new Call(List(";
     _final_command.append((_command));
     for (uint32_t c = 0;
-         c < this->getSplitCall()->numArgList(ArgumentNode::LiveIn); c++) {
-        if (c == this->getSplitCall()->numArgList(ArgumentNode::LiveIn) - 1)
+         c < this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
+         c++) {
+        if (c ==
+            this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn) - 1)
             _command = "32";
         else
             _command = "32, ";
@@ -1526,7 +1528,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
                 uint32_t c = 0;
-                for (auto &_live_in : _l_node->arg_lists()) {
+                for (auto &_live_in : _l_node->live_in_lists()) {
                     if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
                         continue;
                     for (auto &_data_in : _live_in->input_data_range()) {
@@ -1548,7 +1550,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-in dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_in : _l_node->arg_lists()) {
+                for (auto &_live_in : _l_node->live_in_lists()) {
                     if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
                         continue;
                     for (auto &_data_out : _live_in->output_data_range()) {
@@ -1575,7 +1577,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-out dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_out : _l_node->arg_lists()) {
+                for (auto &_live_out : _l_node->live_out_lists()) {
                     if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
                         continue;
                     for (auto &_data_out : _live_out->input_data_range()) {
@@ -1598,27 +1600,49 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                 }
             }
 
-            this->outCode << helperScalaPrintHeader(
-                "Loop Data carry dependencies");
+            this->outCode << helperScalaPrintHeader("Loop carry dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_carry : _l_node->arg_lists()) {
-                    if (_live_carry->getArgType() !=
-                        ArgumentNode::CarryDependency)
+                // TODO remove the counter
+                uint32_t c = 0;
+                for (auto &_carry : _l_node->carry_depen_lists()) {
+                    if (_carry->getArgType() != ArgumentNode::CarryDependency)
                         continue;
-                    for (auto &_data_out : _live_carry->input_data_range()) {
+                    for (auto &_data_in : _carry->input_data_range()) {
+                        this->outCode
+                            << "  "
+                            << _carry->printInputData(PrintType::Scala, c++)
+                            << " <> "
+                            << _data_in.first->printOutputData(
+                                   PrintType::Scala,
+                                   _data_in.first
+                                       ->returnDataOutputPortIndex(_carry.get())
+                                       .getID())
+                            << "\n\n";
+                    }
+                }
+            }
+
+            this->outCode << helperScalaPrintHeader(
+                "Loop Data Carry dependencies");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_carry : _l_node->carry_depen_lists()) {
+                    if (_carry->getArgType() != ArgumentNode::CarryDependency)
+                        continue;
+                    for (auto &_data_out : _carry->output_data_range()) {
+                        if (isa<ArgumentNode>(_data_out.first)) continue;
                         this->outCode << "  "
-                                      << _live_carry->printInputData(
-                                             PrintType::Scala,
-                                             _live_carry
-                                                 ->returnDataInputPortIndex(
-                                                     _data_out.first)
-                                                 .getID())
-                                      << " <> "
-                                      << _data_out.first->printOutputData(
+                                      << _data_out.first->printInputData(
                                              PrintType::Scala,
                                              _data_out.first
+                                                 ->returnDataInputPortIndex(
+                                                     _carry.get())
+                                                 .getID())
+                                      << " <> "
+                                      << _carry->printOutputData(
+                                             PrintType::Scala,
+                                             _carry
                                                  ->returnDataOutputPortIndex(
-                                                     _live_carry.get())
+                                                     _data_out.first)
                                                  .getID())
                                       << "\n\n";
                     }
@@ -1733,7 +1757,7 @@ void Graph::doInitialization() {
         }
     }
     for (auto &_loop : loop_nodes) {
-        for (auto &_l_out : _loop->arg_lists()) {
+        for (auto &_l_out : _loop->live_out_lists()) {
             if (_l_out->getArgType() != ArgumentNode::LoopLiveOut) continue;
             for (auto &_child : _l_out->output_data_range()) {
                 this->insertEdge(
@@ -1748,7 +1772,7 @@ void Graph::doInitialization() {
         }
     }
 
-    for (auto &_arg : this->getSplitCall()->arg_lists()) {
+    for (auto &_arg : this->getSplitCall()->live_in_lists()) {
         if (_arg->getArgType() != ArgumentNode::LiveIn) continue;
         for (auto &_node : _arg->output_data_range()) {
             if (isa<ArgumentNode>(_node.first)) continue;

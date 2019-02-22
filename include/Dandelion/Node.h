@@ -429,7 +429,13 @@ class SuperNode : public Node {
 
 class ArgumentNode : public Node {
    public:
-    enum ArgumentType { LiveIn = 0, LiveOut, LoopLiveIn, LoopLiveOut, CarryDependency };
+    enum ArgumentType {
+        LiveIn = 0,
+        LiveOut,
+        LoopLiveIn,
+        LoopLiveOut,
+        CarryDependency
+    };
 
    private:
     ArgumentType arg_type;
@@ -469,7 +475,9 @@ class ContainerNode : public Node {
 
    private:
     ContainType con_type;
-    RegisterList arg_list;
+    RegisterList live_in;
+    RegisterList live_out;
+    RegisterList carry_depen;
 
    public:
     explicit ContainerNode(NodeInfo _nf)
@@ -485,18 +493,41 @@ class ContainerNode : public Node {
 
     uint32_t getContainerType() const { return con_type; }
 
-    ArgumentNode *insertArgument(llvm::Value *Value,
-                                 ArgumentNode::ArgumentType Type);
+    ArgumentNode *insertLiveInArgument(llvm::Value *Value,
+                                       ArgumentNode::ArgumentType Type);
+    ArgumentNode *insertLiveOutArgument(llvm::Value *Value,
+                                        ArgumentNode::ArgumentType Type);
+    ArgumentNode *insertCarryDepenArgument(llvm::Value *Value,
+                                           ArgumentNode::ArgumentType Type);
 
-    Node *findNode(llvm::Value *_val);
-    uint32_t findArgumentIndex(ArgumentNode *);
+    Node *findLiveInNode(llvm::Value *_val);
+    Node *findLiveOutNode(llvm::Value *_val);
+    Node *findCarryDepenNode(llvm::Value *_val);
 
-    uint32_t numArgList(ArgumentNode::ArgumentType type);
+    uint32_t findLiveInArgumentIndex(ArgumentNode *);
+    uint32_t findLiveOutArgumentIndex(ArgumentNode *);
+    uint32_t findCarryDepenArgumentIndex(ArgumentNode *);
 
-    auto arg_list_begin() { return this->arg_list.begin(); }
-    auto arg_list_end() { return this->arg_list.end(); }
-    auto arg_lists() {
-        return helpers::make_range(arg_list_begin(), arg_list_end());
+    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type);
+    uint32_t numLiveOutArgList(ArgumentNode::ArgumentType type);
+    uint32_t numCarryDepenArgList(ArgumentNode::ArgumentType type);
+
+    auto live_in_begin() { return this->live_in.begin(); }
+    auto live_in_end() { return this->live_in.end(); }
+    auto live_in_lists() {
+        return helpers::make_range(live_in_begin(), live_in_end());
+    }
+
+    auto live_out_begin() { return this->live_out.begin(); }
+    auto live_out_end() { return this->live_out.end(); }
+    auto live_out_lists() {
+        return helpers::make_range(live_out_begin(), live_out_end());
+    }
+
+    auto carry_depen_begin() { return this->carry_depen.begin(); }
+    auto carry_depen_end() { return this->carry_depen.end(); }
+    auto carry_depen_lists() {
+        return helpers::make_range(carry_depen_begin(), carry_depen_end());
     }
 
     // Node *findArg(llvm::Value *);
@@ -726,32 +757,27 @@ class LoopNode : public ContainerNode {
         addControlOutputPort(_n);
         port_type.push_back(std::make_pair(_n, PortType::Active_Loop_Start));
 
-        //Seting activate_loop_start
+        // Seting activate_loop_start
         activate_loop_start = std::make_pair(_n, _port_info);
     }
 
-    void setActiveBackSignal(Node *_n){
+    void setActiveBackSignal(Node *_n) {
         auto _port_info = PortID(this->numControlOutputPort());
         addControlOutputPort(_n);
         port_type.push_back(std::make_pair(_n, PortType::Active_Loop_Back));
 
-        //Seting activate_loop_start
+        // Seting activate_loop_start
         activate_loop_back = std::make_pair(_n, _port_info);
-
     }
 
-    void setActiveExitSignal(Node *_n){
+    void setActiveExitSignal(Node *_n) {
         auto _port_info = PortID(this->numControlOutputPort());
         addControlOutputPort(_n);
         port_type.push_back(std::make_pair(_n, PortType::LoopExit));
 
-        //Seting activate_loop_start
+        // Seting activate_loop_start
         loop_exits.push_back(std::make_pair(_n, _port_info));
-
     }
-
-
-
 
     /**
      * Push supernode to the super node container
