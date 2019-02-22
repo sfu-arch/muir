@@ -913,10 +913,6 @@ void GraphGeneratorPass::findPorts(Function &F) {
                             find_carry = true;
                     }
                 }
-                if(find_carry){
-                    operand->dump();
-                    ins_it->dump();
-                }
                 if (find_carry) {
                     auto _carry =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];

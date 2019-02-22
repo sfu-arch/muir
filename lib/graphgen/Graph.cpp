@@ -1600,6 +1600,33 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                 }
             }
 
+            this->outCode << helperScalaPrintHeader(
+                "Loop live out dependencies");
+            for (auto &_l_node : loop_nodes) {
+                for (auto &_live_out : _l_node->live_out_lists()) {
+                    if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
+                        continue;
+                    for (auto &_data_out : _live_out->output_data_range()) {
+                        if (isa<ArgumentNode>(_data_out.first)) continue;
+                        this->outCode << "  "
+                                      << _data_out.first->printInputData(
+                                             PrintType::Scala,
+                                             _data_out.first
+                                                 ->returnDataInputPortIndex(
+                                                     _live_out.get())
+                                                 .getID())
+                                      << " <> "
+                                      << _live_out->printOutputData(
+                                             PrintType::Scala,
+                                             _live_out
+                                                 ->returnDataOutputPortIndex(
+                                                     _data_out.first)
+                                                 .getID())
+                                      << "\n\n";
+                    }
+                }
+            }
+
             this->outCode << helperScalaPrintHeader("Loop carry dependencies");
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
@@ -1630,21 +1657,21 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
                         continue;
                     for (auto &_data_out : _carry->output_data_range()) {
                         if (isa<ArgumentNode>(_data_out.first)) continue;
-                        this->outCode << "  "
-                                      << _data_out.first->printInputData(
-                                             PrintType::Scala,
-                                             _data_out.first
-                                                 ->returnDataInputPortIndex(
-                                                     _carry.get())
-                                                 .getID())
-                                      << " <> "
-                                      << _carry->printOutputData(
-                                             PrintType::Scala,
-                                             _carry
-                                                 ->returnDataOutputPortIndex(
-                                                     _data_out.first)
-                                                 .getID())
-                                      << "\n\n";
+                        this->outCode
+                            << "  "
+                            << _data_out.first->printInputData(
+                                   PrintType::Scala,
+                                   _data_out.first
+                                       ->returnDataInputPortIndex(_carry.get())
+                                       .getID())
+                            << " <> "
+                            << _carry->printOutputData(
+                                   PrintType::Scala,
+                                   _carry
+                                       ->returnDataOutputPortIndex(
+                                           _data_out.first)
+                                       .getID())
+                            << "\n\n";
                     }
                 }
             }
@@ -1756,21 +1783,21 @@ void Graph::doInitialization() {
                                _child.first->returnDataInputPortIndex(_ptr)));
         }
     }
-    for (auto &_loop : loop_nodes) {
-        for (auto &_l_out : _loop->live_out_lists()) {
-            if (_l_out->getArgType() != ArgumentNode::LoopLiveOut) continue;
-            for (auto &_child : _l_out->output_data_range()) {
-                this->insertEdge(
-                    Edge::EdgeType::DataTypeEdge,
-                    std::make_pair(
-                        &*_l_out,
-                        _l_out->returnDataOutputPortIndex(&*_child.first)),
-                    std::make_pair(
-                        &*_child.first,
-                        _child.first->returnDataInputPortIndex(&*_l_out)));
-            }
-        }
-    }
+    // for (auto &_loop : loop_nodes) {
+    // for (auto &_l_out : _loop->live_out_lists()) {
+    // if (_l_out->getArgType() != ArgumentNode::LoopLiveOut) continue;
+    // for (auto &_child : _l_out->output_data_range()) {
+    // this->insertEdge(
+    // Edge::EdgeType::DataTypeEdge,
+    // std::make_pair(
+    //&*_l_out,
+    //_l_out->returnDataOutputPortIndex(&*_child.first)),
+    // std::make_pair(
+    //&*_child.first,
+    //_child.first->returnDataInputPortIndex(&*_l_out)));
+    //}
+    //}
+    //}
 
     for (auto &_arg : this->getSplitCall()->live_in_lists()) {
         if (_arg->getArgType() != ArgumentNode::LiveIn) continue;
