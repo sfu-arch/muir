@@ -2152,14 +2152,9 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            if (this->reverse)
-                _text =
-                    "  val $name = Module(new $type(NumInputs = $num_in, "
-                    "NumOutputs = $num_out, ID = $id, Res = true))\n\n";
-            else
-                _text =
-                    "  val $name = Module(new $type(NumInputs = $num_in, "
-                    "NumOutputs = $num_out, ID = $id, Res = true))\n\n";
+            _text =
+                "  val $name = Module(new $type(NumInputs = $num_in, "
+                "NumOutputs = $num_out, ID = $id, Res = $reverse))\n\n";
 
             helperReplace(_text, "$type", "PhiFastNode");
             helperReplace(_text, "$num_in",
@@ -2169,6 +2164,7 @@ std::string PhiSelectNode::printDefinition(PrintType _pt) {
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
+            helperReplace(_text, "$reverse", this->reverse ? "true" : "false");
 
             break;
         case PrintType::Dot:
@@ -3286,7 +3282,8 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "LoopBlockNode");
-            helperReplace(_text, "$num_exit", static_cast<uint32_t>(this->loop_exits.size()));
+            helperReplace(_text, "$num_exit",
+                          static_cast<uint32_t>(this->loop_exits.size()));
 
             helperReplace(_text, "$<input_vector>",
                           make_argument_port(live_in_lists()), ", ");

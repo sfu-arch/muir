@@ -147,7 +147,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     // void makeLoopNodes(llvm::LoopInfo &loop_info);
     void buildLoopNodes(llvm::Function &, llvm::LoopInfo &loop_info);
-    void findPorts(llvm::Function &);
+    void findControlPorts(llvm::Function &);
+    void findDataPorts(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
     void connectParalleNodes(llvm::Function &);
     void connectingCalldependencies(llvm::Function &);

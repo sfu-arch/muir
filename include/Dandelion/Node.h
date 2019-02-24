@@ -272,7 +272,7 @@ class Node {
 
     uint32_t getType() const { return node_type; }
 
-   protected:
+   //protected:
     /**
      * Adding a node to a specific index of control input port
      */

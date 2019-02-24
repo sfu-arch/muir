@@ -228,22 +228,6 @@ void UpdateInnerLiveInConnections(
             for (auto OI = I.op_begin(); OI != I.op_end(); OI++) {
                 Value *_value = *OI;
 
-                auto *N = I.getMetadata("UID");
-                auto *S = dyn_cast<MDString>(N->getOperand(0));
-
-                if (isa<llvm::PHINode>(I) && S->getString() == "47") {
-                    auto *N = dyn_cast<Instruction>(OI)->getMetadata("UID");
-                    auto *S = dyn_cast<MDString>(N->getOperand(0));
-
-                    errs() << PURPLE("[DEBUG] ");
-                    errs() << "Phi instruciton: ";
-                    I.dump();
-                    errs() << PURPLE("[DEBUG] ");
-                    errs() << "Operand: ";
-                    _value->dump();
-                    errs() << "Meta:  " << S->getString() << "\n";
-                }
-
                 if (definedInCaller(
                         SetVector<BasicBlock *>(_loop->blocks().begin(),
                                                 _loop->blocks().end()),
@@ -638,14 +622,78 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     }
 }
 
+//void GraphGeneratorPass::findControlPorts(Function &F) {
+    //for (auto &_bb : F) {
+        //outs() << "Name: " << _bb.getName().str() << "Pred :\n";
+        //for (auto _bb_it : llvm::predecessors(&_bb)) {
+            //auto _ins_it = _bb_it->getTerminator();
+
+            //auto _node_src = this->map_value_node.find(
+                //_ins_it);  // it should be Instruction node
+
+            //// First we check if the edges is listed as blacklist
+            //bool find = (find_if(blacklist_control_edge[_ins_it].begin(),
+                                 //blacklist_control_edge[_ins_it].end(),
+                                 //[_bb_it](auto _b_edge) {
+                                     //return _b_edge == _bb_it;
+                                 //}) != blacklist_control_edge[_ins_it].end())
+                            //? true
+                            //: false;
+            //if (find) continue;
+
+            //auto _node_dest =
+                //this->map_value_node.find(_bb_it);  // it should be supernode
+            //assert(isa<SuperNode>(_node_dest->second) &&
+                   //"Destination node should be super node!");
+
+            //assert(isa<InstructionNode>(_node_src->second) &&
+                   //"Source node should be instruction node!");
+
+            //// We don't connect reattach node data dependency
+            //if (isa<ReattachNode>(_node_src->second)) continue;
+
+            //auto _dst = _node_dest->second;
+            //Node *_src = nullptr;
+            //if (isa<BranchNode>(_node_src->second)) {
+                //_src = dyn_cast<BranchNode>(_node_src->second);
+
+                //uint32_t c = 0;
+                //for (c = 0; c < _ins_it->getNumOperands(); ++c) {
+                    //auto _bb_tmp = dyn_cast<BasicBlock>(_ins_it->getOperand(c));
+                    //if (_bb_tmp == &_bb) break;
+                //}
+
+                //if (_ins_it->getNumOperands() == 3) {
+                    //auto _inst_branch = dyn_cast<BranchInst>(_ins_it);
+                    //auto _inst_operand = this->map_value_node.find(
+                        //_inst_branch->getSuccessor(c - 1));
+                    //if (c == 1) {
+                        //dyn_cast<BranchNode>(_src)->addTrueBranch(
+                            //_inst_operand->second);
+                    //} else if (c == 2) {
+                        //dyn_cast<BranchNode>(_src)->addFalseBranch(
+                            //_inst_operand->second);
+                    //}
+                //} else {
+                    //// The node is Ubranch
+                    //_src->addControlOutputPort(_dst, c);
+                //}
+
+                //_dst->addControlInputPort(_src);
+            //}
+        //}
+    //}
+//}
+
 /**
- * In this function we iterate over each function argument and connect all of
+ * In this function we iterate over each function argument and connect all
+ * of
  * its
  * successors as a data input port.
  * If the input is constant value we find the value and make a ConstNode for
  * that value
  */
-void GraphGeneratorPass::findPorts(Function &F) {
+void GraphGeneratorPass::findDataPorts(Function &F) {
     // Check wether we already have iterated over the instructions
     assert(map_value_node.size() > 0 && "Instruction map can not be empty!");
 
@@ -672,13 +720,14 @@ void GraphGeneratorPass::findPorts(Function &F) {
             if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
 
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
-                // If target operand is basicblock it means the instruction is
+                // If target operand is basicblock it means the instruction
+                // is
                 // control instruction
                 // 1) First find the basicblock node
                 // 2) Add bb as a control output
                 // 3) Add ins as a control input
 
-                // First we check if the edes is listed as blacklist
+                // First we check if the edges is listed as blacklist
                 bool find =
                     (find_if(blacklist_control_edge[&*ins_it].begin(),
                              blacklist_control_edge[&*ins_it].end(),
@@ -708,7 +757,8 @@ void GraphGeneratorPass::findPorts(Function &F) {
                         // LLVM IR -> CBranch(cmpInput(0), trueDst(1),
                         // falseDst(2))
                         // XXX There is a bug in llvm IR
-                        // in CBranch first element in the IR actually is C = 2
+                        // in CBranch first element in the IR actually is C
+                        // = 2
                         // and second elemnt is C = 1
                         auto _inst_branch = dyn_cast<BranchInst>(&*ins_it);
                         // outs() << "DEBUG BEGIN\n";
@@ -732,7 +782,15 @@ void GraphGeneratorPass::findPorts(Function &F) {
                         _src->addControlOutputPort(_dst, c);
                     }
 
-                    _dst->addControlInputPort(_src);
+                    //Get the actual contorl input port id
+                   uint32_t _id = 0;
+                   for(auto _pred : llvm::predecessors(target_bb)){
+                       if(&*ins_it == _pred->getTerminator())
+                           break;
+                       else
+                           _id++;
+                   }
+                    _dst->addControlInputPortIndex(_src,_id);
 
                 } else if (isa<DetachNode>(_node_src->second)) {
                     // TODO fix the Detachnode connections
@@ -838,7 +896,8 @@ void GraphGeneratorPass::findPorts(Function &F) {
                     }
                 } else if (auto undef_value =
                                dyn_cast<llvm::UndefValue>(operand)) {
-                    // TODO define an undef node instead of uisng empty const
+                    // TODO define an undef node instead of uisng empty
+                    // const
                     // node!
                     _const_node = this->dependency_graph->insertConstIntNode();
                     map_value_node[operand] = _const_node;
@@ -856,7 +915,8 @@ void GraphGeneratorPass::findPorts(Function &F) {
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
                 // Live in
-                // XXX BUG make sure you only add one edge for each live-in to
+                // XXX BUG make sure you only add one edge for each live-in
+                // to
                 // the loop
                 bool find_live_in = false;
                 bool new_loop = true;
@@ -971,7 +1031,8 @@ void GraphGeneratorPass::findPorts(Function &F) {
         // to the memory system
         if (auto _ld_node = dyn_cast<LoadNode>(
                 this->map_value_node.find(&*ins_it)->second)) {
-            // TODO right now we consider all the connections to the cache or
+            // TODO right now we consider all the connections to the cache
+            // or
             // regfile
             // We need a pass to trace the pointers
             this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
@@ -1028,14 +1089,16 @@ void GraphGeneratorPass::findPorts(Function &F) {
                 this->dependency_graph->getFPUNode());
         }
 
-        // TODO: We need to have diveider as well and connect the diveder node
+        // TODO: We need to have diveider as well and connect the diveder
+        // node
         // like above!
     }
 }
 
 /**
  * This function has two tasks:
- * 1) Iterate over the basicblock's insturcitons and make a list of instructions
+ * 1) Iterate over the basicblock's insturcitons and make a list of
+ * instructions
  * 2) Make control dependnce edges
  */
 void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
@@ -1048,9 +1111,12 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 _en_bb);
             _en_bb->addControlInputPort(this->dependency_graph->getSplitCall());
         }
-        // Here we check wether the basicblock is reached from multiple places.
-        // If it has been reached from multiple places it means it CAN have a
-        // value which is feeded from multiple places. But still we are not sure
+        // Here we check wether the basicblock is reached from multiple
+        // places.
+        // If it has been reached from multiple places it means it CAN have
+        // a
+        // value which is feeded from multiple places. But still we are not
+        // sure
         // and we have to make sure that if there is PHI node whithin the
         // basicblock.
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
@@ -1195,7 +1261,8 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                         return false;
                 });
 
-            // TODO I don't know why sometimes there is no ending instruciton
+            // TODO I don't know why sometimes there is no ending
+            // instruciton
             // add here, need to investigate latter
             if (_tar_exit_br_inst_it == *_le->inputControl_end()) {
                 assert(!"Don't run loop-simplify pass optimization on LL file,"
@@ -1244,7 +1311,8 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
 
         // This function should be called after filling the containers
         // always
-        // Here we look for Store nodes and then connect them to their endinge
+        // Here we look for Store nodes and then connect them to their
+        // endinge
         // branch instruction
         _loop_node->setEndingInstructions();
 
@@ -1460,7 +1528,8 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     buildLoopNodes(F, *LI);
-    findPorts(F);
+    //findControlPorts(F);
+    findDataPorts(F);
     fillBasicBlockDependencies(F);
     // updateLoopDependencies(*LI);
     connectOutToReturn(F);
