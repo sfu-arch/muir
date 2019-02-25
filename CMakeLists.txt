@@ -41,7 +41,7 @@ set(GLOBAL_OUTPUT_PATH   ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/install)
 
 # 3rdparty Libraries
-include(CMakeLists.txt.in)
+#include(CMakeLists.txt.in)
 
 ############## LLVM CONFIGURATION #################
 
@@ -91,4 +91,3 @@ set(CMAKE_TEMP_LIBRARY_PATH "${PROJECT_BINARY_DIR}/lib")
 
 add_subdirectory(lib)
 add_subdirectory(tools)
-#ADD_DEPENDENCIES(xketch LuaCppTemplater)

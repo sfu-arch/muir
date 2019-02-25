@@ -6,8 +6,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "luacpptemplater/LuaTemplater.h"
-
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <queue>
 #include <set>
@@ -747,14 +745,14 @@ void Context::InsertCall() {
     //}
     //}
 
-    // auto _sync_region =
-    // cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
+     auto _sync_region =
+     cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
     auto* CI = CallInst::Create(StaticFunc, Params, "", funcCall);
     auto RI = ReattachInst::Create(
-        cx, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
+        inDet->GetSrc(), _sync_region, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
 
-    //auto RI = ReattachInst::Create(
-        //outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), nullptr);
+    // auto RI = ReattachInst::Create(
+    // outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), nullptr);
     RI->insertAfter(CI);
 
     // point parent's detach edge to caller block
