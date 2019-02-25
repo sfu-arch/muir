@@ -1,13 +1,18 @@
 #include <stdio.h>
-unsigned test07(int j) {
-  for (int i = 0; i < 5; ++i) {
-    j = j - 1;
-  }
-  return j;
+
+int test06(unsigned a, unsigned b){
+    unsigned alloc0[2];
+    int alloc1[1];
+    alloc0[0] = a;
+    alloc0[1] = b;
+    alloc1[0] = alloc0[0]+alloc0[1];
+    return alloc1[0];
 }
 
-int main() {
-  int j = 100;
-  unsigned res = test07(j);
-  printf("Res: %d\n", res);
+int main(){
+    unsigned a = 5;
+    unsigned b = 3;
+    unsigned result = test06(a,b);
+    printf("result=%u\n", result);
+    return 0;
 }

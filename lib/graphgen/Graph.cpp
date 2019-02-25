@@ -1112,6 +1112,8 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
      * In this way I'm catching if I need to have reverse ordering or not.
      * it has to fixed properly
     */
+
+
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         BasicBlock *_op = I.getIncomingBlock(i);
@@ -1119,7 +1121,7 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
         //outs() << "In id: " << i << " ";
         //_op->dump();
         int j = 0;
-        for (BasicBlock *_bb : llvm::predecessors(I.getParent())) {
+        for (auto _bb : llvm::predecessors(I.getParent())) {
             //outs() << "Pred id " << j << " ";
             //_bb->dump();
             if ((_op != _bb) && (i == j)) {

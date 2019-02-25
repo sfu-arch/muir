@@ -604,15 +604,15 @@ std::string MemoryNode::printDefinition(PrintType pt) {
                 returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
             helperReplace(
                 _text, "$num_write",
-                returnMinimumPort(this->numWriteDataInputPort(), BASE_SIZE));
+                returnMinimumPort(this->numWriteDataInputPort(), 0));
             helperReplace(
                 _text, "$read_num_op",
-                returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
+                returnMinimumPort(this->numReadDataInputPort(), 0));
             helperReplace(_text, "$read_base_size", BASE_SIZE);
             helperReplace(_text, "$read_num_entries", BASE_SIZE);
             helperReplace(
                 _text, "$write_num_op",
-                returnMinimumPort(this->numWriteDataOutputPort(), BASE_SIZE));
+                returnMinimumPort(this->numWriteDataOutputPort(), 0));
             helperReplace(_text, "$write_base_size", BASE_SIZE);
             helperReplace(_text, "$write_num_entries", BASE_SIZE);
 

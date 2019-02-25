@@ -1,18 +1,19 @@
 #include <stdio.h>
 
-int test06(unsigned a, unsigned b){
-    unsigned alloc0[2];
-    int alloc1[1];
-    alloc0[0] = a;
-    alloc0[1] = b;
-    alloc1[0] = alloc0[0]+alloc0[1];
-    return alloc1[0];
+int test06(int a, int b) {
+  for (int i = 0; i < a; i++) {
+    if (a > b)
+      a -= b;
+    else
+      b -= a;
+  }
+  return a * b;
 }
 
-int main(){
-    unsigned a = 5;
-    unsigned b = 3;
-    unsigned result = test06(a,b);
-    printf("result=%u\n", result);
-    return 0;
+int main() {
+  unsigned int a = 50;
+  unsigned int b = 5;
+  unsigned res = test06(a, b);
+  printf("Res: %d\n", res);
+  return 0;
 }

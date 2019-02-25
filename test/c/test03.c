@@ -1,19 +1,17 @@
 #include <stdio.h>
 
-int test03(unsigned int a, unsigned int b, int n){
-    unsigned int sum = a;
-    int i;
-
-    for(i = 0 ; i < n; i++)
-        sum = (sum+a)*b;
-    return sum;
+int test03(int a, int b) {
+    if (a > b)
+      a -= b;
+    else
+      b -= a;
+    return a * b;
 }
 
-int main(){
-    unsigned int a = 5;
-    unsigned int b = 3;
-    unsigned int sum = test03(a,b, 5);
-    printf("sum=%u\n", sum);
-    printf("sum=0x%.8X\n", sum);
-    return 0;
+int main() {
+  unsigned int a = 50;
+  unsigned int b = 5;
+  unsigned res = test03(a, b);
+  printf("Res: %d\n", res);
+  return 0;
 }

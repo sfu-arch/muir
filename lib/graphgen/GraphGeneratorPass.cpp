@@ -622,67 +622,67 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     }
 }
 
-//void GraphGeneratorPass::findControlPorts(Function &F) {
-    //for (auto &_bb : F) {
-        //outs() << "Name: " << _bb.getName().str() << "Pred :\n";
-        //for (auto _bb_it : llvm::predecessors(&_bb)) {
-            //auto _ins_it = _bb_it->getTerminator();
+// void GraphGeneratorPass::findControlPorts(Function &F) {
+// for (auto &_bb : F) {
+// outs() << "Name: " << _bb.getName().str() << "Pred :\n";
+// for (auto _bb_it : llvm::predecessors(&_bb)) {
+// auto _ins_it = _bb_it->getTerminator();
 
-            //auto _node_src = this->map_value_node.find(
-                //_ins_it);  // it should be Instruction node
+// auto _node_src = this->map_value_node.find(
+//_ins_it);  // it should be Instruction node
 
-            //// First we check if the edges is listed as blacklist
-            //bool find = (find_if(blacklist_control_edge[_ins_it].begin(),
-                                 //blacklist_control_edge[_ins_it].end(),
-                                 //[_bb_it](auto _b_edge) {
-                                     //return _b_edge == _bb_it;
-                                 //}) != blacklist_control_edge[_ins_it].end())
-                            //? true
-                            //: false;
-            //if (find) continue;
+//// First we check if the edges is listed as blacklist
+// bool find = (find_if(blacklist_control_edge[_ins_it].begin(),
+// blacklist_control_edge[_ins_it].end(),
+//[_bb_it](auto _b_edge) {
+// return _b_edge == _bb_it;
+//}) != blacklist_control_edge[_ins_it].end())
+//? true
+//: false;
+// if (find) continue;
 
-            //auto _node_dest =
-                //this->map_value_node.find(_bb_it);  // it should be supernode
-            //assert(isa<SuperNode>(_node_dest->second) &&
-                   //"Destination node should be super node!");
+// auto _node_dest =
+// this->map_value_node.find(_bb_it);  // it should be supernode
+// assert(isa<SuperNode>(_node_dest->second) &&
+//"Destination node should be super node!");
 
-            //assert(isa<InstructionNode>(_node_src->second) &&
-                   //"Source node should be instruction node!");
+// assert(isa<InstructionNode>(_node_src->second) &&
+//"Source node should be instruction node!");
 
-            //// We don't connect reattach node data dependency
-            //if (isa<ReattachNode>(_node_src->second)) continue;
+//// We don't connect reattach node data dependency
+// if (isa<ReattachNode>(_node_src->second)) continue;
 
-            //auto _dst = _node_dest->second;
-            //Node *_src = nullptr;
-            //if (isa<BranchNode>(_node_src->second)) {
-                //_src = dyn_cast<BranchNode>(_node_src->second);
+// auto _dst = _node_dest->second;
+// Node *_src = nullptr;
+// if (isa<BranchNode>(_node_src->second)) {
+//_src = dyn_cast<BranchNode>(_node_src->second);
 
-                //uint32_t c = 0;
-                //for (c = 0; c < _ins_it->getNumOperands(); ++c) {
-                    //auto _bb_tmp = dyn_cast<BasicBlock>(_ins_it->getOperand(c));
-                    //if (_bb_tmp == &_bb) break;
-                //}
+// uint32_t c = 0;
+// for (c = 0; c < _ins_it->getNumOperands(); ++c) {
+// auto _bb_tmp = dyn_cast<BasicBlock>(_ins_it->getOperand(c));
+// if (_bb_tmp == &_bb) break;
+//}
 
-                //if (_ins_it->getNumOperands() == 3) {
-                    //auto _inst_branch = dyn_cast<BranchInst>(_ins_it);
-                    //auto _inst_operand = this->map_value_node.find(
-                        //_inst_branch->getSuccessor(c - 1));
-                    //if (c == 1) {
-                        //dyn_cast<BranchNode>(_src)->addTrueBranch(
-                            //_inst_operand->second);
-                    //} else if (c == 2) {
-                        //dyn_cast<BranchNode>(_src)->addFalseBranch(
-                            //_inst_operand->second);
-                    //}
-                //} else {
-                    //// The node is Ubranch
-                    //_src->addControlOutputPort(_dst, c);
-                //}
+// if (_ins_it->getNumOperands() == 3) {
+// auto _inst_branch = dyn_cast<BranchInst>(_ins_it);
+// auto _inst_operand = this->map_value_node.find(
+//_inst_branch->getSuccessor(c - 1));
+// if (c == 1) {
+// dyn_cast<BranchNode>(_src)->addTrueBranch(
+//_inst_operand->second);
+//} else if (c == 2) {
+// dyn_cast<BranchNode>(_src)->addFalseBranch(
+//_inst_operand->second);
+//}
+//} else {
+//// The node is Ubranch
+//_src->addControlOutputPort(_dst, c);
+//}
 
-                //_dst->addControlInputPort(_src);
-            //}
-        //}
-    //}
+//_dst->addControlInputPort(_src);
+//}
+//}
+//}
 //}
 
 /**
@@ -782,15 +782,15 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                         _src->addControlOutputPort(_dst, c);
                     }
 
-                    //Get the actual contorl input port id
-                   uint32_t _id = 0;
-                   for(auto _pred : llvm::predecessors(target_bb)){
-                       if(&*ins_it == _pred->getTerminator())
-                           break;
-                       else
-                           _id++;
-                   }
-                    _dst->addControlInputPortIndex(_src,_id);
+                    // Get the actual contorl input port id
+                    uint32_t _id = 0;
+                    for (auto _pred : llvm::predecessors(target_bb)) {
+                        if (&*ins_it == _pred->getTerminator())
+                            break;
+                        else
+                            _id++;
+                    }
+                    _dst->addControlInputPortIndex(_src, _id);
 
                 } else if (isa<DetachNode>(_node_src->second)) {
                     // TODO fix the Detachnode connections
@@ -1429,6 +1429,15 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         auto summary = loop_sum[&*L];
 
+        auto findPrecessorID = [](BasicBlock *_src, BasicBlock *_tar) {
+            uint32_t _id = 0;
+            for (auto _pred : llvm::predecessors(_tar)) {
+                if (_src == _pred) return _id;
+                _id++;
+            }
+            return _id;
+        };
+
         // Connect enable
         this->map_value_node[summary.enable]->addControlOutputPort(_loop_node);
         _loop_node->setInputControlLoopSignal(
@@ -1436,7 +1445,9 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         _loop_node->setActiveOutputLoopSignal(
             this->map_value_node[summary.header]);
-        map_value_node[summary.header]->addControlInputPort(_loop_node);
+        map_value_node[summary.header]->addControlInputPortIndex(
+            _loop_node,
+            findPrecessorID(summary.enable->getParent(), summary.header));
 
         // Connecting backedge
         if (summary.loop_back->getNumOperands() > 0) {
@@ -1458,7 +1469,8 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
         }
 
         _loop_node->setActiveBackSignal(this->map_value_node[summary.header]);
-        this->map_value_node[summary.header]->addControlInputPort(_loop_node);
+        this->map_value_node[summary.header]->addControlInputPortIndex(_loop_node,
+                findPrecessorID(summary.loop_back->getParent(), summary.header));
 
         // Connecting exit signals
         for (auto _l_f : summary.loop_finish) {
@@ -1528,7 +1540,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
     buildLoopNodes(F, *LI);
-    //findControlPorts(F);
+    // findControlPorts(F);
     findDataPorts(F);
     fillBasicBlockDependencies(F);
     // updateLoopDependencies(*LI);
