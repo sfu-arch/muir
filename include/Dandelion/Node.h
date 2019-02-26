@@ -993,9 +993,12 @@ class IcmpNode : public InstructionNode {
 };
 
 class FcmpNode : public InstructionNode {
+    std::map<std::string, std::string> op_codes;
    public:
     FcmpNode(NodeInfo _ni, llvm::FCmpInst *_ins = nullptr)
-        : InstructionNode(_ni, InstructionNode::FcmpInstructionTy, _ins) {}
+        : InstructionNode(_ni, InstructionNode::FcmpInstructionTy, _ins) {
+            op_codes = {{"ogt",">GT"}, {"olt","<LT"}, {"oeq","=EQ"}};
+        }
 
     static bool classof(const InstructionNode *I) {
         return I->getOpCode() == InstType::FcmpInstructionTy;

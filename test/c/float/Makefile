@@ -1,6 +1,6 @@
 CC=clang
 XKETCH=../../../build/bin/dandelion
-CFLAGS= -DPIR -DUSE_CILK_API -emit-llvm -m32 -S 
+CFLAGS= -DPIR -O1 -DUSE_CILK_API -emit-llvm -m32 -S 
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
