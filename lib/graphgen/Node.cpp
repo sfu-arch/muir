@@ -602,17 +602,14 @@ std::string MemoryNode::printDefinition(PrintType pt) {
             helperReplace(
                 _text, "$num_read",
                 returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
-            helperReplace(
-                _text, "$num_write",
-                returnMinimumPort(this->numWriteDataInputPort(), 0));
-            helperReplace(
-                _text, "$read_num_op",
-                returnMinimumPort(this->numReadDataInputPort(), 0));
+            helperReplace(_text, "$num_write",
+                          returnMinimumPort(this->numWriteDataInputPort(), 0));
+            helperReplace(_text, "$read_num_op",
+                          returnMinimumPort(this->numReadDataInputPort(), 0));
             helperReplace(_text, "$read_base_size", BASE_SIZE);
             helperReplace(_text, "$read_num_entries", BASE_SIZE);
-            helperReplace(
-                _text, "$write_num_op",
-                returnMinimumPort(this->numWriteDataOutputPort(), 0));
+            helperReplace(_text, "$write_num_op",
+                          returnMinimumPort(this->numWriteDataOutputPort(), 0));
             helperReplace(_text, "$write_base_size", BASE_SIZE);
             helperReplace(_text, "$write_num_entries", BASE_SIZE);
 
@@ -1203,7 +1200,6 @@ std::string BranchNode::printInputData(PrintType _pt, uint32_t _id) {
  * Returning address of the parent instruction
  */
 Instruction *InstructionNode::getInstruction() {
-    if (this == nullptr) return nullptr;
     return this->parent_instruction;
 }
 
@@ -1727,9 +1723,9 @@ std::string FcmpNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "FPCompareNode");
             helperReplace(_text, "$opcode",
-                          llvm::ICmpInst::getPredicateName(
+                          this->op_codes[llvm::ICmpInst::getPredicateName(
                               dyn_cast<llvm::FCmpInst>(this->getInstruction())
-                                  ->getPredicate()));
+                                  ->getPredicate())]);
 
             break;
         case PrintType::Dot:

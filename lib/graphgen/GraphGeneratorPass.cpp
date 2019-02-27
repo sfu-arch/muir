@@ -1419,7 +1419,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
     uint32_t c_id = 0;
     for (auto &L : getLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c_id, "Loop_" + std::to_string(c_id)));
+            NodeInfo(c_id, "Loop_" + std::to_string(c_id++)));
 
         // Insert loop node
         auto _loop_node =
