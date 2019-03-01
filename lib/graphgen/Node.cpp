@@ -601,7 +601,7 @@ std::string MemoryNode::printDefinition(PrintType pt) {
             helperReplace(_text, "$size", MEM_SIZE);
             helperReplace(
                 _text, "$num_read",
-                returnMinimumPort(this->numReadDataInputPort(), BASE_SIZE));
+                returnMinimumPort(this->numReadDataInputPort(), 0));
             helperReplace(_text, "$num_write",
                           returnMinimumPort(this->numWriteDataInputPort(), 0));
             helperReplace(_text, "$read_num_op",

@@ -39,6 +39,7 @@ using EdgeList = std::list<Edge>;
 namespace graphgen {
 
 struct LoopSummary {
+    std::string loop_name;
     // Control information
     llvm::Instruction *enable;
     llvm::Instruction *loop_back;
@@ -54,19 +55,26 @@ struct LoopSummary {
 
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         live_in_ins;
-    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
+    llvm::DenseMap<llvm::Value *,
+                   std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
         live_in_loop;
 
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         live_out_ins;
+
+    llvm::SmallVector<llvm::Value *, 8> outter_edges;
+
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
         live_out_loop;
-
 
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         carry_dependencies;
 
-    LoopSummary() : enable(nullptr), loop_back(nullptr) {}
+    std::string getNmae() { return loop_name; }
+
+    LoopSummary() : loop_name("No_Name"), enable(nullptr), loop_back(nullptr) {}
+    LoopSummary(std::string name)
+        : loop_name(name), enable(nullptr), loop_back(nullptr) {}
 };
 
 class GraphGeneratorPass : public llvm::ModulePass,
@@ -93,10 +101,15 @@ class GraphGeneratorPass : public llvm::ModulePass,
     std::map<std::pair<llvm::Value *, llvm::Value *>, ArgumentNode *>
         loop_edge_map;
 
-   private:
+    std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
+        loop_loop_edge_map;
+
+    std::map<llvm::Value *, Loop*> live_in_outer_edge;
+
     std::map<llvm::Value *, Node *> map_value_node;
     std::map<llvm::Loop *, LoopNode *> loop_value_node;
 
+   private:
     // Loop Info
     llvm::LoopInfo *LI;
 

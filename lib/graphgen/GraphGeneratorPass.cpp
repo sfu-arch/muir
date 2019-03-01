@@ -321,7 +321,7 @@ void UpdateInnerLiveOutConnections(
  * because of the gauranties that the pass gives us
  */
 LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
-    LoopSummary summary;
+    LoopSummary summary("L_" + std::to_string(L->getStartLoc()->getLine()));
 
     // Check if loop is in a simplify form
     if (!L->isLoopSimplifyForm()) {
@@ -373,14 +373,24 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         L->getSubLoopsVector().begin(),
                         L->getSubLoopsVector().end(), false,
                         [](auto _l, auto _r) { return _l | _r; },
-                        [&ins, &op, &summary](auto _sub_l) {
+                        [&ins, &op, &summary, L](auto _sub_l) {
                             if (_sub_l->contains(&ins)) {
-                                summary.live_in_loop[op].push_back(_sub_l);
+                                summary.live_in_loop[op].push_back(
+                                    std::make_pair(L, _sub_l));
                                 return true;
                             } else
                                 return false;
                         });
-                    if (!contain) summary.live_in_ins[op].push_back(&ins);
+                    if (!contain)
+                        summary.live_in_ins[op].push_back(&ins);
+                    else {
+                        if (L->getParentLoop() == nullptr) {
+                            summary.outter_edges.push_back(op);
+                            // outs() << "Name " << summary.getNmae() << "\n";
+                            // op->dump();
+                            // ins.dump();
+                        }
+                    }
 
                     // Adding to data edge blacklist
                     blacklist_loop_live_in_data_edge[op].push_back(&ins);
@@ -438,9 +448,27 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 }
 
                 if (is_carry) {
-                    summary.carry_dependencies[&ins].push_back(_inst_user);
-                    blacklist_carry_dependency_data_edge[&ins].push_back(
-                        dyn_cast<Instruction>(user));
+                    // Now we have to check if user instruction doesn't belong
+                    // to the subloops
+                    bool contain = transform_reduce(
+                        L->getSubLoopsVector().begin(),
+                        L->getSubLoopsVector().end(), false,
+                        [](auto _l, auto _r) { return _l | _r; },
+                        [&_inst_user, &summary, L](auto _sub_l) {
+                            if (_sub_l->contains(_inst_user)) {
+                                return true;
+                            } else
+                                return false;
+                        });
+
+                    if (!contain) {
+                        ins.dump();
+                        _inst_user->dump();
+                        summary.carry_dependencies[&ins].push_back(_inst_user);
+                        blacklist_carry_dependency_data_edge[&ins].push_back(
+                            dyn_cast<Instruction>(user));
+                        break;
+                    }
                 }
             }
         }
@@ -864,10 +892,10 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                     map_value_node[operand] = _const_node;
 
                     /**
-                      * Constant values should get their
-                      * enable signal from
-                      * their incoming BB
-                    */
+                     * Constant values should get their
+                     * enable signal from
+                     * their incoming BB
+                     */
                     if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
                         DEBUG(operand->dump());
                         DEBUG(outs() << "Index : " << c << "\n");
@@ -939,6 +967,33 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                     if (new_loop) {
                         _node_src->second->addDataOutputPort(_live_in);
                         _live_in->addDataInputPort(_node_src->second);
+
+                        for (auto _loop_edge : loop_loop_edge_map) {
+                            for (auto _edge : _loop_edge.second) {
+                                auto _src_loop_node =
+                                    loop_value_node[_edge.first]
+                                        ->findLiveInNode(_loop_edge.first);
+                                auto _des_loop_node =
+                                    loop_value_node[_edge.second]
+                                        ->findLiveInNode(_loop_edge.first);
+
+                                _src_loop_node->addDataOutputPort(
+                                    _des_loop_node);
+                                _des_loop_node->addDataInputPort(
+                                    _src_loop_node);
+                            }
+                        }
+
+                        for (auto _loop_edge : live_in_outer_edge) {
+                            auto _src = map_value_node[_loop_edge.first];
+                            auto _dest_loop =
+                                loop_value_node[_loop_edge.second];
+
+                            _src->addDataOutputPort(
+                                _dest_loop->findLiveInNode(_loop_edge.first));
+                            _dest_loop->findLiveInNode(_loop_edge.first)
+                                ->addDataInputPort(_src);
+                        }
                     }
 
                     _live_in->addDataOutputPort(_node_dest->second);
@@ -1429,7 +1484,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         auto summary = loop_sum[&*L];
 
-        auto findPrecessorID = [](BasicBlock *_src, BasicBlock *_tar) {
+        auto findPredecessorID = [](BasicBlock *_src, BasicBlock *_tar) {
             uint32_t _id = 0;
             for (auto _pred : llvm::predecessors(_tar)) {
                 if (_src == _pred) return _id;
@@ -1447,7 +1502,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
             this->map_value_node[summary.header]);
         map_value_node[summary.header]->addControlInputPortIndex(
             _loop_node,
-            findPrecessorID(summary.enable->getParent(), summary.header));
+            findPredecessorID(summary.enable->getParent(), summary.header));
 
         // Connecting backedge
         if (summary.loop_back->getNumOperands() > 0) {
@@ -1469,8 +1524,9 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
         }
 
         _loop_node->setActiveBackSignal(this->map_value_node[summary.header]);
-        this->map_value_node[summary.header]->addControlInputPortIndex(_loop_node,
-                findPrecessorID(summary.loop_back->getParent(), summary.header));
+        this->map_value_node[summary.header]->addControlInputPortIndex(
+            _loop_node,
+            findPredecessorID(summary.loop_back->getParent(), summary.header));
 
         // Connecting exit signals
         for (auto _l_f : summary.loop_finish) {
@@ -1504,12 +1560,30 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 
         // Connecting live-in values
         for (auto _live_in : summary.live_in_ins) {
-            auto new_live_in = _loop_node->insertLiveInArgument(
-                _live_in.getFirst(), ArgumentNode::LoopLiveIn);
+            auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
+            if (_node == nullptr)
+                _node = _loop_node->insertLiveInArgument(
+                    _live_in.getFirst(), ArgumentNode::LoopLiveIn);
             for (auto _use : _live_in.getSecond()) {
                 loop_edge_map[std::make_pair(_live_in.getFirst(), _use)] =
-                    new_live_in;
+                    dyn_cast<ArgumentNode>(_node);
             }
+        }
+
+        for (auto _live_in : summary.live_in_loop) {
+            auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
+            if (_node == nullptr) {
+                _loop_node->insertLiveInArgument(_live_in.getFirst(),
+                                                 ArgumentNode::LoopLiveIn);
+            }
+            for (auto _n : _live_in.getSecond()) {
+                loop_loop_edge_map[_live_in.getFirst()].push_back(
+                    std::make_pair(_n.first, _n.second));
+            }
+        }
+
+        for (auto _live_in_outer_edge : summary.outter_edges) {
+            live_in_outer_edge[_live_in_outer_edge] = L;
         }
 
         // Connecting live-outs values
