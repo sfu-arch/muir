@@ -400,7 +400,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
     }
 
     // Loop depth:
-    outs() << "Loop Depth: " << L->getLoopDepth() << "\n";
+    // outs() << "Loop Depth: " << L->getLoopDepth() << "\n";
     // Extracting loop live-outs
     for (auto B : L->blocks()) {
         for (auto &ins : *B) {
@@ -411,7 +411,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 is_live_out = !L->contains(_inst_user) ? true : false;
 
                 if (is_live_out) {
-                    summary.live_out_ins[&ins].push_back(_inst_user);
+                    // summary.live_out_ins[&ins].push_back(_inst_user);
 
                     // Add connections between loops
                     bool contain = transform_reduce(
@@ -421,7 +421,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         [&_inst_user, &summary, L](auto _sub_l) {
                             if (_sub_l->contains(_inst_user)) {
                                 summary.live_out_loop[_inst_user].push_back(
-                                    std::make_pair(_sub_l), L);
+                                    std::make_pair(_sub_l, L));
                                 return true;
                             } else
                                 return false;
@@ -436,8 +436,8 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                     // the user instruction
                     auto parent_loop = L->getParentLoop();
                     if (parent_loop == nullptr ||
-                        !parent_loop->contains(_inst_user)) {
-                        summary.live_out_exit_edges.push_back(_inst_user);
+                        (!parent_loop->contains(_inst_user) && !L->contains(_inst_user))) {
+                        summary.live_out_exit_edges.push_back(&ins);
                     }
 
                     blacklist_loop_live_out_data_edge[&ins].push_back(
@@ -485,8 +485,8 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         });
 
                     if (!contain) {
-                        ins.dump();
-                        _inst_user->dump();
+                        DEBUG(ins.dump());
+                        DEBUG(_inst_user->dump());
                         summary.carry_dependencies[&ins].push_back(_inst_user);
                         blacklist_carry_dependency_data_edge[&ins].push_back(
                             dyn_cast<Instruction>(user));
@@ -970,14 +970,14 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 // to
                 // the loop
                 bool find_live_in = false;
-                bool new_loop = true;
+                bool new_live_in_loop = true;
                 for (auto _data_src : blacklist_loop_live_in_data_edge) {
                     uint32_t _cflag = 0;
                     for (auto _data_edge : _data_src.getSecond()) {
                         if ((_data_src.getFirst() == operand) &&
                             (_data_edge == &*ins_it)) {
                             find_live_in = true;
-                            if (_cflag > 0) new_loop = false;
+                            if (_cflag > 0) new_live_in_loop = false;
                         }
                         _cflag++;
                     }
@@ -987,11 +987,11 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                     auto _live_in =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];
 
-                    if (new_loop) {
+                    if (new_live_in_loop) {
                         _node_src->second->addDataOutputPort(_live_in);
                         _live_in->addDataInputPort(_node_src->second);
 
-                        for (auto _loop_edge : loop_loop_edge_map) {
+                        for (auto _loop_edge : loop_loop_edge_lin_map) {
                             for (auto _edge : _loop_edge.second) {
                                 auto _src_loop_node =
                                     loop_value_node[_edge.first]
@@ -1026,20 +1026,71 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 }
 
                 // Live out
+                bool new_live_out_loop = true;
                 bool find_live_out = false;
                 for (auto _data_src : blacklist_loop_live_out_data_edge) {
+                    uint32_t _cflag = 0;
                     for (auto _data_edge : _data_src.getSecond()) {
                         if ((_data_src.getFirst() == operand) &&
-                            (_data_edge == &*ins_it))
+                            (_data_edge == &*ins_it)) {
                             find_live_out = true;
+                            if (_cflag > 0) new_live_in_loop = false;
+                        }
+                        _cflag++;
                     }
                 }
+                // if (find_live_out) {
+                // auto _live_out =
+                // loop_edge_map[std::make_pair(operand, &*ins_it)];
+
+                //_node_src->second->addDataOutputPort(_live_out);
+                //_live_out->addDataInputPort(_node_src->second);
+
+                //_live_out->addDataOutputPort(_node_dest->second);
+                //_node_dest->second->addDataInputPort(_live_out);
+
+                // continue;
+                //}
                 if (find_live_out) {
+                    //outs() << "live out:\n";
+                    //operand->dump();
+                    //ins_it->dump();
+
                     auto _live_out =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];
 
-                    _node_src->second->addDataOutputPort(_live_out);
-                    _live_out->addDataInputPort(_node_src->second);
+                    if (new_live_out_loop) {
+                        _node_src->second->addDataOutputPort(_live_out);
+                        _live_out->addDataInputPort(_node_src->second);
+
+                        for (auto _loop_edge : loop_loop_edge_lout_map) {
+                            for (auto _edge : _loop_edge.second) {
+                                auto _src_loop_node =
+                                    loop_value_node[_edge.first]
+                                        ->findLiveOutNode(_loop_edge.first);
+                                auto _des_loop_node =
+                                    loop_value_node[_edge.second]
+                                        ->findLiveOutNode(_loop_edge.first);
+
+                                _src_loop_node->addDataOutputPort(
+                                    _des_loop_node);
+                                _des_loop_node->addDataInputPort(
+                                    _src_loop_node);
+                            }
+                        }
+
+                        // for (auto _loop_edge : live_out_outer_edge) {
+                        //_loop_edge.first->dump();
+                        // auto _src = map_value_node[_loop_edge.first];
+                        // auto _dest_loop =
+                        // loop_value_node[_loop_edge.second];
+
+                        //_dest_loop->findLiveOutNode(_loop_edge.first)
+                        //->addDataOutputPort(_src);
+                        //_src->addDataInputPort(
+                        //_dest_loop->findLiveOutNode(_loop_edge.first));
+                        //}
+                    }
 
                     _live_out->addDataOutputPort(_node_dest->second);
                     _node_dest->second->addDataInputPort(_live_out);
@@ -1582,6 +1633,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
         }
 
         // Connecting live-in values
+        // Edge type 1
         for (auto _live_in : summary.live_in_ins) {
             auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
             if (_node == nullptr)
@@ -1592,6 +1644,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
                     dyn_cast<ArgumentNode>(_node);
             }
         }
+        // Edge type 2
         for (auto _live_in : summary.live_in_loop) {
             auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
             if (_node == nullptr) {
@@ -1599,23 +1652,47 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
                                                  ArgumentNode::LoopLiveIn);
             }
             for (auto _n : _live_in.getSecond()) {
-                loop_loop_edge_map[_live_in.getFirst()].push_back(
+                loop_loop_edge_lin_map[_live_in.getFirst()].push_back(
                     std::make_pair(_n.first, _n.second));
             }
         }
 
+        // Edge type 3
         for (auto _live_in_outer_edge : summary.live_in_exit_edges) {
             live_in_outer_edge[_live_in_outer_edge] = L;
         }
 
         // Connecting live-outs values
+        // Edge type 1
         for (auto _live_out : summary.live_out_ins) {
-            auto new_live_out = _loop_node->insertLiveOutArgument(
-                _live_out.getFirst(), ArgumentNode::LoopLiveOut);
+            auto _new_live_out_node =
+                _loop_node->findLiveOutNode(_live_out.getFirst());
+            if (_new_live_out_node == nullptr) {
+                _new_live_out_node = _loop_node->insertLiveOutArgument(
+                    _live_out.getFirst(), ArgumentNode::LoopLiveOut);
+            }
             for (auto _use : _live_out.getSecond()) {
                 loop_edge_map[std::make_pair(_live_out.getFirst(), _use)] =
-                    new_live_out;
+                    dyn_cast<ArgumentNode>(_new_live_out_node);
             }
+        }
+
+        // Edge type 2
+        for (auto _live_out : summary.live_out_loop) {
+            auto _node = _loop_node->findLiveOutNode(_live_out.getFirst());
+            if (_node == nullptr) {
+                _loop_node->insertLiveInArgument(_live_out.getFirst(),
+                                                 ArgumentNode::LoopLiveOut);
+            }
+            for (auto _n : _live_out.getSecond()) {
+                loop_loop_edge_lout_map[_live_out.getFirst()].push_back(
+                    std::make_pair(_n.first, _n.second));
+            }
+        }
+
+        // Edge type 3
+        for (auto _live_out_outer_edge : summary.live_out_exit_edges) {
+            live_out_outer_edge[_live_out_outer_edge] = L;
         }
 
         // Connecting carry values

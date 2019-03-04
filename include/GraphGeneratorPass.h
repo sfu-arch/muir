@@ -107,7 +107,9 @@ class GraphGeneratorPass : public llvm::ModulePass,
         loop_edge_map;
 
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
-        loop_loop_edge_map;
+        loop_loop_edge_lin_map;
+    std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
+        loop_loop_edge_lout_map;
 
     std::map<llvm::Value *, Loop*> live_in_outer_edge;
     std::map<llvm::Value *, Loop*> live_out_outer_edge;
