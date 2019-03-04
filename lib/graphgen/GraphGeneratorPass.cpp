@@ -385,7 +385,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         summary.live_in_ins[op].push_back(&ins);
                     else {
                         if (L->getParentLoop() == nullptr) {
-                            summary.outter_edges.push_back(op);
+                            summary.live_in_exit_edges.push_back(op);
                             // outs() << "Name " << summary.getNmae() << "\n";
                             // op->dump();
                             // ins.dump();
@@ -399,6 +399,8 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
         }
     }
 
+    // Loop depth:
+    outs() << "Loop Depth: " << L->getLoopDepth() << "\n";
     // Extracting loop live-outs
     for (auto B : L->blocks()) {
         for (auto &ins : *B) {
@@ -409,12 +411,33 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 is_live_out = !L->contains(_inst_user) ? true : false;
 
                 if (is_live_out) {
-                    auto parent_loop = L->getParentLoop();
                     summary.live_out_ins[&ins].push_back(_inst_user);
-                    while (parent_loop) {
-                        summary.live_out_loop[user].push_back(parent_loop);
-                        if (parent_loop->contains(_inst_user)) break;
-                        parent_loop = parent_loop->getParentLoop();
+
+                    // Add connections between loops
+                    bool contain = transform_reduce(
+                        L->getSubLoopsVector().begin(),
+                        L->getSubLoopsVector().end(), false,
+                        [](auto _l, auto _r) { return _l | _r; },
+                        [&_inst_user, &summary, L](auto _sub_l) {
+                            if (_sub_l->contains(_inst_user)) {
+                                summary.live_out_loop[_inst_user].push_back(
+                                    std::make_pair(_sub_l), L);
+                                return true;
+                            } else
+                                return false;
+                        });
+
+                    if (!contain) {
+                        summary.live_out_ins[&ins].push_back(_inst_user);
+                    }
+
+                    // If current loop doesn't have a parent loop or the parent
+                    // node contains the user then there is a edge from loop to
+                    // the user instruction
+                    auto parent_loop = L->getParentLoop();
+                    if (parent_loop == nullptr ||
+                        !parent_loop->contains(_inst_user)) {
+                        summary.live_out_exit_edges.push_back(_inst_user);
                     }
 
                     blacklist_loop_live_out_data_edge[&ins].push_back(
@@ -1569,7 +1592,6 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
                     dyn_cast<ArgumentNode>(_node);
             }
         }
-
         for (auto _live_in : summary.live_in_loop) {
             auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
             if (_node == nullptr) {
@@ -1582,7 +1604,7 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
             }
         }
 
-        for (auto _live_in_outer_edge : summary.outter_edges) {
+        for (auto _live_in_outer_edge : summary.live_in_exit_edges) {
             live_in_outer_edge[_live_in_outer_edge] = L;
         }
 
