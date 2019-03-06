@@ -117,7 +117,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
     std::map<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
         live_in_ins_loop_edge;
 
-    std::map<llvm::Value *, std::pair<llvm::Loop *, llvm::Loop *>>
+    std::map<llvm::Value *,
+             llvm::SmallSetVector<std::pair<llvm::Loop *, llvm::Loop *>, 8>>
         live_in_loop_loop_edge;
 
     llvm::DenseMap<

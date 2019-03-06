@@ -369,7 +369,8 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 // If the value is live-in, we need to check if
                 // subloops contain the instruction or not (not the operand).
                 if (is_live_in) {
-                    bool contain = transform_reduce(
+                    bool contain = false;
+                    contain = transform_reduce(
                         L->getSubLoopsVector().begin(),
                         L->getSubLoopsVector().end(), false,
                         [](auto _l, auto _r) { return _l | _r; },
@@ -380,7 +381,10 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                             } else
                                 return false;
                         });
-                    if (!contain) summary.live_in_out_ins[op].insert(&ins);
+
+                    if (!contain) {
+                        summary.live_in_out_ins[op].insert(&ins);
+                    }
 
                     if (L->getParentLoop()) {
                         if (!isa<llvm::Argument>(op)) {
@@ -992,7 +996,6 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                                             return false;
                                     });
 
-                        // for (auto _edge : _loop_edge.getSecond()) {
                         if (_edge != _loop_edge.getSecond().end()) {
                             auto _node_src =
                                 _loop_node->findLiveInNode(_edge->first);
@@ -1678,8 +1681,8 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
                         _live_in.getFirst(), ArgumentNode::LoopLiveIn);
                 }
 
-                live_in_loop_loop_edge[_live_in.getFirst()] =
-                    std::make_pair(L, _loop_in);
+                live_in_loop_loop_edge[_live_in.getFirst()].insert(
+                    std::make_pair(L, _loop_in));
             }
         }
 
@@ -1753,15 +1756,18 @@ void GraphGeneratorPass::connectLoopEdge() {
     }
 
     for (auto _edge : live_in_loop_loop_edge) {
-        auto _node_src =
-            this->loop_value_node[_edge.second.first]->findLiveInNode(
-                _edge.first);
-        auto _node_tar =
-            this->loop_value_node[_edge.second.second]->findLiveInNode(
-                _edge.first);
 
-        _node_src->addDataOutputPort(_node_tar);
-        _node_tar->addDataInputPort(_node_src);
+        for (auto _loop_edge : _edge.second) {
+            auto _node_src =
+                this->loop_value_node[_loop_edge.first]->findLiveInNode(
+                    _edge.first);
+            auto _node_tar =
+                this->loop_value_node[_loop_edge.second]->findLiveInNode(
+                    _edge.first);
+
+            _node_src->addDataOutputPort(_node_tar);
+            _node_tar->addDataInputPort(_node_src);
+        }
     }
 }
 
