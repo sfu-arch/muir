@@ -53,13 +53,21 @@ struct LoopSummary {
     // Live-in
     llvm::SetVector<llvm::Loop *> sub_loops;
 
-    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
-        live_in_ins;
-    llvm::DenseMap<llvm::Value *,
-                   std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
-        live_in_loop;
+    // Loop -> ins (output)
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Instruction *, 8>>
+        live_in_out_ins;
 
-    llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
+    // Loop -> Loop (output)
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_in_out_loop;
+
+    // Loop -> ins (input)
+    llvm::SmallSetVector<llvm::Value *, 8> live_in_in_ins;
+
+    // Loop -> Loop (input)
+    llvm::DenseMap<llvm::Value *, llvm::Loop *> live_in_in_loop;
+
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Instruction *, 8>>
         live_out_ins;
     llvm::DenseMap<llvm::Value *,
                    std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
@@ -69,8 +77,8 @@ struct LoopSummary {
 
     llvm::SmallVector<llvm::Value *, 8> live_out_exit_edges;
 
-    //llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
-        //live_out_loop;
+    // llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
+    // live_out_loop;
 
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         carry_dependencies;
@@ -106,13 +114,24 @@ class GraphGeneratorPass : public llvm::ModulePass,
     std::map<std::pair<llvm::Value *, llvm::Value *>, ArgumentNode *>
         loop_edge_map;
 
+    std::map<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_in_ins_loop_edge;
+
+    std::map<llvm::Value *, std::pair<llvm::Loop *, llvm::Loop *>>
+        live_in_loop_loop_edge;
+
+    llvm::DenseMap<
+        llvm::Loop *,
+        llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
+        live_in_loop_ins_edge;
+
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
         loop_loop_edge_lin_map;
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
         loop_loop_edge_lout_map;
 
-    std::map<llvm::Value *, Loop*> live_in_outer_edge;
-    std::map<llvm::Value *, Loop*> live_out_outer_edge;
+    std::map<llvm::Value *, Loop *> live_in_outer_edge;
+    std::map<llvm::Value *, Loop *> live_out_outer_edge;
 
     std::map<llvm::Value *, Node *> map_value_node;
     std::map<llvm::Loop *, LoopNode *> loop_value_node;
@@ -168,6 +187,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     // void makeLoopNodes(llvm::LoopInfo &loop_info);
     void buildLoopNodes(llvm::Function &, llvm::LoopInfo &loop_info);
+    void connectLoopEdge();
     void findControlPorts(llvm::Function &);
     void findDataPorts(llvm::Function &);
     void connectOutToReturn(llvm::Function &);
