@@ -48,11 +48,11 @@ struct LoopSummary {
     llvm::BasicBlock *header;
     llvm::SmallVector<llvm::BasicBlock *, 8> exit_blocks;
 
+    llvm::SetVector<llvm::Loop *> sub_loops;
+
     // Data information
     //
     // Live-in
-    llvm::SetVector<llvm::Loop *> sub_loops;
-
     // Loop -> ins (output)
     llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Instruction *, 8>>
         live_in_out_ins;
@@ -65,21 +65,30 @@ struct LoopSummary {
     llvm::SmallSetVector<llvm::Value *, 8> live_in_in_ins;
 
     // Loop -> Loop (input)
-    llvm::DenseMap<llvm::Value *, llvm::Loop *> live_in_in_loop;
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_in_in_loop;
 
+    // Data information
+    //
+    // Live-out
+    // Loop -> ins (output)
     llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Instruction *, 8>>
-        live_out_ins;
-    llvm::DenseMap<llvm::Value *,
-                   std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
-        live_out_loop;
+        live_out_out_ins;
 
-    llvm::SmallVector<llvm::Value *, 8> live_in_exit_edges;
+    // Loop -> Loop (output)
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_out_out_loop;
 
-    llvm::SmallVector<llvm::Value *, 8> live_out_exit_edges;
+    // Loop -> ins (input)
+    llvm::SmallSetVector<llvm::Value *, 8> live_out_in_ins;
 
-    // llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Loop *, 8>>
-    // live_out_loop;
+    // Loop -> Loop (input)
+    llvm::DenseMap<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_out_in_loop;
 
+    // Data information
+    //
+    // Carry-depen
     llvm::DenseMap<llvm::Value *, llvm::SmallVector<llvm::Instruction *, 8>>
         carry_dependencies;
 
@@ -125,6 +134,20 @@ class GraphGeneratorPass : public llvm::ModulePass,
         llvm::Loop *,
         llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
         live_in_loop_ins_edge;
+
+    std::map<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+        live_out_ins_loop_edge;
+
+    std::map<llvm::Value *,
+             llvm::SmallSetVector<std::pair<llvm::Loop *, llvm::Loop *>, 8>>
+        live_out_loop_loop_edge;
+
+    llvm::DenseMap<
+        llvm::Loop *,
+        llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
+        live_out_loop_ins_edge;
+
+
 
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
         loop_loop_edge_lin_map;
