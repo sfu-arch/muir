@@ -1,14 +1,19 @@
 #include <stdio.h>
 
-unsigned test09(unsigned j) {
-  unsigned foo = j;
+unsigned test09(unsigned *a, unsigned *b, unsigned *c) {
   for (unsigned i = 0; i < 5; ++i) {
-    foo=i+1;
+    c[i] = a[i] + b[i];
   }
-  return foo;
+  return 1;
 }
 
 int main() {
-  int result = test09(100);
-  printf("%d\n",result);
+  int i;
+  unsigned a[5] = {1, 2, 3, 4, 5};
+  unsigned b[5] = {1, 2, 3, 4, 5};
+  unsigned c[5] = {0};
+  test09(a, b, c);
+  for (i = 0; i < 5; i++) {
+    printf("%d\n", c[i]);
+  }
 }
