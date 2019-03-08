@@ -1480,12 +1480,6 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
         auto &_end_ins = _ins->getParent()->back();
         auto _end_node = map_value_node[&_end_ins];
         if (isa<ReattachNode>(_end_node) || isa<BranchNode>(_end_node)) {
-            if (isa<BranchNode>(_end_node)) {
-                _end_node->addDataInputPort(_call_node->getCallIn());
-                _call_node->getCallIn()->addDataOutputPort(_end_node);
-            }
-
-            // TODO needs to be checked!
             _end_node->addControlInputPort(_call_node->getCallIn());
             _call_node->getCallIn()->addControlOutputPort(_end_node);
         }

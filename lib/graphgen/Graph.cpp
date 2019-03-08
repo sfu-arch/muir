@@ -819,8 +819,13 @@ void Graph::printScalaFunctionHeader() {
             //_command = "    val $call_in = Flipped(Decoupled(new Call(List(";
 
             //"))))\n";
-            for (auto ag : _fc->getCallIn()->input_data_range()) {
-                _command = "32, ";
+            uint32_t c = 0;
+            for (auto ag : _fc->getCallIn()->output_data_range()) {
+                if (++c == _fc->getCallIn()->numDataOutputPort())
+                    _command = "32";
+                else
+                    _command = "32, ";
+
                 _final_command.append(_command);
             }
             if (_fc->getCallIn()->numDataInputPort()) {
@@ -1023,9 +1028,8 @@ InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
  */
 InstructionNode *Graph::insertDetachNode(DetachInst &I) {
     inst_list.push_back(std::make_unique<DetachNode>(
-        NodeInfo(
-            inst_list.size(),
-            "detach_" + I.getName().str() + std::to_string(inst_list.size())),
+        NodeInfo(inst_list.size(), "detach_" + I.getName().str() +
+                                       std::to_string(inst_list.size())),
         &I));
 
     auto ff = std::find_if(
@@ -1041,9 +1045,8 @@ InstructionNode *Graph::insertDetachNode(DetachInst &I) {
  */
 InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
     inst_list.push_back(std::make_unique<ReattachNode>(
-        NodeInfo(
-            inst_list.size(),
-            "reattach_" + I.getName().str() + std::to_string(inst_list.size())),
+        NodeInfo(inst_list.size(), "reattach_" + I.getName().str() +
+                                       std::to_string(inst_list.size())),
         &I));
 
     auto ff = std::find_if(
@@ -1059,9 +1062,8 @@ InstructionNode *Graph::insertReattachNode(ReattachInst &I) {
  */
 InstructionNode *Graph::insertSyncNode(SyncInst &I) {
     inst_list.push_back(std::make_unique<SyncNode>(
-        NodeInfo(
-            inst_list.size(),
-            "sync_" + I.getName().str() + std::to_string(inst_list.size())),
+        NodeInfo(inst_list.size(), "sync_" + I.getName().str() +
+                                       std::to_string(inst_list.size())),
         &I));
 
     auto ff = std::find_if(
@@ -1111,32 +1113,31 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
      * the branches order to the parent basic block
      * In this way I'm catching if I need to have reverse ordering or not.
      * it has to fixed properly
-    */
-
+     */
 
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         BasicBlock *_op = I.getIncomingBlock(i);
-        //I.dump();
-        //outs() << "In id: " << i << " ";
+        // I.dump();
+        // outs() << "In id: " << i << " ";
         //_op->dump();
         int j = 0;
         for (auto _bb : llvm::predecessors(I.getParent())) {
-            //outs() << "Pred id " << j << " ";
+            // outs() << "Pred id " << j << " ";
             //_bb->dump();
             if ((_op != _bb) && (i == j)) {
-                //I.dump();
+                // I.dump();
                 //_op->dump();
                 //_bb->dump();
-                //outs() << "i " << i << "\n";
-                //outs() << "j " << j << "\n";
+                // outs() << "i " << i << "\n";
+                // outs() << "j " << j << "\n";
                 reverse = true;
             }
             j++;
         }
     }
 
-    //if (reverse) I.dump();
+    // if (reverse) I.dump();
 
     inst_list.push_back(std::make_unique<PhiSelectNode>(
         NodeInfo(inst_list.size(),

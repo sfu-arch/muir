@@ -1108,7 +1108,7 @@ std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
         case PrintType::Scala:
             _text = "$name.io.PredOp($id)";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id - 1);
+            helperReplace(_text, "$id", _id);
             break;
         default:
             break;
@@ -3887,7 +3887,7 @@ std::string CallInNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$type", "CallInNode");
             helperReplace(_text, "$<output_vector>",
-                          make_argument_port(this->input_data_range()), ",");
+                          make_argument_port(this->output_data_range()), ",");
 
             break;
         case PrintType::Dot:
