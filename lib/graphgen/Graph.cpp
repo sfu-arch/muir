@@ -816,9 +816,7 @@ void Graph::printScalaFunctionHeader() {
             _command = "    val $call_in = Flipped(Decoupled(new Call(List(";
             helperReplace(_command, "$call", _fc->getName());
             _final_command.append(_command);
-            //_command = "    val $call_in = Flipped(Decoupled(new Call(List(";
 
-            //"))))\n";
             uint32_t c = 0;
             for (auto ag : _fc->getCallIn()->output_data_range()) {
                 if (++c == _fc->getCallIn()->numDataOutputPort())

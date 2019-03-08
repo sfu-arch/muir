@@ -32,9 +32,11 @@ using EdgeList = std::list<std::unique_ptr<Edge>>;
 using Port = std::pair<Node *, PortID>;
 
 class Graph {
+   public:
+    NodeInfo graph_info;
+
    private:
     // Node information
-    NodeInfo graph_info;
 
     // List of elements inside each graph
     InstructionList inst_list;
@@ -52,7 +54,6 @@ class Graph {
 
     // List of the edges between nodes inside the graph
     EdgeList edge_list;
-
 
     // Memory units inside each graph
     std::unique_ptr<MemoryNode> memory_unit;
@@ -247,6 +248,6 @@ class Graph {
     void printScalaInputSpliter();
     void printScalaMainClass();
 };
-}
+}  // namespace dandelion
 
 #endif  // end of DANDDELION_GRAPH_H

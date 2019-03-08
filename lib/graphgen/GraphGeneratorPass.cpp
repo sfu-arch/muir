@@ -508,7 +508,7 @@ bool GraphGeneratorPass::doInitialization(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
 
-        if (F.getName() == target_fn) {
+        if (F.getName() == this->dependency_graph->graph_info.Name) {
             this->LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
         }
     }
@@ -656,6 +656,15 @@ void GraphGeneratorPass::visitReturnInst(llvm::ReturnInst &I) {
 }
 
 void GraphGeneratorPass::visitCallInst(llvm::CallInst &I) {
+    if (auto _call = dyn_cast<CallInst>(&I)) {
+        auto called = dyn_cast<Function>(
+            CallSite(_call).getCalledValue()->stripPointerCasts());
+        if (!called) {
+            return;
+        }
+        if (called->isDeclaration()) return;
+    }
+
     map_value_node[&I] = this->dependency_graph->insertCallNode(I);
 }
 
@@ -765,6 +774,18 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
     }
 
     for (auto ins_it = inst_begin(F); ins_it != inst_end(F); ++ins_it) {
+        // Check if its debug function
+        if (auto _call = dyn_cast<CallInst>(&*ins_it)) {
+            auto called = dyn_cast<Function>(
+                CallSite(_call).getCalledValue()->stripPointerCasts());
+            if (!called) {
+                continue;
+            }
+
+            // Skip debug function
+            if (called->isDeclaration()) continue;
+        }
+
         auto _node_src = this->map_value_node.find(
             &*ins_it);  // it should be Instruction node
 
@@ -1202,6 +1223,18 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         // basicblock.
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
+                //Check if I is not a call to debug function
+                if (auto _call = dyn_cast<CallInst>(&I)) {
+                    auto called = dyn_cast<Function>(
+                        CallSite(_call).getCalledValue()->stripPointerCasts());
+                    if (!called) {
+                        continue;
+                    }
+
+                    // Skip debug function
+                    if (called->isDeclaration()) continue;
+                }
+
                 // Iterate over the basicblock's instructions
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
@@ -1719,7 +1752,6 @@ void GraphGeneratorPass::connectLoopEdge() {
             _node_tar->addDataInputPort(_node_src);
         }
     }
-
 }
 
 /**
@@ -1746,7 +1778,7 @@ void GraphGeneratorPass::init(Function &F) {
 bool GraphGeneratorPass::runOnModule(Module &M) {
     for (auto &F : M) {
         if (F.isDeclaration()) continue;
-        if (F.getName() == target_fn) {
+        if (F.getName() == this->dependency_graph->graph_info.Name) {
             // Iterating over loops, and extracting loops information
             // before running anyother analysis
             auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
@@ -1766,7 +1798,7 @@ bool GraphGeneratorPass::runOnModule(Module &M) {
 
             } while (hasLoop);
 
-            stripDebugInfo(F);
+            // stripDebugInfo(F);
             visit(F);
             init(F);
         }

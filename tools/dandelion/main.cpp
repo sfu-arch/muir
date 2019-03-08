@@ -1,8 +1,14 @@
 #define DEBUG_TYPE "dandelion-debug"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.def"
@@ -11,20 +17,20 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
@@ -34,14 +40,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
-#include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/Analysis/ScopedNoAliasAA.h"
-
 
 #include <memory>
 #include <string>
@@ -54,12 +52,12 @@
 #include "TargetLoopExtractor.h"
 
 using namespace llvm;
+using llvm::legacy::PassManager;
+using llvm::sys::ExecuteAndWait;
+using llvm::sys::findProgramByName;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using llvm::sys::ExecuteAndWait;
-using llvm::sys::findProgramByName;
-using llvm::legacy::PassManager;
 
 static cl::OptionCategory dandelionCategory{"dandelion options"};
 
@@ -97,8 +95,9 @@ cl::opt<char> HWoptLevel("H",
                          cl::Prefix, cl::ZeroOrMore, cl::init('1'));
 
 static cl::opt<char> optLevel(
-    "O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
+    "O",
+    cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+             "(default = '-O2')"),
     cl::Prefix, cl::ZeroOrMore, cl::init('2'));
 
 cl::list<string> libPaths("L", cl::Prefix,
@@ -139,9 +138,9 @@ static void compile(Module &m, string outputPath) {
 
     string FeaturesStr;
     TargetOptions options = InitTargetOptionsFromCodeGenFlags();
-    unique_ptr<TargetMachine> machine(
-        target->createTargetMachine(triple.getTriple(), MCPU, FeaturesStr,
-                                    options, getRelocModel(), CMModel.getValue(), level));
+    unique_ptr<TargetMachine> machine(target->createTargetMachine(
+        triple.getTriple(), MCPU, FeaturesStr, options, getRelocModel(),
+        CMModel.getValue(), level));
     assert(machine.get() && "Could not allocate target machine!");
 
     if (FloatABIForCalls != FloatABI::Default) {
@@ -150,7 +149,7 @@ static void compile(Module &m, string outputPath) {
 
     std::error_code errc;
     auto out = std::make_unique<ToolOutputFile>(outputPath.c_str(), errc,
-                                                  sys::fs::F_None);
+                                                sys::fs::F_None);
     if (!out) {
         report_fatal_error("Unable to create file:\n " + errc.message());
     }
@@ -221,8 +220,8 @@ static void link(string const &objectFile, string const &outputFile) {
     outs() << "\n";
 
     string err;
-    if (-1 == ExecuteAndWait(clang.get(), &charArgs[0], nullptr, {}, 0, 0,
-                             &err)) {
+    if (-1 ==
+        ExecuteAndWait(clang.get(), &charArgs[0], nullptr, {}, 0, 0, &err)) {
         report_fatal_error("Unable to link output file.");
     }
 }
@@ -257,8 +256,8 @@ static void extractLoops(Module &m) {
     pm.add(createLoopSimplifyPass());
     pm.add(new LoopInfoWrapperPass());
     pm.add(new DominatorTreeWrapperPass());
-    //pm.add(new lx::TargetLoopExtractor());
-    //pm.add(new loopclouser::LoopClouser());
+    // pm.add(new lx::TargetLoopExtractor());
+    // pm.add(new loopclouser::LoopClouser());
     pm.add(createVerifierPass());
     pm.run(m);
 
@@ -322,15 +321,15 @@ static void splitGeps(Function &F) {
 /**
  * Function lists
  */
-static void runGraphGen(Module &M) {
+static void runGraphGen(Module &M, string file_name) {
     // Check wether xketch outpufile name has been specified
-    if (outFile.getValue() == "") {
+    if (file_name.empty()) {
         errs() << "o command line option must be specified.\n";
         exit(-1);
     }
 
     std::error_code errc;
-    raw_fd_ostream out(outFile + ".scala", errc, sys::fs::F_None);
+    raw_fd_ostream out(file_name + ".scala", errc, sys::fs::F_None);
 
     legacy::PassManager pm;
     // Usefull passes
@@ -338,28 +337,47 @@ static void runGraphGen(Module &M) {
     // pm.add(llvm::createLoopSimplifyPass());
     // pm.add(new helpers::CallInstSpliter(target_fn));
     pm.add(new llvm::AssumptionCacheTracker());
-    //pm.add(createBreakCriticalEdgesPass());
-    //pm.add(createLoopSimplifyPass());
+    // pm.add(createBreakCriticalEdgesPass());
+    // pm.add(createLoopSimplifyPass());
     pm.add(createLoopSimplifyPass());
-    //pm.add(llvm::createCFGSimplificationPass());
+    // pm.add(llvm::createCFGSimplificationPass());
     pm.add(new LoopInfoWrapperPass());
     pm.add(new DominatorTreeWrapperPass());
-    //pm.add(new loopclouser::LoopClouser());
+    // pm.add(new loopclouser::LoopClouser());
 
-    //pm.add(createBasicAAWrapperPass());
-    //pm.add(llvm::createTypeBasedAAWrapperPass());
-    //pm.add(createGlobalsAAWrapperPass());
-    //pm.add(createSCEVAAWrapperPass());
-    //pm.add(createScopedNoAliasAAWrapperPass());
-    //pm.add(createCFLAndersAAWrapperPass());
-    //pm.add(createAAResultsWrapperPass());
-    //pm.add(new aew::AliasEdgeWriter());
+    // pm.add(createBasicAAWrapperPass());
+    // pm.add(llvm::createTypeBasedAAWrapperPass());
+    // pm.add(createGlobalsAAWrapperPass());
+    // pm.add(createSCEVAAWrapperPass());
+    // pm.add(createScopedNoAliasAAWrapperPass());
+    // pm.add(createCFLAndersAAWrapperPass());
+    // pm.add(createAAResultsWrapperPass());
+    // pm.add(new aew::AliasEdgeWriter());
 
     pm.add((llvm::createStripDeadDebugInfoPass()));
-    pm.add(new helpers::GepInformation(target_fn));
-    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, target_fn), out));
+    pm.add(new helpers::GepInformation(file_name));
+    pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, file_name), out));
     pm.add(createVerifierPass());
     pm.run(M);
+}
+
+static SetVector<llvm::Function *> getCallInst(llvm::Function &F) {
+    SetVector<Function *> call_inst;
+    for (auto &ins : llvm::instructions(&F)) {
+        if (auto _call = dyn_cast<CallInst>(&ins)) {
+            auto called = dyn_cast<Function>(
+                CallSite(_call).getCalledValue()->stripPointerCasts());
+            if (!called) {
+                continue;
+            }
+
+            // Skip debug function
+            if (called->isDeclaration()) continue;
+            call_inst.insert(called);
+        }
+    }
+
+    return call_inst;
 }
 
 /**
@@ -402,7 +420,15 @@ int main(int argc, char **argv) {
     }
 
     labelFunctions(*module);
-    runGraphGen(*module);
+
+    for (auto &F : *module) {
+        if (F.isDeclaration()) continue;
+        if (F.getName() == target_fn) {
+        }
+        auto call_inst = getCallInst(F);
+        call_inst.insert(&F);
+        runGraphGen(*module, F.getName());
+    }
 
     saveModule(*module, target_fn + ".final.bc");
 
