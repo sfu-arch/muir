@@ -424,10 +424,12 @@ int main(int argc, char **argv) {
     for (auto &F : *module) {
         if (F.isDeclaration()) continue;
         if (F.getName() == target_fn) {
+            auto call_inst = getCallInst(F);
+            call_inst.insert(&F);
+            for (auto ff : call_inst) {
+                runGraphGen(*module, ff->getName());
+            }
         }
-        auto call_inst = getCallInst(F);
-        call_inst.insert(&F);
-        runGraphGen(*module, F.getName());
     }
 
     saveModule(*module, target_fn + ".final.bc");

@@ -15,7 +15,6 @@ float test25(float *a, int n, float mean) {
         a[k+6] = a[k+6]/mean;
         a[k+7] = a[k+7]/mean;
     }
-    a[n - 1]++;
     return a[n-1];
 }
 
