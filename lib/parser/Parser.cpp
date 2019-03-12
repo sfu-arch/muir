@@ -447,7 +447,20 @@ void Context::LiveInHelper(llvm::Value* Val) {
             if (auto OIns =
                     dyn_cast<Instruction>(OI)) {  // if operand is instruction
 
-                if (defs.count(OIns) == 0) {
+                bool is_live_in = true;
+                auto _intrinsic_op = CallSite(OIns);
+                if (_intrinsic_op.getInstruction()) {
+                    auto _intrinsic_call = dyn_cast<Function>(
+                        _intrinsic_op.getCalledValue()->stripPointerCasts());
+
+                    if (_intrinsic_call) {
+                        if (_intrinsic_call->isDeclaration()) {
+                            is_live_in = false;
+                        }
+                    }
+                }
+
+                if ((defs.count(OIns) == 0) && (is_live_in)) {
                     liveIns.insert(OIns);
 
                 }  // operand was not produced by context
@@ -736,24 +749,15 @@ void Context::InsertCall() {
         Params.push_back(G);
     }
 
-    // llvm::Value* _sync_region=nullptr;
-    // for(auto &BB: *F){
-    // for(auto &I : BB){
-    // if(auto _sync = dyn_cast<llvm::SyncInst>(&I)){
-    //_sync_region = _sync->getSyncRegion();
-    //}
-    //}
-    //}
+    auto _sync_region =
+        cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
 
-     auto _sync_region =
-     cast<DetachInst>(inDet->GetSrc()->getTerminator())->getSyncRegion();
     auto* CI = CallInst::Create(StaticFunc, Params, "", funcCall);
-    auto RI = ReattachInst::Create(
-        inDet->GetSrc(), _sync_region, outRe.back()->GetSrc()->getTerminator()->getSuccessor(0));
 
-    // auto RI = ReattachInst::Create(
-    // outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), nullptr);
-    RI->insertAfter(CI);
+    auto RI = ReattachInst::Create(
+        outRe.back()->GetSrc()->getTerminator()->getSuccessor(0), _sync_region);
+
+     RI->insertAfter(CI);
 
     // point parent's detach edge to caller block
     (cast<DetachInst>(inDet->GetSrc()->getTerminator()))

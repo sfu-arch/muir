@@ -366,6 +366,18 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                 if (auto _inst = dyn_cast<Instruction>(op))
                     is_live_in = !L->contains(_inst) ? true : false;
 
+                auto _intrinsic_op = CallSite(op);
+                if (_intrinsic_op.getInstruction()) {
+                    auto _intrinsic_call = dyn_cast<Function>(
+                        _intrinsic_op.getCalledValue()->stripPointerCasts());
+
+                    if (_intrinsic_call) {
+                        if (_intrinsic_call->isDeclaration()) {
+                            is_live_in = false;
+                        }
+                    }
+                }
+
                 // If the value is live-in, we need to check if
                 // subloops contain the instruction or not (not the operand).
                 if (is_live_in) {
@@ -791,6 +803,20 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
 
         for (uint32_t c = 0; c < ins_it->getNumOperands(); ++c) {
             auto operand = ins_it->getOperand(c);
+
+            // Skip debug functions
+            if (auto _call = dyn_cast<CallInst>(operand)) {
+                auto called = dyn_cast<Function>(
+                    CallSite(_call).getCalledValue()->stripPointerCasts());
+                if (!called) {
+                    continue;
+                }
+
+                // Skip debug function
+                if (called->isDeclaration()) {
+                    continue;
+                }
+            }
 
             // First operand of a call function is a pointer to itself
             if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
@@ -1223,7 +1249,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
         // basicblock.
         if (auto _bb = dyn_cast<SuperNode>(this->map_value_node[&BB])) {
             for (auto &I : BB) {
-                //Check if I is not a call to debug function
+                // Check if I is not a call to debug function
                 if (auto _call = dyn_cast<CallInst>(&I)) {
                     auto called = dyn_cast<Function>(
                         CallSite(_call).getCalledValue()->stripPointerCasts());
@@ -1703,13 +1729,17 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
 void GraphGeneratorPass::connectLoopEdge() {
     // Connecting live-ins
     for (auto _edge : live_in_ins_loop_edge) {
-        auto _node_src = this->map_value_node[_edge.first];
+        auto _node_src = this->map_value_node.find(_edge.first);
+        if (_node_src == this->map_value_node.end()) {
+            _edge.first->dump();
+            assert(!"WRONG");
+        }
         for (auto _tar : _edge.second) {
             auto _loop_dest = this->loop_value_node[_tar];
             auto _node_dest = _loop_dest->findLiveInNode(_edge.first);
 
-            _node_src->addDataOutputPort(_node_dest);
-            _node_dest->addDataInputPort(_node_src);
+            _node_src->second->addDataOutputPort(_node_dest);
+            _node_dest->addDataInputPort(_node_src->second);
         }
     }
 
