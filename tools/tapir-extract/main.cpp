@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
     //Generating Chisel code
     codeGenerator(*module);
 
-    saveModule(*module, "final.bc");
+    saveModule(*module, target_fn + "_detach.bc");
 
     //common::PrintFunctionDFG(*module);
 

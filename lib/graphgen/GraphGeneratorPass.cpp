@@ -321,7 +321,9 @@ void UpdateInnerLiveOutConnections(
  * because of the gauranties that the pass gives us
  */
 LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
-    LoopSummary summary("L_" + std::to_string(L->getStartLoc()->getLine()));
+    LoopSummary summary("L_" + std::to_string( L->getStartLoc() ? L->getStartLoc()->getLine() : LID));
+    LID++;
+
 
     // Check if loop is in a simplify form
     if (!L->isLoopSimplifyForm()) {

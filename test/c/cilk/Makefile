@@ -21,8 +21,8 @@ svg: $(SVG)
 %.ll: %.bc
 	llvm-dis $<
 
-%.scala: %.ll
-	$(XKETCH) -fn-name=$* -config=../../../scripts/config.json $< -o $*
+%.scala: %.detach
+	$(XKETCH) -fn-name=$* -config=../../../scripts/config.json $*_detach.bc -o $*
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
@@ -34,10 +34,3 @@ clean:
 .ONESHELL:
 %.detach: %.bc
 	$(SPLIT) -fn-name=$* $< -o $*
-	llvm-dis final.bc
-	opt final.ll -S -dce -separate-const-offset-from-gep -mem2reg -dot-cfg -o $*a.ll
-	$(XKETCH) -fn-name=$* -config=../../../scripts/config.json $*a.ll -o $*
-	$(eval subfcn=$(shell egrep -o "$*_detach[0-9]*" $*a.ll | sort -u))
-	for fcn in ${subfcn} ; do \
-		$(XKETCH) -fn-name=$${fcn} -config=../../../scripts/config.json $*a.ll -o $${fcn} ;  \
-	done

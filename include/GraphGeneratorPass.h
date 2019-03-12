@@ -147,8 +147,6 @@ class GraphGeneratorPass : public llvm::ModulePass,
         llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
         live_out_loop_ins_edge;
 
-
-
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
         loop_loop_edge_lin_map;
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
@@ -159,6 +157,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     std::map<llvm::Value *, Node *> map_value_node;
     std::map<llvm::Loop *, LoopNode *> loop_value_node;
+
+    uint32_t LID;
 
    private:
     // Loop Info
@@ -227,15 +227,18 @@ class GraphGeneratorPass : public llvm::ModulePass,
     GraphGeneratorPass()
         : llvm::ModulePass(ID),
           dependency_graph(std::make_unique<Graph>(NodeInfo(0, "dummy"))),
+          LID(0),
           code_out(llvm::outs()) {}
     GraphGeneratorPass(NodeInfo _n_info)
         : llvm::ModulePass(ID),
           dependency_graph(std::make_unique<Graph>(_n_info)),
+          LID(0),
           code_out(llvm::outs()) {}
 
     GraphGeneratorPass(NodeInfo _n_info, llvm::raw_ostream &out)
         : llvm::ModulePass(ID),
           dependency_graph(std::make_unique<Graph>(_n_info, out)),
+          LID(0),
           code_out(out) {}
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
