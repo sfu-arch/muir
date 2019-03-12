@@ -321,9 +321,10 @@ void UpdateInnerLiveOutConnections(
  * because of the gauranties that the pass gives us
  */
 LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
-    LoopSummary summary("L_" + std::to_string( L->getStartLoc() ? L->getStartLoc()->getLine() : LID));
+    LoopSummary summary("L_" + std::to_string(L->getStartLoc()
+                                                  ? L->getStartLoc()->getLine()
+                                                  : LID));
     LID++;
-
 
     // Check if loop is in a simplify form
     if (!L->isLoopSimplifyForm()) {
@@ -797,7 +798,9 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
             }
 
             // Skip debug function
-            if (called->isDeclaration()) continue;
+            if (called->isDeclaration()) {
+                continue;
+            }
         }
 
         auto _node_src = this->map_value_node.find(
@@ -1018,6 +1021,15 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 auto _node_src = this->map_value_node.find(operand);
                 auto _node_dest = this->map_value_node.find(&*ins_it);
 
+                auto _src = _node_src->second;
+                auto _dst = _node_dest->second;
+
+                // TODO later we need to get ride of these lines
+                if (auto call_out = dyn_cast<CallNode>(_node_dest->second))
+                    _dst = call_out->getCallOut();
+                if (auto call_in = dyn_cast<CallNode>(_node_src->second))
+                    _src = call_in->getCallIn();
+
                 // Live in
                 bool find_live_in = false;
                 for (auto _data_src : blacklist_loop_live_in_data_edge) {
@@ -1049,6 +1061,12 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                                 _loop_node->findLiveInNode(_edge->first);
                             auto _node_tar =
                                 this->map_value_node[_edge->second];
+
+                            // TODO later we need to get ride of these lines
+                            if (auto call_out = dyn_cast<CallNode>(_node_tar))
+                                _node_tar = call_out->getCallOut();
+                            if (auto call_in = dyn_cast<CallNode>(_node_src))
+                                _node_src = call_in->getCallIn();
 
                             _node_src->addDataOutputPort(_node_tar);
                             _node_tar->addDataInputPort(_node_src);
@@ -1091,6 +1109,11 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             auto _node_tar =
                                 this->map_value_node[_edge->second];
 
+                            if (auto call_out = dyn_cast<CallNode>(_node_tar))
+                                _node_tar = call_out->getCallOut();
+                            if (auto call_in = dyn_cast<CallNode>(_node_src))
+                                _node_src = call_in->getCallIn();
+
                             _node_src->addDataOutputPort(_node_tar);
                             _node_tar->addDataInputPort(_node_src);
                         }
@@ -1112,11 +1135,11 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                     auto _carry =
                         loop_edge_map[std::make_pair(operand, &*ins_it)];
 
-                    _node_src->second->addDataOutputPort(_carry);
-                    _carry->addDataInputPort(_node_src->second);
+                    _src->addDataOutputPort(_carry);
+                    _carry->addDataInputPort(_src);
 
-                    _carry->addDataOutputPort(_node_dest->second);
-                    _node_dest->second->addDataInputPort(_carry);
+                    _carry->addDataOutputPort(_dst);
+                    _dst->addDataInputPort(_carry);
 
                     continue;
                 }
@@ -1139,9 +1162,6 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             "[HINT] Look at the LLVM type it you don't have one to one mapping"
                             "between LLVM and your graph library");
                 }
-
-                auto _src = _node_src->second;
-                auto _dst = _node_dest->second;
 
                 // Make sure that _src and _dst pointing
                 // to correct node
@@ -1285,11 +1305,15 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                         _bb->setNodeType(SuperNode::Mask);
                     }
 
-                    if (auto _call_node = dyn_cast<CallNode>(_ins)) {
+                    if (isa<llvm::CallInst>(I)) {
+                        auto _call_node =
+                            dyn_cast<CallNode>(this->map_value_node[&I]);
+
                         _bb->addControlOutputPort(_call_node->getCallOut());
-                        _call_node->setCallOutEnable(_bb);
+                        _bb->addControlOutputPort(_call_node->getCallIn());
+                        _call_node->getCallOut()->addControlInputPort(_bb);
+                        _call_node->getCallIn()->addControlInputPort(_bb);
                     } else {
-                        //
                         _bb->addControlOutputPort(_ins);
                         _ins->addControlInputPort(_bb);
                     }

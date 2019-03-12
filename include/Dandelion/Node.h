@@ -350,6 +350,10 @@ class Node {
         return this->info.Name +
                std::string(" -> MemOutput with ID Not defined!");
     }
+
+    void dump(){
+        outs() << info.Name << "\n";
+    }
 };
 
 /**

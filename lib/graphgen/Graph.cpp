@@ -470,44 +470,78 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
                     }
 
                     if (auto _call_node = dyn_cast<CallNode>(_output_node)) {
-                        _output_node = _call_node->getCallOut();
+                        auto ff_out = std::find_if(
+                            _call_node->getCallOut()->inputControl_begin(),
+                            _call_node->getCallOut()->inputControl_end(),
+                            [&_s_node](auto &arg) -> bool {
+                                return _s_node.get() == &*arg.first;
+                            });
+
+                        if (ff_out ==
+                            _call_node->getCallOut()->inputControl_end())
+                            assert(!"Couldn't find the control edge\n");
+
+                        auto ff_in = std::find_if(
+                            _call_node->getCallIn()->inputControl_begin(),
+                            _call_node->getCallIn()->inputControl_end(),
+                            [&_s_node](auto &arg) -> bool {
+                                return _s_node.get() == &*arg.first;
+                            });
+
+                        if (ff_in ==
+                            _call_node->getCallIn()->inputControl_end())
+                            assert(!"Couldn't find the control edge\n");
 
                         this->outCode
                             << "  "
-                            << _call_node->getCallIn()->printInputEnable(
-                                   PrintType::Scala)
+                            << _call_node->getCallIn()->printInputEnable(PrintType::Scala)
+                            << " <> "
+                            << _s_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _s_node
+                                       ->returnControlOutputPortIndex(
+                                           _call_node->getCallIn())
+                                       .getID())
+                            << "\n\n";
+
+                        this->outCode
+                            << "  "
+                            << _call_node->getCallOut()->printInputEnable(PrintType::Scala)
+                            << " <> "
+                            << _s_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _s_node
+                                       ->returnControlOutputPortIndex(
+                                           _call_node->getCallOut())
+                                       .getID())
+                            << "\n\n";
+
+                    } else {
+                        // Finding super node
+                        auto ff = std::find_if(
+                            _output_node->inputControl_begin(),
+                            _output_node->inputControl_end(),
+                            [&_s_node](auto &arg) -> bool {
+                                return _s_node.get() == &*arg.first;
+                            });
+
+                        if (ff == _output_node->inputControl_end())
+                            assert(!"Couldn't find the control edge\n");
+
+                        this->outCode
+                            << "  "
+                            << _output_node->printInputEnable(PrintType::Scala)
+                            << " <> "
+                            << _s_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _s_node
+                                       ->returnControlOutputPortIndex(
+                                           _output_node)
+                                       .getID())
                             << "\n\n";
                     }
-
-                    // auto _output_index =
-                    // std::distance(_s_node->ins_begin(), _ins_iterator);
-
-                    // Finding super node
-                    auto ff =
-                        std::find_if(_output_node->inputControl_begin(),
-                                     _output_node->inputControl_end(),
-                                     [&_s_node](auto &arg) -> bool {
-                                         return _s_node.get() == &*arg.first;
-                                     });
-
-                    // auto _input_index =
-                    // std::distance(_output_node->inputControl_begin(), ff);
-
-                    if (ff == _output_node->inputControl_end())
-                        assert(!"Couldn't find the control edge\n");
-
-                    this->outCode
-                        << "  "
-                        << _output_node->printInputEnable(PrintType::Scala)
-                        << " <> "
-                        << _s_node->printOutputEnable(
-                               PrintType::Scala,
-                               _s_node
-                                   ->returnControlOutputPortIndex(_output_node)
-                                   .getID())
-                        << "\n\n";
+                    this->outCode << "\n";
                 }
-                this->outCode << "\n";
             }
 
             break;

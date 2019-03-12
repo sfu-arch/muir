@@ -4019,7 +4019,7 @@ std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.In(\"field$id\")";
+            _text = "$name.io.In.elements(\"field$id\")";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
             break;
@@ -4058,7 +4058,7 @@ std::string CallInNode::printInputEnable(PrintType pt) {
     switch (pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.enable.enq(ControlBundle.active())";
+            _text = "$name.io.enable";
             helperReplace(_text, "$name", _name.c_str());
 
             break;
