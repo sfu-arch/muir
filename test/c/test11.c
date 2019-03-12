@@ -1,0 +1,22 @@
+#include <stdio.h>
+
+unsigned test11_inner(unsigned j) {
+  unsigned foo = j;
+  for(unsigned k = 0; k < 5; ++k){
+     foo++;
+  }
+  return foo;
+}
+
+unsigned test11(unsigned j) {
+  unsigned foo = j;
+  for (unsigned i = 0; i < 5; ++i) {
+    foo += test11_inner(foo);
+  }
+  return foo;
+}
+
+int main() {
+  int result = test11(10);
+  printf("%d\n",result);
+}

@@ -1,13 +1,13 @@
 CC=clang
 XKETCH=../../../build/bin/dandelion
 SPLIT=../../../build/bin/tapir-extract
-CFLAGS=-DPIR -DUSE_CILK_API -emit-llvm -m32 -S -o -
+CFLAGS=-O1 -DPIR -DUSE_CILK_API -g -emit-llvm -m32 -S -o -
 SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DETACH=$(SOURCES:%.c=%.detach)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
-#APALA=~/amoeba/apala-generator/build/bin/xketch
+EXTRACT=../../../build/bin/tapir-extract
 
 .PRECIOUS: %.ll
 
