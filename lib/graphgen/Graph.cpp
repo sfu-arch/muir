@@ -1217,6 +1217,10 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I, GepInfo _info) {
+
+    //for(auto f : _info.element_size){
+        //outs() << "LOG Size: " << f << "\n";
+    //}
     inst_list.push_back(std::make_unique<GepNode>(
         NodeInfo(inst_list.size(),
                  "Gep_" + I.getName().str() + to_string(inst_list.size())),

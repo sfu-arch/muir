@@ -361,9 +361,8 @@ static void runGraphGen(Module &M, string file_name) {
     pm.run(M);
 }
 
-static SetVector<llvm::Function *> getCallInst(llvm::Function &F) {
-    SetVector<Function *> call_inst;
-    for (auto &ins : llvm::instructions(&F)) {
+void getCallInst(llvm::Function *F, SetVector<Function *> &call_inst) {
+    for (auto &ins : llvm::instructions(F)) {
         if (auto _call = dyn_cast<CallInst>(&ins)) {
             auto called = dyn_cast<Function>(
                 CallSite(_call).getCalledValue()->stripPointerCasts());
@@ -374,10 +373,10 @@ static SetVector<llvm::Function *> getCallInst(llvm::Function &F) {
             // Skip debug function
             if (called->isDeclaration()) continue;
             call_inst.insert(called);
+            getCallInst(called, call_inst);
         }
     }
-
-    return call_inst;
+    return;
 }
 
 /**
@@ -424,7 +423,8 @@ int main(int argc, char **argv) {
     for (auto &F : *module) {
         if (F.isDeclaration()) continue;
         if (F.getName() == target_fn) {
-            auto call_inst = getCallInst(F);
+            SetVector<Function *> call_inst;
+            getCallInst(&F, call_inst);
             call_inst.insert(&F);
             for (auto ff : call_inst) {
                 runGraphGen(*module, ff->getName());

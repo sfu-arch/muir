@@ -19,12 +19,12 @@
 
 using namespace llvm;
 
-using helpers::LabelUID;
-using helpers::pdgDump;
+using helpers::CallInstSpliter;
 using helpers::DFGPrinter;
 using helpers::GepInformation;
 using helpers::InstCounter;
-using helpers::CallInstSpliter;
+using helpers::LabelUID;
+using helpers::pdgDump;
 
 /**
  * Helper classes
@@ -35,7 +35,7 @@ namespace helpers {
 char LabelUID::ID = 0;
 
 RegisterPass<LabelUID> X("lableUID", "Labeling the instructions with UID");
-}
+}  // namespace helpers
 
 template <typename T>
 void LabelUID::visitGeneric(string S, T &IT) {
@@ -80,7 +80,7 @@ bool LabelUID::runOnFunction(Function &F) {
 namespace helpers {
 char pdgDump::ID = 0;
 RegisterPass<pdgDump> Y("pdgDump", "Dumping PDG");
-}
+}  // namespace helpers
 
 bool pdgDump::runOnFunction(Function &F) {
     errs() << "digraph " + F.getName() + "{\n";
@@ -127,7 +127,7 @@ string getOpcodeStr(unsigned int N) {
 }
 
 char DFGPrinter::ID = 0;
-}
+}  // namespace helpers
 
 bool DFGPrinter::doInitialization(Module &M) {
     dot.clear();
@@ -162,13 +162,15 @@ void DFGPrinter::visitFunction(Function &F) {
         return after;
     };
 
-    auto subGraphFormat = [&escape_quotes](
-        uint64_t id, string label, string color, string name) -> string {
+    auto subGraphFormat = [&escape_quotes](uint64_t id, string label,
+                                           string color,
+                                           string name) -> string {
         stringstream sstr;
         std::replace(name.begin(), name.end(), '.', '_');
         auto eir = escape_quotes(name);
-        sstr << "    subgraph cluster" << label << id << " {\n"
-                                                         "        label=\""
+        sstr << "    subgraph cluster" << label << id
+             << " {\n"
+                "        label=\""
              << name << "\"\n";
         return sstr.str();
     };
@@ -283,7 +285,6 @@ void DFGPrinter::visitInstruction(Instruction &I) {
     auto controlEdge = [&escape_quotes](uint64_t src_id, uint64_t dst_id,
                                         uint64_t port, string bb_lable,
                                         uint64_t bb_id, string color) {
-
         stringstream sstr;
         sstr << "    m_" << src_id << ":s" << port << " -> m_" << dst_id
              << "[color=red, style=dotted, lhead=\"cluster" << bb_lable << bb_id
@@ -425,24 +426,31 @@ void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 
     } else if (src_type->isArrayTy()) {
         auto src_array_type = dyn_cast<llvm::ArrayType>(src_type);
-        tmp_align.push_back(
-            DL.getTypeAllocSize(src_array_type->getArrayElementType()));
-        // tmp_align.push_back(DL.getTypeAllocSize(src_type));
-
-        DEBUG(errs() << src_array_type->getArrayNumElements() << "\n");
-        DEBUG(errs() << DL.getTypeAllocSize(src_array_type) << "\n");
+        //
+        DEBUG(I.dump());
+        DEBUG(errs() << "Num elements: "
+                     << src_array_type->getArrayNumElements() << "\n");
+        DEBUG(errs() << "Array size: " << DL.getTypeAllocSize(src_array_type)
+                     << "\n");
+        DEBUG(
+            errs() << "Array element size: "
+                   << DL.getTypeAllocSize(src_array_type->getArrayElementType())
+                   << "\n");
         DEBUG(
             errs() << "Num byte: "
                    << DL.getTypeAllocSize(src_array_type->getArrayElementType())
                    << "\n");
+
+        tmp_align.push_back(DL.getTypeAllocSize(src_type));
+        tmp_align.push_back(
+            DL.getTypeAllocSize(src_array_type->getArrayElementType()));
+
     } else if (src_type->isIntegerTy() || src_type->isDoubleTy() ||
                src_type->isFloatTy()) {
         tmp_align.push_back(DL.getTypeAllocSize(src_type));
-    }
-    else if(src_type->isPointerTy()){
+    } else if (src_type->isPointerTy()) {
         tmp_align.push_back(DL.getTypeAllocSize(src_type));
-    }
-    else {
+    } else {
         // Dumping the instruction
         DEBUG(errs() << PURPLE("[DEBUG] "));
         DEBUG(errs() << "Instruction: ");
@@ -596,7 +604,7 @@ namespace helpers {
 char InstCounter::ID = 0;
 // static RegisterPass<pdgDump> X(
 //"InstructionCounter", "Counting number of instructions at each BasicBlock");
-}
+}  // namespace helpers
 
 bool InstCounter::doInitialization(Module &M) { return false; }
 
@@ -746,7 +754,7 @@ char CallInstSpliter::ID = 0;
 
 RegisterPass<CallInstSpliter> W(
     "CallInstSpliter", "Spliting basic blocks after each call function");
-}
+}  // namespace helpers
 
 bool CallInstSpliter::doInitialization(Module &M) { return false; }
 

@@ -1,17 +1,21 @@
 #include <stdio.h>
 #include <cilk/cilk.h>
 
-unsigned cilk_for_test03(unsigned j) {
-  unsigned foo = j;
+unsigned cilk_for_test03(unsigned *a, unsigned *b, unsigned *c) {
   cilk_for (unsigned i = 0; i < 5; ++i) {
-      cilk_for(unsigned k = 0; k < 5; ++k){
-        foo++;
-      }
+    c[i]=a[i]+b[i];
   }
-  return foo;
+  return 1;
 }
 
 int main() {
-  int result = cilk_for_test03(100);
-  printf("%d\n",result);
+  int i;
+  unsigned a[5] = {1,2,3,4,5};
+  unsigned b[5] = {1,2,3,4,5};
+  unsigned c[5] = {0};
+  cilk_for_test03(a,b,c);
+  for(i=0;i<5;i++) {
+    printf("%d\n", c[i]);
+  }
+
 }

@@ -599,9 +599,8 @@ std::string MemoryNode::printDefinition(PrintType pt) {
 
             // TODO this part can be parametrize using config file
             helperReplace(_text, "$size", MEM_SIZE);
-            helperReplace(
-                _text, "$num_read",
-                returnMinimumPort(this->numReadDataInputPort(), 0));
+            helperReplace(_text, "$num_read",
+                          returnMinimumPort(this->numReadDataInputPort(), 0));
             helperReplace(_text, "$num_write",
                           returnMinimumPort(this->numWriteDataInputPort(), 0));
             helperReplace(_text, "$read_num_op",
@@ -3142,8 +3141,22 @@ std::string GepNode::printDefinition(PrintType _pt) {
             std::copy(this->gep_info.element_size.begin(),
                       std::prev(this->gep_info.element_size.end()),
                       std::experimental::make_ostream_joiner(_array, ", "));
+
+            // outs() << "SIZE: " << this->gep_info.element_size.size() << "\n";
+
+            // if (this->gep_info.element_size.size() > 1) {
+            // std::copy(
+            // this->gep_info.element_size.begin(),
+            // std::prev(this->gep_info.element_size.end()),
+            // std::experimental::make_ostream_joiner(std::cout, ", "));
+            //} else
+            //_array << *this->gep_info.element_size.begin();
+
+            // for(this->gep_info.element_size)
+
             helperReplace(_text, "$size",
                           *std::prev(this->gep_info.element_size.end()));
+
             helperReplace(_text, "$array", "List(" + _array.str() + ")");
 
             break;
