@@ -1,5 +1,8 @@
 # Dandelion Generator
 
+
+[![pipeline status](https://csil-git1.cs.surrey.sfu.ca/Dandelion/dandelion-generator/badges/master/pipeline.svg)](https://csil-git1.cs.surrey.sfu.ca/Dandelion/dandelion-generator/commits/master)
+
 Getting Started
 =======
 Official supported environment for building and running TAPAS is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :

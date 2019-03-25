@@ -1,7 +1,11 @@
 KERN=fft
 ALG=strided
 
+<<<<<<< HEAD
 CFLAGS?=-O1 -g -Wall -Wno-unused-label
+=======
+CFLAGS?=-O1 -Wall -Wno-unused-label
+>>>>>>> dbe7b8c88f89e0f94435e47e73094c562c6353ed
 
 SRCS=$(KERN).c local_support.c ../../common/support.c
 FILES=$(SRCS) $(KERN).h ../../common/support.h

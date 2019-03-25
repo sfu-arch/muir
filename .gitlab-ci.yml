@@ -1,0 +1,46 @@
+stages:
+  - build
+  - test
+
+job1:
+  stage: build
+
+  tags:
+    - llvm
+    - chisel
+
+  before_script:
+    - source /home/amirali/Downloads/modules-4.2.2/init/profile.sh
+    - module load llvm/tapir
+
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DTAPIR=ON -G Ninja ../
+    - ninja
+
+  artifacts:
+      paths:
+        - build
+
+job2:
+  stage: test
+
+  tags:
+    - llvm
+    - chisel
+
+  script:
+    - cd test/c
+    - make
+
+job3:
+  stage: test
+
+  tags:
+    - llvm
+    - chisel
+
+  script:
+    - cd test/c/cilk/
+    - make

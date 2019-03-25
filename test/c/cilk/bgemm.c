@@ -32,7 +32,6 @@ void bgemm(int m1[], int m2[], int prod[]){
     loopjj:cilk_for (int jj = 0; jj < row_size; jj += block_size){
         loopkk:cilk_for (int kk = 0; kk < row_size; kk += block_size){
             loopi:cilk_for ( int i = 0; i < row_size; ++i){
-		//printf("\nworker id = %d", __cilkrts_get_worker_number ());
                 loopk:for (int k = 0; k < block_size; ++k){
                     i_row = i * row_size;
                     k_row = (k  + kk) * row_size;
@@ -59,8 +58,10 @@ int main () {
 
 	for (int i = 0; i < N; i++) {
 
-		a[i] = rand() % 10;
-		b[i] = rand() % 10;		
+		a[i] = i;
+		//a[i] = rand() % 10;
+		//b[i] = rand() % 10;		
+		b[i] = i;		
 		c[i] = 0;
 
 	}
