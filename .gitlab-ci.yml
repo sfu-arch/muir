@@ -11,7 +11,14 @@
 #     # Execute your project's tests
 #     - sbt compile
 
+stages:
+  - build
+  - test
+  - deploy
+
 job1:
+  stage: build
+
   tags:
     - llvm
     - chisel
@@ -35,3 +42,14 @@ job1:
     - cd build
     - cmake -DTAPIR=ON -G Ninja ../
     - ninja
+
+job2:
+  stage: test
+
+  tags:
+    - llvm
+    - chisel
+
+  script:
+    - cd test/c
+    - make
