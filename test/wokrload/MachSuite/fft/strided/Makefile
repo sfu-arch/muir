@@ -1,7 +1,7 @@
 KERN=fft
 ALG=strided
 
-CFLAGS?=-O0 -Wall -Wno-unused-label
+CFLAGS?=-O1 -g -Wall -Wno-unused-label
 
 SRCS=$(KERN).c local_support.c ../../common/support.c
 FILES=$(SRCS) $(KERN).h ../../common/support.h
