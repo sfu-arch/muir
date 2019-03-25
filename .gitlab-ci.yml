@@ -22,6 +22,9 @@ job1:
   tags:
     - llvm
     - chisel
+
+  artifacts:
+    - build
     
   before_script:
     - source /home/amirali/Downloads/modules-4.2.2/init/profile.sh
