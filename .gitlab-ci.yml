@@ -23,9 +23,6 @@ job1:
     - llvm
     - chisel
 
-  artifacts:
-    - build
-    
   before_script:
     - source /home/amirali/Downloads/modules-4.2.2/init/profile.sh
     - module load llvm/tapir
@@ -45,6 +42,11 @@ job1:
     - cd build
     - cmake -DTAPIR=ON -G Ninja ../
     - ninja
+
+  artifacts:
+      paths:
+        - build
+    
 
 job2:
   stage: test
