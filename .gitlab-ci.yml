@@ -33,5 +33,5 @@ job1:
   script:
     - mkdir build
     - cd build
-    - cmake -DTAPIR -GNinja ../
+    - cmake -DTAPIR=ON -GNinja ../
     - ninja
