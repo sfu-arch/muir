@@ -1,20 +1,6 @@
-# This file is a template, and might need editing before it works on your project.
-# Official Java image. Look for the different tagged releases at
-# https://hub.docker.com/r/library/java/tags/ . A Java image is not required
-# but an image with a JVM speeds up the build a bit.
-# image: java:8
-
-
-
-# test:
-#   script:
-#     # Execute your project's tests
-#     - sbt compile
-
 stages:
   - build
   - test
-  - deploy
 
 job1:
   stage: build
@@ -26,17 +12,7 @@ job1:
   before_script:
     - source /home/amirali/Downloads/modules-4.2.2/init/profile.sh
     - module load llvm/tapir
-#     #   # Enable the usage of sources over https
-#     - apt-get update -yqq
-#     - apt-get install apt-transport-https -yqq
-#     #   Add keyserver for SBT
-#     - echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
-#     - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
-#     #   Install SBT
-#     - apt-get update -yqq
-#     - apt-get install sbt -yqq
-#      # Log the sbt version
-#     - sbt sbtVersion
+
   script:
     - mkdir build
     - cd build
@@ -46,7 +22,6 @@ job1:
   artifacts:
       paths:
         - build
-    
 
 job2:
   stage: test
@@ -57,4 +32,15 @@ job2:
 
   script:
     - cd test/c
+    - make
+
+job3:
+  stage: test
+
+  tags:
+    - llvm
+    - chisel
+
+  script:
+    - cd test/c/cilk/
     - make
