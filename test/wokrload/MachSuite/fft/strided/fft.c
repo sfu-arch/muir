@@ -33,16 +33,3 @@ outer:
         }
     }
 }
-
-/*int main() {*/
-    /*double real[FFT_SIZE];*/
-    /*double img[FFT_SIZE];*/
-    /*double real_twid[FFT_SIZE / 2];*/
-    /*double img_twid[FFT_SIZE / 2];*/
-
-    /*fft(real, img, real_twid, img_twid);*/
-
-    /*for (unsigned i = 0; i < FFT_SIZE; ++i) {*/
-        /*printf("Res: %d\n", img_twid[i]);*/
-    /*}*/
-/*}*/

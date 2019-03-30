@@ -2736,7 +2736,7 @@ std::string SextNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "  val $name = Module(new $type())\n\n";
+            _text = "  val $name = Module(new $type(NumOuts = $num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -2813,7 +2813,7 @@ std::string ZextNode::printDefinition(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "  val $name = Module(new $type())\n\n";
+            _text = "  val $name = Module(new $type(NumOuts = $num_out))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -2850,8 +2850,9 @@ std::string ZextNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out";
+            _text = "$name.io.Out($id)";
             helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _id);
 
             break;
         case PrintType::Dot:
