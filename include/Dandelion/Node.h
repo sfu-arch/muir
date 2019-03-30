@@ -1620,6 +1620,29 @@ class ZextNode : public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
+/**
+ * truncate node
+ */
+class TruncNode: public InstructionNode {
+   public:
+    TruncNode(NodeInfo _ni, llvm::TruncInst *_ins = nullptr,
+             NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::TruncInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::TruncInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
+
 class ReattachNode : public InstructionNode {
    private:
     bool ground;

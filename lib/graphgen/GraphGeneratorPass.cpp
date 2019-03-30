@@ -15,7 +15,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
-#include <experimental/numeric>
+#include <numeric>
 #include <iostream>
 
 #include "AliasEdgeWriter.h"
@@ -615,6 +615,12 @@ void GraphGeneratorPass::visitSExtInst(llvm::SExtInst &I) {
 void GraphGeneratorPass::visitZExtInst(llvm::ZExtInst &I) {
     map_value_node[&I] = this->dependency_graph->insertZextNode(I);
 }
+
+void GraphGeneratorPass::visitTruncInst(llvm::TruncInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertTruncNode(I);
+}
+
+
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();

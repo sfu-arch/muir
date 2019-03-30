@@ -193,6 +193,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     void visitSExtInst(llvm::SExtInst &);
     void visitZExtInst(llvm::ZExtInst &);
+    void visitTruncInst(llvm::TruncInst&);
 
     void visitFAdd(llvm::BinaryOperator &);
     void visitFSub(llvm::BinaryOperator &);

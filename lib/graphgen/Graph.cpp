@@ -1182,6 +1182,7 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
     return ff->get();
 }
 
+
 /**
  * Insert a new select node
  */
@@ -1418,6 +1419,25 @@ ConstIntNode *Graph::insertConstIntNode() {
 
     return const_int_list.back().get();
 }
+
+/**
+ * Insert a new sext node
+ */
+InstructionNode *Graph::insertTruncNode(TruncInst &I) {
+    inst_list.push_back(std::make_unique<TruncNode>(
+        NodeInfo(inst_list.size(),
+                 "trunc" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+
 
 /**
  * Insert a new sext node
