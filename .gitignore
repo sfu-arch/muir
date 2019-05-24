@@ -1,20 +1,10 @@
 build/*
 build-tapir/*
 cmake-build-*
-luacpptemplater/*
 tags
 .idea
-*.swp
-.ycm_extra_conf.py
-*.svg
-*.out
-*.orig
-*.dot
-*.scala
-*.ll
-<<<<<<< HEAD
 compile_commands.json
-=======
+
 *~
 *.autosave
 *.a
@@ -57,6 +47,7 @@ Thumbs.db
 
 # Vim temporary files
 .*.swp
+.ycm_extra_conf.py
 
 # Visual Studio generated files
 *.ib_pdb_index
@@ -90,5 +81,3 @@ CMakeLists.txt.user
 build-*
 build*
 build-Clang_Desktop-Default/
-
->>>>>>> eb941ee7f9e0f6fc2bd09318acd2899d31d51272

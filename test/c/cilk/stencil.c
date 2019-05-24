@@ -5,7 +5,8 @@
 #include <cilk/cilk.h>
 /*#include <cilk/cilk_api.h>*/
 
-#define LOOP_SIZE 1000000
+/*#define LOOP_SIZE 1000000*/
+#define LOOP_SIZE 1
 #define TIME
 
 double timespec_to_ms(struct timespec *ts)
@@ -18,7 +19,7 @@ double timespec_to_ms(struct timespec *ts)
 #define NBRROWS (1)
 #define NBRCOLS (1)
 #define NWORKERS (4)
-#define NSTEPS (5)
+#define NSTEPS (1)
 #define FILTCOLS (1 + NBRROWS * 2)
 #define FILTROWS (1 + NBRCOLS * 2)
 #define UNSIGNED
@@ -56,6 +57,10 @@ void stencil(unsigned in[], unsigned out[]) {
         for (unsigned nr = 0; nr <= 2 * NBRROWS; nr++) {
             stencil_inner(in, out, i, j, nr);
         }
+        /*printf("i: %d, j: %d, out[i][j]=%d, filr*filcol=%d , (out+fil)/9=%d \n", i, j, out[i * NCOLS + j],(FILTROWS * FILTCOLS),*/
+        /*(out[i * NCOLS + j] + (FILTROWS * FILTCOLS)) /*/
+                             /*(FILTROWS * FILTCOLS)*/
+                /*);*/
         out[i * NCOLS + j] = (out[i * NCOLS + j] + (FILTROWS * FILTCOLS)) /
                              (FILTROWS * FILTCOLS);
     }
@@ -76,6 +81,7 @@ void stencil(unsigned in[], unsigned out[]) {
                 }
             }
         }
+        printf("i: %d, j: %d, out[i][j]=%d\n", i, j, out[i * NCOLS + j]);
         out[i * NCOLS + j] = (out[i * NCOLS + j] + (FILTROWS * FILTCOLS)) /
                              (FILTROWS * FILTCOLS);
     }
