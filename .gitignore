@@ -10,7 +10,7 @@ compile_commands.json
 .*.ll
 test/c
 test/cilk
-test/workload/*
+test/wokrload
 *.dot
 *~
 *.autosave
