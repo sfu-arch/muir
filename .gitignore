@@ -3,6 +3,7 @@ build-tapir/*
 cmake-build-*
 tags
 .idea
+.vscode
 compile_commands.json
 
 *.bc
