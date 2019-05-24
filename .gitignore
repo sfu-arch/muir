@@ -5,6 +5,11 @@ tags
 .idea
 compile_commands.json
 
+*.bc
+.*.ll
+test/c
+test/cilk
+*.dot
 *~
 *.autosave
 *.a
