@@ -1,8 +1,0 @@
-num-aa-pairs 0
-num-ipaa-may-alias 0
-num-ipaa-no-alias 0
-num-ld-ld-pairs 0
-num-may-alias-naive 0
-num-must-alias 0
-num-no-alias 0
-num-partial-alias 0
