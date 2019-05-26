@@ -3,16 +3,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#define FPGA_SIM
-#define TIME
-
-#ifdef FPGA_SIM
 #include <pthread.h>
-pthread_t fpga_thread;
-pthread_t host_thread;
-pthread_mutex_t mem_lock;
-#endif
+
 
 #define STAT_ADDRESS 0x00000800
 #define CNT_ADDRESS 0x00000000
@@ -31,6 +23,11 @@ pthread_mutex_t mem_lock;
 #define CNT_ADDRESS 0x00000000
 #define CNT_ADDRESS 0x00000000
 #define CNT_ADDRESS 0x00000000
+
+
+pthread_t fpga_thread;
+pthread_t host_thread;
+pthread_mutex_t mem_lock;
 
 /*
  *
@@ -181,40 +178,12 @@ void *host_exe(void *mem) {
 
 int main(void) {
 
-  // === get FPGA addresses ===
-  // Open /dev/mem
-  int fd;
-
-#ifdef FPGA_SIM
-  // === FPGA PTR ===
-
-  volatile unsigned int *vptr_fpga = NULL;
-
-  vptr_fpga = create_shared_memory(1 << 12);
-
-#elif
   // === FPGA PTR ===
   volatile unsigned int *vptr_fpga = NULL;
 
-  if ((fd = open("/dev/mem", (O_RDWR | O_SYNC))) == -1) {
-    printf("ERROR: could not open \"/dev/mem\"...\n");
-    return (1);
-  }
-
-  // Get a virtual pointer to 4k window at FPGA address.
-  vptr_fpga =
-      mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, fd, SDRAM_BASE);
-
-  if (vptr_fpga == MAP_FAILED) {
-    printf("ERROR: mmap() failed...\n");
-    close(fd);
-    return (1);
-  }
-
-#endif
+  vptr_fpga = (unsigned int *)create_shared_memory(1 << 12);
 
   // This part only exist to simulate FPGA
-#ifdef FPGA_SIM
   if (pthread_mutex_init(&mem_lock, NULL) != 0) {
     printf("\n mutex init failed\n");
     return 1;
@@ -231,10 +200,6 @@ int main(void) {
 
   pthread_join(fpga_thread, NULL);
   pthread_join(host_thread, NULL);
-#elif
-
-  host_exe(vptr_fpga);
-#endif
 
   printf("[LOG] Finish execution\n");
 
