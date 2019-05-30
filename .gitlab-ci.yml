@@ -25,6 +25,9 @@ job1:
 job2:
   stage: test
 
+  before_script:
+    - module load llvm/tapir-6
+
   tags:
     - llvm
     - chisel
@@ -39,6 +42,9 @@ job3:
   tags:
     - llvm
     - chisel
+
+  before_script:
+    - module load llvm/tapir-6
 
   script:
     - cd test/c/cilk/
