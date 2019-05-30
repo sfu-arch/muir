@@ -10,8 +10,7 @@ job1:
     - chisel
 
   before_script:
-    - source /home/amirali/Downloads/modules-4.2.2/init/profile.sh
-    - module load llvm/tapir
+    - module load llvm/tapir-6
 
   script:
     - mkdir build
