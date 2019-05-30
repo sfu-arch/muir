@@ -11,7 +11,7 @@
 #include <ostream>
 #include <set>
 
-#include "json/json.h"
+#include "jsoncpp/json/json.h"
 
 #include "Dandelion/Edge.h"
 #include "Dandelion/Node.h"
