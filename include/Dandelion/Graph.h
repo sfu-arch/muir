@@ -244,7 +244,7 @@ class Graph {
     void printAllocaOffset(PrintType);
 
     // Scala specific functions
-    void printScalaHeader(std::string, std::string);
+    void printScalaHeader(std::string json_path);
     void printScalaFunctionHeader();
     void printScalaInputSpliter();
     void printScalaMainClass();

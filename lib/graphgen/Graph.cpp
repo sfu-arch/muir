@@ -80,7 +80,7 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             DEBUG(dbgs() << "Print Graph information!\n");
 
             // TODO: pass the corect config path
-            printScalaHeader(json_path, "dataflow");
+            printScalaHeader(json_path);
 
             doInitialization();
 
@@ -902,7 +902,7 @@ void Graph::printScalaFunctionHeader() {
 /**
  * Print specific scala header files
  */
-void Graph::printScalaHeader(string config_path, string package_name) {
+void Graph::printScalaHeader(string config_path) {
     std::ifstream _in_file(config_path);
     Json::Value _root_json;
 
@@ -911,7 +911,8 @@ void Graph::printScalaHeader(string config_path, string package_name) {
     assert(!_root_json["import"].empty() && "Config should contain import key");
 
     // TODO add one level of package to the config json file
-    outCode << "package " << package_name << "\n\n";
+    auto package_name = _root_json["package-name"];
+    outCode << "package " << package_name.asString()  << "\n\n";
 
     for (auto _it_obj = _root_json["import"].begin();
          _it_obj != _root_json["import"].end(); _it_obj++) {
@@ -1855,21 +1856,6 @@ void Graph::doInitialization() {
                                _child.first->returnDataInputPortIndex(_ptr)));
         }
     }
-    // for (auto &_loop : loop_nodes) {
-    // for (auto &_l_out : _loop->live_out_lists()) {
-    // if (_l_out->getArgType() != ArgumentNode::LoopLiveOut) continue;
-    // for (auto &_child : _l_out->output_data_range()) {
-    // this->insertEdge(
-    // Edge::EdgeType::DataTypeEdge,
-    // std::make_pair(
-    //&*_l_out,
-    //_l_out->returnDataOutputPortIndex(&*_child.first)),
-    // std::make_pair(
-    //&*_child.first,
-    //_child.first->returnDataInputPortIndex(&*_l_out)));
-    //}
-    //}
-    //}
 
     for (auto &_arg : this->getSplitCall()->live_in_lists()) {
         if (_arg->getArgType() != ArgumentNode::LiveIn) continue;

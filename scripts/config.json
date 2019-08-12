@@ -1,4 +1,5 @@
 {
+    "package-name" : "dandelion.generator",
     "import":{
         "chisel3":[
             "util",
@@ -9,19 +10,19 @@
 
         "org.scalatest":"_",
         "muxes":"_",
-        "config":"_",
-        "control":"_",
+        "dandelion.config":"_",
+        "dandelion.control":"_",
         "util":"_",
-        "interfaces":"_",
+        "dandelion.interfaces":"_",
         "regfile":"_",
-        "memory":"_",
-        "stack":"_",
-        "arbiters":"_",
-        "loop":"_",
-        "accel":"_",
-        "node":"_",
-        "junctions":"_",
-        "FPU":"_"
+        "dandelion.memory":"_",
+        "dandelion.memory.stack":"_",
+        "dandelion.arbiters":"_",
+        "dandelion.loop":"_",
+        "dandelion.accel":"_",
+        "dandelion.node":"_",
+        "dandelion.junctions":"_",
+        "dandelion.fpu":"_"
     }
 }
 
