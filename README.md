@@ -20,7 +20,7 @@ To build TAPAS you should run following commands :
 ```
 $ git clone git@github.com/sfu-arch/TAPAS.git
 $ cd TAPAS
-$ git clone --recursive https://github.com/sfu-arch/Tapir-Meta.git
+$ git clone --recursive git@csil-git1.cs.surrey.sfu.ca:Dandelion/Tapir-Meta.git
 $ cd Tapir-Meta/
 $ ./build.sh
 $ source ./setup-env.sh
