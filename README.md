@@ -18,7 +18,7 @@ Build
 =======
 To build TAPAS you should run following commands :
 ```
-$ git clone git@github.com/sfu-arch/TAPAS.git
+$ git clone git@csil-git1.cs.surrey.sfu.ca:Dandelion/dandelion-generator.git
 $ cd TAPAS
 $ git clone --recursive git@csil-git1.cs.surrey.sfu.ca:Dandelion/Tapir-Meta.git
 $ cd Tapir-Meta/
