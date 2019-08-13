@@ -7,11 +7,7 @@ Getting Started
 =======
 Official supported environment for building and running dandelion-generator is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
 ```
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-sudo apt-get update
-
-apt-get install build-essential cmake sbt libjsoncpp-dev
+sudo apt-get install build-essential cmake libjsoncpp-dev
 ````
 
 Build
