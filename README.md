@@ -7,7 +7,7 @@ Getting Started
 =======
 Official supported environment for building and running dandelion-generator is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
 ```
-sudo apt-get install build-essential cmake libjsoncpp-dev
+sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev
 ````
 
 Build
@@ -19,12 +19,22 @@ $ cd dandelion-generator
 $ git clone --recursive git@csil-git1.cs.surrey.sfu.ca:Dandelion/Tapir-Meta.git
 $ cd Tapir-Meta/
 $ ./build.sh
+
+# If you get this error: Just ignore 
+# -- Performing Test CXX_HAVE_CILK_SUPPORT - Failed
+# CMake Error at CMakeLists.txt:132 (message):
+#     CXX compiler must support Cilk.
+#
+#
+#     -- Configuring incomplete, errors occurred!
+
+
+
 $ source ./setup-env.sh
 $ cd ..; mkdir build; cd build;
 $ cmake -DLLVM_DIR=<your repository>/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
 $ make
  ```
-
 Running tests
 =======
 Inside test directory there are set of test example which show the generality of dandelion-generator.
