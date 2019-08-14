@@ -7,7 +7,7 @@ Getting Started
 =======
 Official supported environment for building and running dandelion-generator is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
 ```
-sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev
+sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
 ````
 
 Build
