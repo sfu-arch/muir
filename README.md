@@ -12,6 +12,9 @@ sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev
 
 Build
 =======
+```
+#1. FInd Install instructions for verilator from dandelion-lib repository 
+```
 To build dandelion-generator you should run following commands :
 ```
 $ git clone git@csil-git1.cs.surrey.sfu.ca:Dandelion/dandelion-generator.git
