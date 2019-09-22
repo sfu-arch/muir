@@ -15,8 +15,8 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
-#include <numeric>
 #include <iostream>
+#include <numeric>
 
 #include "AliasEdgeWriter.h"
 #include "Dandelion/Node.h"
@@ -620,8 +620,6 @@ void GraphGeneratorPass::visitTruncInst(llvm::TruncInst &I) {
     map_value_node[&I] = this->dependency_graph->insertTruncNode(I);
 }
 
-
-
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();
@@ -830,7 +828,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
             }
 
             // First operand of a call function is a pointer to itself
-            if (auto fn = dyn_cast<llvm::Function>(operand)) continue;
+            if (llvm::isa<llvm::Function>(operand)) continue;
 
             if (auto target_bb = dyn_cast<llvm::BasicBlock>(operand)) {
                 // If target operand is basicblock it means the instruction
@@ -1007,8 +1005,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             ->addconstFPNode(
                                 dyn_cast<ConstFPNode>(_const_node));
                     }
-                } else if (auto undef_value =
-                               dyn_cast<llvm::UndefValue>(operand)) {
+                } else if (llvm::isa<llvm::UndefValue>(operand)) {
                     // TODO define an undef node instead of uisng empty
                     // const
                     // node!
@@ -1298,7 +1295,7 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     // Because you don't need to make reattach node's
                     // connecitons
                     // they already exist.
-                    if (auto reatach = dyn_cast<ReattachNode>(_ins)) continue;
+                    if (llvm::isa<ReattachNode>(_ins)) continue;
 
                     // Detect Phi instrucctions
                     if (auto _phi_ins = dyn_cast<PhiSelectNode>(_ins)) {
@@ -1585,7 +1582,8 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
     uint32_t c_id = 0;
     for (auto &L : getLoops(loop_info)) {
         auto _new_loop = std::make_unique<LoopNode>(
-            NodeInfo(c_id, "Loop_" + std::to_string(c_id++)));
+            NodeInfo(c_id, "Loop_" + std::to_string(c_id)));
+        c_id++;
 
         // Insert loop node
         auto _loop_node =

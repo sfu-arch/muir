@@ -13,7 +13,7 @@
 
 #ifdef __APPLE__
 #include "json/json.h"
-#elif
+#else
 #include "jsoncpp/json/json.h"
 #endif
 
