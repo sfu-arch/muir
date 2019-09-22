@@ -11,7 +11,11 @@
 #include <ostream>
 #include <set>
 
+#ifdef __APPLE__
+#include "json/json.h"
+#elif
 #include "jsoncpp/json/json.h"
+#endif
 
 #include "Dandelion/Edge.h"
 #include "Dandelion/Node.h"

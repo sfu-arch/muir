@@ -137,13 +137,13 @@ bool DFGPrinter::doInitialization(Module &M) {
 void DFGPrinter::visitFunction(Function &F) {
     auto &nodes = this->nodes;
 
-    auto checkCall = [](const Instruction &I, string name) -> bool {
-        if (isa<CallInst>(&I) && dyn_cast<CallInst>(&I)->getCalledFunction() &&
-            dyn_cast<CallInst>(&I)->getCalledFunction()->getName().startswith(
-                name))
-            return true;
-        return false;
-    };
+    //auto checkCall = [](const Instruction &I, string name) -> bool {
+        //if (isa<CallInst>(&I) && dyn_cast<CallInst>(&I)->getCalledFunction() &&
+            //dyn_cast<CallInst>(&I)->getCalledFunction()->getName().startswith(
+                //name))
+            //return true;
+        //return false;
+    //};
 
     auto escape_quotes = [](const string &before) -> string {
         string after;
@@ -345,7 +345,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
     }
 #endif
     else {
-        auto BB = I.getParent();
+        // auto BB = I.getParent();
 
         for (auto OI : Operands) {
             std::string op;
@@ -361,7 +361,7 @@ void DFGPrinter::visitInstruction(Instruction &I) {
                 if (auto cnt = dyn_cast<llvm::ConstantInt>(OI)) {
                     auto cnt_value = cnt->getSExtValue();
                     if (nodes.count(OI) == 0) {
-                        nodes[OI] = cnt->getSExtValue();
+                        nodes[OI] = cnt_value;
                         dot << "    cnst_" << cnt->getSExtValue() << "[label=\""
                             << cnt->getSExtValue()
                             << "\", color=blue, constraint=false]\n";
@@ -409,9 +409,9 @@ char GepInformation::ID = 0;
 void GepInformation::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
     // Getting datalayout
     auto DL = I.getModule()->getDataLayout();
-    uint32_t numByte = 0;
-    uint64_t start_align = 0;
-    uint64_t end_align = 0;
+    // uint32_t numByte = 0;
+    // uint64_t start_align = 0;
+    // uint64_t end_align = 0;
     std::vector<uint32_t> tmp_align;
 
     auto src_type = I.getSourceElementType();

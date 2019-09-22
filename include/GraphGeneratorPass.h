@@ -9,7 +9,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef __APPLE__
+#include "json/json.h"
+#elif
 #include "jsoncpp/json/json.h"
+#endif
 
 #include "Common.h"
 #include "NodeType.h"

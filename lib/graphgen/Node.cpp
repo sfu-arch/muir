@@ -22,9 +22,11 @@ using namespace helpers;
 using namespace std::placeholders;
 
 std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number) {
-    auto sign = std::bitset<1>(_number.raw.sign);
-    auto exponent = std::bitset<8>(_number.raw.exponent);
-    auto mantissa = std::bitset<23>(_number.raw.mantissa);
+
+    //TODO: Enable if the following lines if it's needed
+    // auto sign = std::bitset<1>(_number.raw.sign);
+    // auto exponent = std::bitset<8>(_number.raw.exponent);
+    // auto mantissa = std::bitset<23>(_number.raw.mantissa);
 
     std::stringstream _output;
     _output << "0x" << std::hex << _number.bits;
