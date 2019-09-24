@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.15)
 project(xketch-generator)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -87,7 +87,18 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/include)
 link_directories(${LIBRARY_OUTPUT_PATH})
 set(CMAKE_TEMP_LIBRARY_PATH "${PROJECT_BINARY_DIR}/lib")
+
 # TODO: Add install path to the list....
+
+
+#configure_file("${CMAKE_SOURCE_DIR}/tests" "${CMAKE_CURRENT_BINARY_DIR}/" @COPYONLY)
+file(COPY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
+configure_file("${CMAKE_SOURCE_DIR}/tests/c/Makefile" "${CMAKE_CURRENT_BINARY_DIR}/tests/c/Makefile" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/scripts/colors.sh" "${CMAKE_CURRENT_BINARY_DIR}/scripts/colors.sh" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/scripts/config.json" "${CMAKE_CURRENT_BINARY_DIR}/scripts" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/setup.sh"
+            "${CMAKE_CURRENT_BINARY_DIR}/scripts/setup.sh" @ONLY)
+
 
 add_subdirectory(lib)
 add_subdirectory(tools)
