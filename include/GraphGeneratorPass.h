@@ -11,7 +11,7 @@
 
 #ifdef __APPLE__
 #include "json/json.h"
-#elif
+#else
 #include "jsoncpp/json/json.h"
 #endif
 
@@ -47,7 +47,7 @@ struct LoopSummary {
     // Control information
     llvm::Instruction *enable;
     llvm::Instruction *loop_back;
-    llvm::SetVector<llvm::Instruction *> loop_finish;
+    std::set<llvm::Instruction *> loop_finish;
 
     llvm::BasicBlock *header;
     llvm::SmallVector<llvm::BasicBlock *, 8> exit_blocks;
@@ -131,24 +131,24 @@ class GraphGeneratorPass : public llvm::ModulePass,
         live_in_ins_loop_edge;
 
     std::map<llvm::Value *,
-             llvm::SmallSetVector<std::pair<llvm::Loop *, llvm::Loop *>, 8>>
+             std::set<std::pair<llvm::Loop *, llvm::Loop *>>>
         live_in_loop_loop_edge;
 
     llvm::DenseMap<
         llvm::Loop *,
-        llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
+        std::set<std::pair<llvm::Value *, llvm::Value *>>>
         live_in_loop_ins_edge;
 
-    std::map<llvm::Value *, llvm::SmallSetVector<llvm::Loop *, 8>>
+    std::map<llvm::Value *, std::set<llvm::Loop *>>
         live_out_ins_loop_edge;
 
     std::map<llvm::Value *,
-             llvm::SmallSetVector<std::pair<llvm::Loop *, llvm::Loop *>, 8>>
+             std::set<std::pair<llvm::Loop *, llvm::Loop *>>>
         live_out_loop_loop_edge;
 
     llvm::DenseMap<
         llvm::Loop *,
-        llvm::SmallSetVector<std::pair<llvm::Value *, llvm::Value *>, 8>>
+        std::set<std::pair<llvm::Value *, llvm::Value *>>>
         live_out_loop_ins_edge;
 
     std::map<llvm::Value *, std::vector<std::pair<llvm::Loop *, llvm::Loop *>>>
