@@ -105,7 +105,8 @@ function build_tapir(){
     pushd ${DEPEN} > /dev/null
 
     git clone --recursive ${TAPIR_META}
-    pushd tapir_meta > /dev/null
+    pushd Tapir-Meta > /dev/null
+    chmod +x build.sh
     ./build.sh release
     popd > /dev/null
 
