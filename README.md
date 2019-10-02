@@ -12,25 +12,16 @@ sudo apt-get install gcc-8-multilib g++-8-multilib
 ````
 
 Build
-=======
-```
-#1. FInd Install instructions for verilator from dandelion-lib repository 
-```
-To build dandelion-generator you should run following commands :
-```
-$ git clone git@csil-git1.cs.surrey.sfu.ca:Dandelion/dandelion-generator.git
-$ cd dandelion-generator
-$ git clone --recursive git@csil-git1.cs.surrey.sfu.ca:Dandelion/Tapir-Meta.git
-$ cd Tapir-Meta/
-$ ./build.sh
+=====
 
-# If you get this error: Just ignore 
-# -- Performing Test CXX_HAVE_CILK_SUPPORT - Failed
-# CMake Error at CMakeLists.txt:132 (message):
-#     CXX compiler must support Cilk.
-#
-#
-#     -- Configuring incomplete, errors occurred!
+To build Dandelion dependencies, we have scripted installing the dependencies. To install the dependencies you need only to run the following commands:
+
+``` bash
+
+cd dandelion-generator
+./scripts/dandelion.sh
+
+```
 
 
 

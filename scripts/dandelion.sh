@@ -29,13 +29,30 @@ FIRRTL_GIT="https://github.com/freechipsproject/firrtl.git"
 CHISEL_TESTERS_GIT="https://github.com/freechipsproject/chisel-testers.git"
 BERKELEY_HARD_FLOAT_GIT="https://github.com/ucb-bar/berkeley-hardfloat.git"
 DSPTOOLS_GIT="https://github.com/ucb-bar/dsptools.git"
-TAPIR_META="https://csil-git1.cs.surrey.sfu.ca/Dandelion/Tapir-Meta.git"
+TAPIR_META="https://github.com/sfu-arch/Tapir-Meta.git"
 
 DEPEN="dependencies"
 
 # ----------------------------------
 # FUNCTIONS
 # ----------------------------------
+
+progress-bar() {
+  local duration=${1}
+
+
+    already_done() { for ((done=0; done<$elapsed; done++)); do printf "▇"; done }
+    remaining() { for ((remain=$elapsed; remain<$duration; remain++)); do printf " "; done }
+    percentage() { printf "| %s%%" $(( (($elapsed)*100)/($duration)*100/100 )); }
+    clean_line() { printf "\r"; }
+
+  for (( elapsed=1; elapsed<=$duration; elapsed++ )); do
+      already_done; remaining; percentage
+      sleep 1
+      clean_line
+  done
+  clean_line
+}
 
 function mill_publish(){
     make mill.publishLocal
@@ -102,18 +119,61 @@ function build_dependencies(){
     echo -e "${GREEN}Dependencies installed sucessfully...${NOCOLOR}"
 }
 
+function build_chisel(){
+    echo -e "${GREEN}Buidling chisel dependencies...${NOCOLOR}"
+    #progress-bar 10
+    git_clone "firrtl" ${FIRRTL_GIT}
+    git_clone "chisel3" ${CHISEL_GIT}
+    git_clone "chisel-testers" ${CHISEL_TESTERS_GIT}
+    git_clone "hardfloat" ${BERKELEY_HARD_FLOAT_GIT}
+    git_clone "dsptools" ${DSPTOOLS_GIT}
+}
+
 
 # ----------------------------------
 # SCRIPTS
 # ----------------------------------
 
+echo -e "${GREEN}Setting up Dandelion dependencies.......${NOCOLOR}"
+
 #1) Clone and build all the dependencies
-build_dependencies
-build_verilator
-build_tapir
-echo -e "${GREEN}Buidling chisel dependencies...${NOCOLOR}"
-git_clone "firrtl" ${FIRRTL_GIT}
-git_clone "chisel3" ${CHISEL_GIT}
-git_clone "chisel-testers" ${CHISEL_TESTERS_GIT}
-git_clone "hardfloat" ${BERKELEY_HARD_FLOAT_GIT}
-git_clone "dsptools" ${DSPTOOLS_GIT}
+while true; do
+    read -p "Do you wish to install Dandelion dependencies? [y/N]" yn
+    case ${yn:-N} in
+        [Yy]* ) build_dependencies; break;;
+        [Nn]* ) break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+# Installing verilator
+while true; do
+    read -p "Do you wish to install Verilator? [y/N]" yn
+    case ${yn:-N} in
+        [Yy]* ) build_verilator; break;;
+        [Nn]* ) break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+while true; do
+    read -p "Do you wish to install LLVM/Tapir? [y/N]" yn
+    case ${yn:-N} in
+        [Yy]* ) build_tapir; break;;
+        [Nn]* ) break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+while true; do
+    read -p "Do you wish to install Chisel dependencies? [Y/n]" yn
+    case ${yn:-Y} in
+        [Yy]* ) build_chisel; break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+
+
+
