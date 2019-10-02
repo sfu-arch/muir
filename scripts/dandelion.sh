@@ -115,7 +115,7 @@ function build_tapir(){
 function build_dependencies(){
     echo -e "${GREEN}Installing dependencies, it needs sudo access to update packages...${NOCOLOR}"
     sudo apt update
-    sudo apt install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib apt install git make autoconf g++ flex bison -y
+    sudo apt install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib git make autoconf g++ flex bison -Y
     echo -e "${GREEN}Dependencies installed sucessfully...${NOCOLOR}"
 }
 
