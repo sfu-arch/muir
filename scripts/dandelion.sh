@@ -104,10 +104,8 @@ function build_tapir(){
     mkdir -p ${DEPEN}
     pushd ${DEPEN} > /dev/null
 
-    git clone --recursive ${TAPIR_META}
+    git clone --branch release_60 --recursive ${TAPIR_META}
     pushd Tapir-Meta > /dev/null
-    git checkout release_60
-    chmod +x build.sh
     ./build.sh release
     popd > /dev/null
 
