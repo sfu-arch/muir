@@ -117,7 +117,12 @@ function build_tapir(){
 function build_dependencies(){
     echo -e "${GREEN}Installing dependencies, it needs sudo access to update packages...${NOCOLOR}"
     sudo apt update
-    sudo apt install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib git make autoconf g++ flex bison -Y
+    sudo apt install -y build-essential cmake libjsoncpp-dev libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib libfl2 libfl-dev git make autoconf g++ flex bison python gpg default-jdk python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev ninja-build libsnappy-dev
+    echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+    sudo apt update
+    sudo apt install sbt -y
+
     echo -e "${GREEN}Dependencies installed sucessfully...${NOCOLOR}"
 }
 
