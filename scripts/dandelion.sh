@@ -106,6 +106,7 @@ function build_tapir(){
 
     git clone --recursive ${TAPIR_META}
     pushd Tapir-Meta > /dev/null
+    git checkout release_60
     chmod +x build.sh
     ./build.sh release
     popd > /dev/null
