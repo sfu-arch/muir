@@ -4,7 +4,7 @@
 [![pipeline status](https://csil-git1.cs.surrey.sfu.ca/Dandelion/dandelion-generator/badges/master/pipeline.svg)](https://csil-git1.cs.surrey.sfu.ca/Dandelion/dandelion-generator/commits/master)
 
 How to push your changes
-=======================
+========================
 
 Currently we have a primary(Internal) and a secondary(External) repository. The secondary reporistory is in sync with the main repository. In order to push any changes to the repository please first read the following article:
 
