@@ -89,7 +89,11 @@ Generic Options:
 ```
 
 Extra Documentation
-=======
+===================
 For more information you can look at the wiki.
 https://github.com/sfu-arch/dandelion-lib/wiki
 
+
+Authors:
+========
+* Amirali Sharifian (amiralis@sfu.ca)
