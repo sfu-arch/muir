@@ -1,6 +1,7 @@
 # µIR
 
 [![Gitter](https://badges.gitter.im/sfu-arch/community.svg)](https://gitter.im/sfu-arch/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![CircleCI](https://circleci.com/gh/sfu-arch/uir.svg?style=svg)](https://circleci.com/gh/sfu-arch/uir)
 
 Getting Started
 =======
