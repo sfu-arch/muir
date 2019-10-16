@@ -9,28 +9,28 @@ executors:
     working_directory: ~/repos
 
     environment:
-      # Customize the JVM maximum heap limit
-      JVM_OPTS: -Xmx3200m
-      TERM: dumb
+        # Customize the JVM maximum heap limit
+        JVM_OPTS: -Xmx3200m
+        TERM: dumb
 
-jobs:
-  build-prep:
-    executor: dandelion--executor
+#jobs:
+  #build-prep:
+    #executor: dandelion--executor
 
-    steps:
+    #steps:
 
-    # Perform a "default" checkout to get ssh set up.
-      - checkout:
-          path: dandelion
+    ## Perform a "default" checkout to get ssh set up.
+      #- checkout:
+          #path: dandelion
 
-      - run:
-          command: |
-            date > date.prep
-            printenv
-            ls -l
+      #- run:
+          #command: |
+            #date > date.prep
+            #printenv
+            #ls -l
 
-workflows:
+#workflows:
 
-  build_and_test:
-    jobs:
-      - build-prep
+  #build_and_test:
+    #jobs:
+      #- build-prep
