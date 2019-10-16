@@ -1,10 +1,9 @@
 version: 2.1
 
 executors:
-  chisel-executor:
-    # Use the chisel3-tools image to build and run FIRRTL and chisel tests.
+  dandelion-executor:
     docker:
-      - image: amsharifian/dandelion
+        - image: amsharifian/dandelion:micro
         user: "dandelion"
 
     working_directory: ~/repos
@@ -16,13 +15,13 @@ executors:
 
 jobs:
   build-prep:
-    executor: chisel-executor
+    executor: dandelion--executor
 
     steps:
 
     # Perform a "default" checkout to get ssh set up.
       - checkout:
-          path: chisel3
+          path: dandelion
 
       - run:
           command: |
