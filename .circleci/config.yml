@@ -1,0 +1,37 @@
+version: 2.1
+
+executors:
+  chisel-executor:
+    # Use the chisel3-tools image to build and run FIRRTL and chisel tests.
+    docker:
+      - image: amsharifian/dandelion
+        user: "dandelion"
+
+    working_directory: ~/repos
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+jobs:
+  build-prep:
+    executor: chisel-executor
+
+    steps:
+
+    # Perform a "default" checkout to get ssh set up.
+      - checkout:
+          path: chisel3
+
+      - run:
+          command: |
+            date > date.prep
+            printenv
+            ls -l
+
+workflows:
+
+  build_and_test:
+    jobs:
+      - build-prep
