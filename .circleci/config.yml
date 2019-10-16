@@ -1,36 +1,8 @@
-version: 2.1
-
-executors:
-  dandelion-executor:
-    docker:
-        - image: amsharifian/dandelion:micro
-        user: "dandelion"
-
-    working_directory: ~/repos
-
-    environment:
-        # Customize the JVM maximum heap limit
-        JVM_OPTS: -Xmx3200m
-        TERM: dumb
-
-#jobs:
-  #build-prep:
-    #executor: dandelion--executor
-
-    #steps:
-
-    ## Perform a "default" checkout to get ssh set up.
-      #- checkout:
-          #path: dandelion
-
-      #- run:
-          #command: |
-            #date > date.prep
-            #printenv
-            #ls -l
-
-#workflows:
-
-  #build_and_test:
-    #jobs:
-      #- build-prep
+ version: 2
+ jobs:
+   build:
+     docker:
+       - image: circleci/ruby:2.4.1
+     steps:
+       - checkout
+       - run: echo "A first hello"
