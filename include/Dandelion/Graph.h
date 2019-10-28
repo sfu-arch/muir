@@ -223,6 +223,7 @@ class Graph {
     void optimizationPasses();
     void groundStoreNodes();
     void groundReattachNode();
+    void printNodeSummary();
 
    protected:
     // General print functions with accepting print type

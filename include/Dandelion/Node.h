@@ -121,6 +121,8 @@ class Node {
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : node_type(_nt), info(_ni) {}
 
+    NodeInfo getInfo() { return info; }
+
     PortID returnDataInputPortIndex(Node *);
     PortID returnControlInputPortIndex(Node *);
     PortID returnMemoryReadInputPortIndex(Node *);
