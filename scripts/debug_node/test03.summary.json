@@ -14,7 +14,7 @@
 				"name" : "select_sub1"
 			},
 			{
-				"debug" : "false",
+				"debug" : "true",
 				"id" : 2,
 				"name" : "binaryOp_a_addr_02"
 			},
