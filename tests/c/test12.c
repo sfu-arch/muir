@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int test17(unsigned int a, unsigned int b, unsigned c){
+int test12(unsigned int a, unsigned int b, unsigned c){
     unsigned int sum = 0;
     if(a / 2 == 4){
             sum = a + b + c;
@@ -22,7 +22,7 @@ int main(){
     unsigned int a = 8;
     unsigned int b = 3;
     unsigned int c = 6;
-    unsigned int sum = test17(a,b,c);
+    unsigned int sum = test12(a,b,c);
     printf("Result: %d\n", sum);
     return 0;
 }

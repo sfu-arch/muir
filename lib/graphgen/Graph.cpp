@@ -494,7 +494,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 
                         this->outCode
                             << "  "
-                            << _call_node->getCallIn()->printInputEnable(PrintType::Scala)
+                            << _call_node->getCallIn()->printInputEnable(
+                                   PrintType::Scala)
                             << " <> "
                             << _s_node->printOutputEnable(
                                    PrintType::Scala,
@@ -506,7 +507,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 
                         this->outCode
                             << "  "
-                            << _call_node->getCallOut()->printInputEnable(PrintType::Scala)
+                            << _call_node->getCallOut()->printInputEnable(
+                                   PrintType::Scala)
                             << " <> "
                             << _s_node->printOutputEnable(
                                    PrintType::Scala,
@@ -912,7 +914,7 @@ void Graph::printScalaHeader(string config_path) {
 
     // TODO add one level of package to the config json file
     auto package_name = _root_json["package-name"];
-    outCode << "package " << package_name.asString()  << "\n\n";
+    outCode << "package " << package_name.asString() << "\n\n";
 
     for (auto _it_obj = _root_json["import"].begin();
          _it_obj != _root_json["import"].end(); _it_obj++) {
@@ -1183,7 +1185,6 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
     return ff->get();
 }
 
-
 /**
  * Insert a new select node
  */
@@ -1219,9 +1220,8 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I, GepInfo _info) {
-
-    //for(auto f : _info.element_size){
-        //outs() << "LOG Size: " << f << "\n";
+    // for(auto f : _info.element_size){
+    // outs() << "LOG Size: " << f << "\n";
     //}
     inst_list.push_back(std::make_unique<GepNode>(
         NodeInfo(inst_list.size(),
@@ -1437,8 +1437,6 @@ InstructionNode *Graph::insertTruncNode(TruncInst &I) {
 
     return ff->get();
 }
-
-
 
 /**
  * Insert a new sext node
@@ -1970,3 +1968,31 @@ void Graph::groundReattachNode() {
 //
 
 void Graph::optimizationPasses() { groundStoreNodes(); }
+
+void Graph::printNodeSummary() {
+    std::ofstream _out_file(this->graph_info.Name + ".summary.json");
+
+    Json::Value _root_json;
+    Json::Value _node_entry;
+
+    for (auto &node : this->inst_list) {
+        auto _name = node->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = node->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["node"].append(_node_entry);
+    }
+
+    for (auto &bb : this->super_node_list) {
+        auto _name = bb->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = bb->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["super_node"].append(_node_entry);
+    }
+
+    _out_file << _root_json;
+    _out_file.close();
+}
