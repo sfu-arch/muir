@@ -16,13 +16,13 @@ def main(argv):
     args = parser.parse_args(argv)
 
     if path.isfile(args.input) and args.input.lower().endswith('scala'):
-        print(args.input)
+        print("Input scala file: {}".format(args.input))
     else:
         print("Input scala file is not valid!")
         return
     
     if path.isfile(args.config) and args.config.lower().endswith('json'):
-        print(args.config)
+        print("Input IR file: {}".format(args.config))
 
     else:
         print("Input config file is not valid!")
@@ -37,28 +37,26 @@ def main(argv):
 
     with open(args.input) as input_scala:
         for line in input_scala:
+
+            # Filter only definition lines
             if line.lstrip().startswith('val'):
                 reg = re.findall(r'val (.+?) = .* ID = (.+?), .*', line.lstrip())
 
+                # Capture only Compute nodes
                 if reg:
-                    name = reg[0][0]
-                    id = reg[0][1]
+                    (name, id) = tuple(reg[0])
 
-                    for node in config['module']['node']:
-                        if node['name'] == name:
-                            if node['debug'].lower() == 'true':
-                                debug_file.write(line.replace('Debug = false', 'Debug = true'))
-                            else:
-                                debug_file.write(line)
+                    node_filter = list(filter(lambda n : n['name'] == name ,config['module']['node']))
+                    for node in node_filter:
+                        if node['debug'].lower() == 'true':
+                            debug_file.write(line.replace('Debug = false', 'Debug = true'))
+                        else:
+                            debug_file.write(line)
 
-                
             else:
                 debug_file.write(line)
     
     debug_file.close()
-
-
-
 
 
 if __name__ == "__main__":
