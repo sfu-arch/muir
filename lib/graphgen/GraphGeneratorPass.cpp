@@ -620,6 +620,11 @@ void GraphGeneratorPass::visitTruncInst(llvm::TruncInst &I) {
     map_value_node[&I] = this->dependency_graph->insertTruncNode(I);
 }
 
+void GraphGeneratorPass::visitSIToFPInst(llvm::SIToFPInst &I){
+
+    map_value_node[&I] = this->dependency_graph->insertSTIoFPNode(I);
+}
+
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();

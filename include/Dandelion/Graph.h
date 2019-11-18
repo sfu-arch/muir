@@ -193,6 +193,7 @@ class Graph {
 
     InstructionNode *insertSextNode(llvm::SExtInst &);
     InstructionNode *insertZextNode(llvm::ZExtInst &);
+    InstructionNode *insertSTIoFPNode(llvm::SIToFPInst &);
     InstructionNode *insertTruncNode(llvm::TruncInst &);
 
     InstructionNode *insertFaddNode(llvm::BinaryOperator &);

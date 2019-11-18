@@ -861,6 +861,7 @@ class InstructionNode : public Node {
         SextInstructionTy,
         ZextInstructionTy,
         BitCastInstructionTy,
+        STIoFPInstructionTy,
         TruncInstructionTy,
         SelectInstructionTy,
 
@@ -1643,6 +1644,30 @@ class TruncNode: public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
+
+/**
+ * stiofp node
+ */
+class STIoFPNode: public InstructionNode {
+   public:
+    STIoFPNode(NodeInfo _ni, llvm::SIToFPInst *_ins = nullptr,
+             NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::STIoFPInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::STIoFPInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
+
 
 
 class ReattachNode : public InstructionNode {
