@@ -1439,7 +1439,7 @@ InstructionNode *Graph::insertTruncNode(TruncInst &I) {
 }
 
 /**
- * Insert a new sext node
+ * Insert a new stiofp node
  */
 InstructionNode *Graph::insertSTIoFPNode(SIToFPInst &I) {
     inst_list.push_back(std::make_unique<STIoFPNode>(
@@ -1455,6 +1455,22 @@ InstructionNode *Graph::insertSTIoFPNode(SIToFPInst &I) {
     return ff->get();
 }
 
+/**
+ * Insert a new fptoui node
+ */
+InstructionNode *Graph::insertFPToUINode(FPToUIInst &I) {
+    inst_list.push_back(std::make_unique<FPToUINode>(
+        NodeInfo(inst_list.size(),
+                 "stiofp" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
 
 
 /**
