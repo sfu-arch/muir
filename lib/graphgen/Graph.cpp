@@ -767,7 +767,7 @@ void Graph::printScalaMainClass() {
         "object $class_nameTop extends App {\n"
         "  val dir = new File(\"RTL/$class_nameTop\");\n"
         "  dir.mkdirs\n"
-        "  implicit val p = config.Parameters.root((new "
+        "  implicit val p = Parameters.root((new "
         "MiniConfig).toInstance)\n"
         "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new "
         "$module_name()))\n\n"
