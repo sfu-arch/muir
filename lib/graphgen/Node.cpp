@@ -2057,7 +2057,7 @@ std::string SelectNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type("
-                "NumOuts = $num_out, ID = $id))\n\n";
+                "NumOuts = $num_out, ID = $id)(fast = false))\n\n";
             helperReplace(_text, "$type", "SelectNode");
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));

@@ -9,12 +9,10 @@ double timespec_to_ms(struct timespec *ts) {
   return ts->tv_sec * 1000.0 + ts->tv_nsec / 1000000.0;
 }
 
-void vector_scale_s(int *a, int *c,
-                  int scale, // 24.8 bit fixed point
-                  int N) {
-#pragma clang loop vectorize(disable)
-#pragma clang loop unroll_count(3)
-  for (int32_t i = 0; i < N; ++i) {
+void vector_scale(unsigned *a, unsigned *c,
+                    unsigned scale, // 24.8 bit fixed point
+                    unsigned N) {
+  for (unsigned i = 0; i < N; ++i) {
     // Clip pixel values
     if (a[i] < 0) {
       c[i] = 0;
@@ -62,14 +60,14 @@ int main(int argc, char *argv[]) {
 #endif
   for (int i = 0; i < LOOP_SIZE; i++) {
     // Run the component
-    vector_scale_s(A, C, 32, TEST_SIZE);
+    vector_scale(A, C, 32, TEST_SIZE);
   }
 #ifdef TIME
   clock_gettime(CLOCK_MONOTONIC, &end_time);
   double time_ms = timespec_to_ms(&end_time) - timespec_to_ms(&start_time);
   float time_ns = time_ms / LOOP_SIZE * 1000000;
-  printf("Calculated in %.3f ns using %d workers.\n", time_ns,1);
-         /*__cilkrts_get_nworkers());*/
+  printf("Calculated in %.3f ns using %d workers.\n", time_ns, 1);
+  /*__cilkrts_get_nworkers());*/
 #endif
 
   return 0;
