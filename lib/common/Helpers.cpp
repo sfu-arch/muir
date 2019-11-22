@@ -56,6 +56,11 @@ void LabelUID::visitFunction(Function &F) {
 
 void LabelUID::visitInstruction(Instruction &I) {
     if (auto call_inst = dyn_cast<CallInst>(&I)) {
+        auto called = dyn_cast<Function>(
+            CallSite(&I).getCalledValue()->stripPointerCasts());
+        if (!called) {
+            return;
+        }
         if (call_inst->getCalledFunction()->isDeclaration()) return;
     }
     visitGeneric<Instruction>("UID", I);
@@ -137,12 +142,12 @@ bool DFGPrinter::doInitialization(Module &M) {
 void DFGPrinter::visitFunction(Function &F) {
     auto &nodes = this->nodes;
 
-    //auto checkCall = [](const Instruction &I, string name) -> bool {
-        //if (isa<CallInst>(&I) && dyn_cast<CallInst>(&I)->getCalledFunction() &&
-            //dyn_cast<CallInst>(&I)->getCalledFunction()->getName().startswith(
-                //name))
-            //return true;
-        //return false;
+    // auto checkCall = [](const Instruction &I, string name) -> bool {
+    // if (isa<CallInst>(&I) && dyn_cast<CallInst>(&I)->getCalledFunction() &&
+    // dyn_cast<CallInst>(&I)->getCalledFunction()->getName().startswith(
+    // name))
+    // return true;
+    // return false;
     //};
 
     auto escape_quotes = [](const string &before) -> string {
