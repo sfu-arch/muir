@@ -9,7 +9,7 @@ $(error "There is no dandelion in PATH, consider source scripts/setup.sh")
 endif
 
 DANDELION=dandelion
-CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -m32 -S -o -
+CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -S -o -
 SOURCES=$(shell ls test*.c)
 SOURCES := vector_scale.c conv2dSerial.c
 SCALA=$(SOURCES:%.c=%.scala)

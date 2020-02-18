@@ -1,46 +1,85 @@
-# µIR
+# muIR-Generator
 
 [![Gitter](https://badges.gitter.im/sfu-arch/community.svg)](https://gitter.im/sfu-arch/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![CircleCI](https://circleci.com/gh/sfu-arch/uir.svg?style=svg)](https://circleci.com/gh/sfu-arch/uir)
 
-Getting Started
-=======
-Official supported environment for building and running dandelion-generator is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
-```
-sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
-sudo apt-get install gcc-8-multilib g++-8-multilib
-````
+muIR-Generator is a tool to generator hardware accelerator from software programs. muIR-Generator uses muIR as an intermediate representation (IR) to design hardware accelerators. Currently, muIR-Generator supports C/C++ and Cilk programs.
 
-Build
-=====
+## Getting Started
 
-To build Dandelion dependencies, we have scripted installing the dependencies. To install the dependencies you need only to run the following commands:
+**Step one: Installing dependencies:** Official supported environment for building and running muIR-Generator is ubuntu 18.04. To start using muIR-Generator you have to first install muIR-Generator dependencies:
 
 ``` bash
-cd dandelion-generator
-./scripts/dandelion.sh
+sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
+sudo apt-get install gcc-8-multilib g++-8-multilib
+```
 
-source ./setup-env.sh
-cd ..; mkdir build; cd build;
-cmake -DLLVM_DIR=<your repository>/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
+**Step Two: Building LLVM/TAPIR-6:**  muIR-Generator uses LLVM/TAPIR compiler (LLVM compiler with parallel instruction extension to support Cilk programs). The following link contains a forked version of of [LLVM/TAPIR-6](https://github.com/sfu-arch/Tapir-Meta) with a minor changes which muIR is compatible with.
+To ease of building TAPIR, we have scripted the build process of TAPIR:
+
+``` bash
+git clone https://github.com/sfu-arch/muir.git
+cd muir
+./scripts/dandelion.sh
+```
+
+**Step Three: Building muIR-Generator:** Now we have installed and built all the muIR-Generator dependencies we can build the project:
+
+```bash
+cd muir
+mkdir build
+cd build
+cmake -DLLVM_DIR=<your_repository_path>/dependencies/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
+make -jN
+```
+
+**Step Four: Setting your PATH:** To set your ``PATH`` variable you can use the following script which is under **build** directory:
+
+``` bash
+cd muir/build
+source ./scripts/setup-env.sh
+```
+
+After sourcing the script you should see the following message;
+
+```
+Dandelion is installed in:<your_repository_path>/build/bin
+Your PATH is set!
+```
+
+## Running test cases
+
+Under *muir/tests* directory there are muir examples and the application examples which muIR framework is tested with.
+To keep the build process integrated and simple, muIR cmake file copy all these test cases under *build/tests* and make sure all the environment variables under this directory is properly set:
+
+```bash
+cd <your_repository>/build/tests/c/
 make
 ```
 
-Running tests
-=======
-Inside test directory there are set of test example which show the generality of dandelion-generator.
-To get the generated accelerator files for test cases you can run:
+**NOTE:** Currently, for simplicity of the Makefile in each example the target function's name needs to be the same name as the source file's name, hence, the Makefile can pick the right values for the compilation process.
 
-```
-# in your code repository
-cd test/c/
-make all
-```
+## Testing the generated hardware accelerators
 
-For each test case there is going to be one sacala file which has the detailed implementation of dandelion-generator.
+After running the ``make`` command for each test case there should be one Scala file. This Scala file is the target function accelerator description id muIR.
+muIR-Generator uses [muIR-Lib](https://github.com/sfu-arch/muir-lib) chisel library to describe hardware accelerator.
+To be able to run and test the hardware accelerator, currently, we support the following back-ends:
 
-How to run generator on your code (detailed way)?
-=================================================
+* [muIR-Sim](https://github.com/sfu-arch/muir-sim)
+* [FPGA SoC boards](https://github.com/sfu-arch/muir-fpga)
+* [RISCV Extension](https://github.com/amsharifian/rocket-rocc-examples)
+* Amazon AWS F1
+
+Each project, separately has tutorial on how to connect the generated hardware accelerator design and run the full-system application.
+
+## Need more details on muIR project and implementation?
+
+In the following repo, [Dandelion-Tutorial](https://github.com/amsharifian/dandelion-tutorial), we are documenting all the Dandelion project pieces, muIR is one of the subprojects of Dandelion.
+To have more information on the design details and other project you can follow the documentation.
+
+## How to run generator on your code (detailed way)?
+
+**This section is not complete yet**
 
 For generating `.scala` for your code the following steps need to be taken :
 
@@ -49,14 +88,6 @@ For generating `.scala` for your code the following steps need to be taken :
 2. Run `opt` with `-mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce` arguments on your llvm ir (`.ll`) code.
 3. Run TAPAS generator on your `.ll` file like this :
     * `<your repository>/build/bin/dandelion -fn-name=[output file of last step] -config=../../scripts/config.json -o output.scala`
-
-How to run generator on your code (simple way)?
-=======
-You can simply put your `.c` file in the `<your repository>/test/c` directory and simply run :
-```
-$ make all
-```
-After that you should have the `.scala` file beside your `.c` file with a same name.
 
 
 Help
@@ -86,6 +117,6 @@ For more information you can look at the wiki.
 https://github.com/sfu-arch/dandelion-lib/wiki
 
 
-Authors:
+Author:
 ========
 * Amirali Sharifian (amiralis@sfu.ca)
