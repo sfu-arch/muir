@@ -81,14 +81,14 @@ To have more information on the design details and other project you can follow 
 
 **This section is not complete yet**
 
-For generating `.scala` for your code the following steps need to be taken :
+<!-- For generating `.scala` for your code the following steps need to be taken :
 
 1. Emit the llvm ir (`.ll`) for your code with supported Tapir/dandelion-generator compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
     * You can out put llvm ir with this command `./Tapir-Meta/tapir/build/bin/clang -emit-llvm [Your source code]`
 2. Run `opt` with `-mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce` arguments on your llvm ir (`.ll`) code.
 3. Run TAPAS generator on your `.ll` file like this :
     * `<your repository>/build/bin/dandelion -fn-name=[output file of last step] -config=../../scripts/config.json -o output.scala`
-
+ -->
 
 Help
 =======
