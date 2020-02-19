@@ -13,6 +13,7 @@
         "dandelion.config":"_",
         "dandelion.control":"_",
         "util":"_",
+        "chipsalliance.rocketchip.config":"_",
         "dandelion.interfaces":"_",
         "regfile":"_",
         "dandelion.memory":"_",

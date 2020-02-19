@@ -105,7 +105,7 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             printDatadependencies(PrintType::Scala);
             printOutPort(PrintType::Scala);
             printClosingclass(PrintType::Scala);
-            printScalaMainClass();
+            //printScalaMainClass();
 
             break;
         case PrintType::Dot:
@@ -800,7 +800,7 @@ void Graph::printScalaFunctionHeader() {
     };
 
     // print the header
-    this->outCode << helperScalaPrintHeader("Printing ports definition");
+    //this->outCode << helperScalaPrintHeader("Printing ports definition");
 
     string _final_command;
     //string _command =
@@ -893,12 +893,12 @@ void Graph::printScalaFunctionHeader() {
     //outCode << _final_command;
 
     _final_command =
-        "class $module_nameDF(ArgsIn: Seq[Int] = List($<input_vector>), Returns: Seq[Int] = List($<output_vector>))\n"
+        "\n\nclass $module_nameDF(ArgsIn: Seq[Int] = List($<input_vector>), Returns: Seq[Int] = List($<output_vector>))\n"
         "\t\t\t(implicit p: Parameters)"
         " extends DandelionAccelModule(ArgsIn, Returns){\n";
     helperReplace(_final_command, "$module_name", graph_info.Name);
     auto num_in_args = this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
-    auto num_out_args = this->getSplitCall()->numLiveOutArgList(ArgumentNode::LiveOut);
+    uint32_t num_out_args = (!function_ptr->getReturnType()->isVoidTy()) ? 1 : 0;
     std::vector<uint32_t> _input_args(num_in_args, 32);
     std::vector<uint32_t> _output_args(num_out_args, 32);
 
