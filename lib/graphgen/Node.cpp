@@ -1,7 +1,7 @@
 #define DEBUG_TYPE "graphgen"
 
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+//#include "llvm/Support/raw_ostream.h"
 
 #include "Common.h"
 #include "Dandelion/Node.h"
@@ -829,7 +829,7 @@ uint32_t ContainerNode::findLiveInArgumentIndex(ArgumentNode *_arg_node) {
     RegisterList _local_list;
 
     auto find_function = [_arg_type](auto &node) {
-        if (node->getArgType() == _arg_type) return true;
+        return (node->getArgType() == _arg_type);
     };
 
     std::copy_if(live_in.begin(), live_in.end(),
@@ -848,7 +848,7 @@ uint32_t ContainerNode::findLiveOutArgumentIndex(ArgumentNode *_arg_node) {
     RegisterList _local_list;
 
     auto find_function = [_arg_type](auto &node) {
-        if (node->getArgType() == _arg_type) return true;
+        return (node->getArgType() == _arg_type);
     };
 
     std::copy_if(live_out.begin(), live_out.end(),
@@ -867,7 +867,7 @@ uint32_t ContainerNode::findCarryDepenArgumentIndex(ArgumentNode *_arg_node) {
     RegisterList _local_list;
 
     auto find_function = [_arg_type](auto &node) {
-        if (node->getArgType() == _arg_type) return true;
+        return (node->getArgType() == _arg_type) ;
     };
 
     std::copy_if(carry_depen.begin(), carry_depen.end(),
@@ -885,7 +885,7 @@ uint32_t ContainerNode::numLiveInArgList(ArgumentNode::ArgumentType type) {
     RegisterList _local_list;
 
     auto find_function = [type](auto &node) {
-        if (node->getArgType() == type) return true;
+        return (node->getArgType() == type);
     };
 
     std::copy_if(live_in.begin(), live_in.end(),
@@ -898,7 +898,7 @@ uint32_t ContainerNode::numLiveOutArgList(ArgumentNode::ArgumentType type) {
     RegisterList _local_list;
 
     auto find_function = [type](auto &node) {
-        if (node->getArgType() == type) return true;
+        return (node->getArgType() == type);
     };
 
     std::copy_if(live_out.begin(), live_out.end(),
@@ -911,7 +911,7 @@ uint32_t ContainerNode::numCarryDepenArgList(ArgumentNode::ArgumentType type) {
     RegisterList _local_list;
 
     auto find_function = [type](auto &node) {
-        if (node->getArgType() == type) return true;
+        return (node->getArgType() == type);
     };
 
     std::copy_if(carry_depen.begin(), carry_depen.end(),
@@ -919,75 +919,6 @@ uint32_t ContainerNode::numCarryDepenArgList(ArgumentNode::ArgumentType type) {
 
     return _local_list.size();
 }
-
-// Node *ContainerNode::findLiveOut(llvm::Value *_val) {
-// auto ff = std::find_if(live_out.begin(), live_out.end(),
-//[&_val](auto &arg) -> bool {
-// return arg.get()->getArgumentValue() == _val;
-//});
-
-// if (ff == live_out.end()) {
-//// WARNING(!"Couldn't find the live-in");
-// return nullptr;
-//}
-// return ff->get();
-//}
-
-// ArgumentNode *ContainerNode::insertLiveInArgument(llvm::Value *_val) {
-// auto ff = std::find_if(live_in.begin(), live_in.end(),
-//[&_val](auto &arg) -> bool {
-// return arg.get()->getArgumentValue() == _val;
-//});
-// if (ff == live_in.end()) {
-// live_in.push_back(std::make_unique<ArgumentNode>(
-// NodeInfo(live_in.size(), _val->getName().str()),
-// ArgumentNode::LiveIn, this, _val));
-
-// ff = std::find_if(live_in.begin(), live_in.end(),
-//[&_val](auto &arg) -> bool {
-// return arg.get()->getArgumentValue() == _val;
-//});
-//}
-
-// return ff->get();
-//}
-
-// ArgumentNode *ContainerNode::insertLiveOutArgument(llvm::Value *_val) {
-// auto ff = std::find_if(live_out.begin(), live_out.end(),
-//[&_val](auto &arg) -> bool {
-// return arg.get()->getArgumentValue() == _val;
-//});
-// if (ff == live_out.end()) {
-// live_out.push_back(std::make_unique<ArgumentNode>(
-// NodeInfo(live_out.size(), _val->getName().str()),
-// ArgumentNode::LiveOut, this, _val));
-
-// ff = std::find_if(live_out.begin(), live_out.end(),
-//[&_val](auto &arg) -> bool {
-// return arg.get()->getArgumentValue() == _val;
-//});
-//}
-
-// return ff->get();
-//}
-
-// uint32_t ContainerNode::findLiveInIndex(ArgumentNode *_arg_node) {
-// auto arg_find = std::find_if(
-// live_in.begin(), live_in.end(),
-//[_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
-
-// ptrdiff_t pos = std::distance(live_in.begin(), arg_find);
-// return pos;
-//}
-
-// uint32_t ContainerNode::findLiveOutIndex(ArgumentNode *_arg_node) {
-// auto arg_find = std::find_if(
-// live_out.begin(), live_out.end(),
-//[_arg_node](auto &arg) -> bool { return arg.get() == _arg_node; });
-
-// ptrdiff_t pos = std::distance(live_out.begin(), arg_find);
-// return pos;
-//}
 
 //===----------------------------------------------------------------------===//
 //                            CallSpliter Class
@@ -1016,7 +947,7 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
 
             // TODO make a list of liveins first
             auto find_function = [](auto &node) {
-                if (node->getArgType() == ArgumentNode::LiveIn) return true;
+                return (node->getArgType() == ArgumentNode::LiveIn);
             };
             RegisterList _local_list;
 
@@ -3371,11 +3302,8 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
     string _text;
 
     auto port_equal = [](auto port_1, auto port_2) -> bool {
-        if ((port_1.first == port_2.first) &&
-            (port_1.second.getID() == port_2.second.getID()))
-            return true;
-        else
-            return false;
+        return ((port_1.first == port_2.first) &&
+            (port_1.second.getID() == port_2.second.getID()));
     };
 
     switch (_pt) {

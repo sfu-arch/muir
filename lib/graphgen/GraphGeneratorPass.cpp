@@ -497,10 +497,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         L->getSubLoopsVector().end(), false,
                         [](auto _l, auto _r) { return _l | _r; },
                         [&_inst_user, &summary, L](auto _sub_l) {
-                            if (_sub_l->contains(_inst_user)) {
-                                return true;
-                            } else
-                                return false;
+                            return (_sub_l->contains(_inst_user));
                         });
 
                     if (!contain) {
@@ -1064,11 +1061,8 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             find_if(_loop_edge.getSecond().begin(),
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
-                                        if ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it))
-                                            return true;
-                                        else
-                                            return false;
+                                        return ((_f_edge.first == operand) &&
+                                            (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
@@ -1111,11 +1105,8 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             find_if(_loop_edge.getSecond().begin(),
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
-                                        if ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it))
-                                            return true;
-                                        else
-                                            return false;
+                                        return ((_f_edge.first == operand) &&
+                                            (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
