@@ -11,7 +11,6 @@ endif
 DANDELION=dandelion
 CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -S -o -
 SOURCES=$(shell ls test*.c)
-SOURCES := vector_scale.c conv2dSerial.c
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)

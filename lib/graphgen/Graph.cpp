@@ -803,99 +803,109 @@ void Graph::printScalaFunctionHeader() {
     this->outCode << helperScalaPrintHeader("Printing ports definition");
 
     string _final_command;
-    string _command =
-        "abstract class $module_nameDFIO"
-        "(implicit val p: Parameters) extends Module with CoreParams {\n"
-        "  val io = IO(new Bundle {\n";
-    helperReplace(_command, "$module_name", this->graph_info.Name.c_str());
-    _final_command.append(_command);
+    //string _command =
+        //"abstract class $module_nameDFIO"
+        //"(implicit val p: Parameters) extends Module with CoreParams {\n"
+        //"  val io = IO(new Bundle {\n";
+    //helperReplace(_command, "$module_name", this->graph_info.Name.c_str());
+    //_final_command.append(_command);
 
-    // Print input call parameters
-    _command = "    val in = Flipped(Decoupled(new Call(List(";
-    _final_command.append((_command));
-    for (uint32_t c = 0;
-         c < this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
-         c++) {
-        if (c ==
-            this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn) - 1)
-            _command = "32";
-        else
-            _command = "32, ";
-        helperReplace(_command, "$index", c);
-        _final_command.append(_command);
-    }
-    //_final_command.pop_back();
-    _command = "))))\n";
-    _final_command.append(_command);
+    //// Print input call parameters
+    //_command = "    val in = Flipped(Decoupled(new Call(List(";
+    //_final_command.append((_command));
+    //for (uint32_t c = 0;
+         //c < this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
+         //c++) {
+        //if (c ==
+            //this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn) - 1)
+            //_command = "32";
+        //else
+            //_command = "32, ";
+        //helperReplace(_command, "$index", c);
+        //_final_command.append(_command);
+    //}
+    ////_final_command.pop_back();
+    //_command = "))))\n";
+    //_final_command.append(_command);
 
-    // Print sub-function call interface
-    uint32_t c = 0;
-    for (auto &_ins : this->inst_list) {
-        if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
-            // Call arguments to subroutine
-            _command = "    val $call_out = Decoupled(new Call(List(";
-            helperReplace(_command, "$call", _ins->getName());
-            _final_command.append(_command);
-            for (auto ag : _fc->getCallOut()->input_data_range()) {
-                _command = "32, ";
-                _final_command.append(_command);
-            }
-            _final_command.pop_back();
-            _final_command.pop_back();
-            _command = ")))\n";
-            _final_command.append(_command);
+    //// Print sub-function call interface
+    //uint32_t c = 0;
+    //for (auto &_ins : this->inst_list) {
+        //if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
+            //// Call arguments to subroutine
+            //_command = "    val $call_out = Decoupled(new Call(List(";
+            //helperReplace(_command, "$call", _ins->getName());
+            //_final_command.append(_command);
+            //for (auto ag : _fc->getCallOut()->input_data_range()) {
+                //_command = "32, ";
+                //_final_command.append(_command);
+            //}
+            //_final_command.pop_back();
+            //_final_command.pop_back();
+            //_command = ")))\n";
+            //_final_command.append(_command);
 
-            // Return values from sub-routine.
-            // Only supports a single 32 bit data bundle for now
-            //
-            // TODO : Make the output depedent on the actual code
-            _command = "    val $call_in = Flipped(Decoupled(new Call(List(";
-            helperReplace(_command, "$call", _fc->getName());
-            _final_command.append(_command);
+            //// Return values from sub-routine.
+            //// Only supports a single 32 bit data bundle for now
+            ////
+            //// TODO : Make the output depedent on the actual code
+            //_command = "    val $call_in = Flipped(Decoupled(new Call(List(";
+            //helperReplace(_command, "$call", _fc->getName());
+            //_final_command.append(_command);
 
-            uint32_t c = 0;
-            for (auto ag : _fc->getCallIn()->output_data_range()) {
-                if (++c == _fc->getCallIn()->numDataOutputPort())
-                    _command = "32";
-                else
-                    _command = "32, ";
+            //uint32_t c = 0;
+            //for (auto ag : _fc->getCallIn()->output_data_range()) {
+                //if (++c == _fc->getCallIn()->numDataOutputPort())
+                    //_command = "32";
+                //else
+                    //_command = "32, ";
 
-                _final_command.append(_command);
-            }
-            if (_fc->getCallIn()->numDataInputPort()) {
-                _final_command.pop_back();
-                _final_command.pop_back();
-            }
-            _command = "))))\n";
-            _final_command.append(_command);
-        }
-    }
+                //_final_command.append(_command);
+            //}
+            //if (_fc->getCallIn()->numDataInputPort()) {
+                //_final_command.pop_back();
+                //_final_command.pop_back();
+            //}
+            //_command = "))))\n";
+            //_final_command.append(_command);
+        //}
+    //}
 
-    // Print cache memory interface
-    _final_command.append(
-        "    val MemResp = Flipped(Valid(new MemResp))\n"
-        "    val MemReq = Decoupled(new MemReq)\n");
+    //// Print cache memory interface
+    //_final_command.append(
+        //"    val MemResp = Flipped(Valid(new MemResp))\n"
+        //"    val MemReq = Decoupled(new MemReq)\n");
 
-    // TODO make sure independent from return type we always need to have an
-    // output
-    // Print output (return) parameters
-    if (!function_ptr->getReturnType()->isVoidTy()) {
-        _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
-    } else {
-        _final_command.append("    val out = Decoupled(new Call(List()))\n");
-    }
+    //// TODO make sure independent from return type we always need to have an
+    //// output
+    //// Print output (return) parameters
+    //if (!function_ptr->getReturnType()->isVoidTy()) {
+        //_final_command.append("    val out = Decoupled(new Call(List(32)))\n");
+    //} else {
+        //_final_command.append("    val out = Decoupled(new Call(List()))\n");
+    //}
 
-    _final_command.append(
-        "  })\n"
-        "}\n\n");
+    //_final_command.append(
+        //"  })\n"
+        //"}\n\n");
 
-    // Printing Abstract
-    outCode << _final_command;
+    //// Printing Abstract
+    //outCode << _final_command;
 
     _final_command =
-        "class $module_nameDF(implicit p: Parameters)"
-        " extends $module_nameDFIO()(p) {\n";
+        "class $module_nameDF(ArgsIn: Seq[Int] = List($<input_vector>), Returns: Seq[Int] = List($<output_vector>))\n"
+        "\t\t\t(implicit p: Parameters)"
+        " extends DandelionAccelModule(ArgsIn, Returns){\n";
     helperReplace(_final_command, "$module_name", graph_info.Name);
+    auto num_in_args = this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
+    auto num_out_args = this->getSplitCall()->numLiveOutArgList(ArgumentNode::LiveOut);
+    std::vector<uint32_t> _input_args(num_in_args, 32);
+    std::vector<uint32_t> _output_args(num_out_args, 32);
+
+    helperReplace(_final_command, "$<input_vector>",
+            _input_args, ", ");
+    helperReplace(_final_command, "$<output_vector>",
+            _output_args, ", ");
 
     helperScalaPrintHeader("Printing Module Definition");
     outCode << _final_command;
