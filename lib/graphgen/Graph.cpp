@@ -1693,27 +1693,49 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-out dependencies");
             for (auto &_l_node : loop_nodes) {
+                //for (auto &_live_out : _l_node->live_out_lists()) {
+                    //if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
+                        //continue;
+                    //for (auto &_data_out : _live_out->input_data_range()) {
+                        //this->outCode << "  "
+                                      //<< _live_out->printInputData(
+                                             //PrintType::Scala,
+                                             //_live_out
+                                                 //->returnDataInputPortIndex(
+                                                     //_data_out.first)
+                                                 //.getID())
+                                      //<< " <> "
+                                      //<< _data_out.first->printOutputData(
+                                             //PrintType::Scala,
+                                             //_data_out.first
+                                                 //->returnDataOutputPortIndex(
+                                                     //_live_out.get())
+                                                 //.getID())
+                                      //<< "\n\n";
+                    //}
+                //}
+
+                unsigned c = 0;
                 for (auto &_live_out : _l_node->live_out_lists()) {
                     if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
                         continue;
-                    for (auto &_data_out : _live_out->input_data_range()) {
-                        this->outCode << "  "
-                                      << _live_out->printInputData(
-                                             PrintType::Scala,
-                                             _live_out
-                                                 ->returnDataInputPortIndex(
-                                                     _data_out.first)
-                                                 .getID())
-                                      << " <> "
-                                      << _data_out.first->printOutputData(
-                                             PrintType::Scala,
-                                             _data_out.first
-                                                 ->returnDataOutputPortIndex(
-                                                     _live_out.get())
-                                                 .getID())
-                                      << "\n\n";
+                    for (auto &_data_in : _live_out->input_data_range()) {
+                        this->outCode
+                            << "  "
+                            << _live_out->printInputData(PrintType::Scala, c++)
+                            << " <> "
+                            << _data_in.first->printOutputData(
+                                   PrintType::Scala,
+                                   _data_in.first
+                                       ->returnDataOutputPortIndex(
+                                           _live_out.get())
+                                       .getID())
+                            << "\n\n";
                     }
                 }
+
+
+
             }
 
             this->outCode << helperScalaPrintHeader(

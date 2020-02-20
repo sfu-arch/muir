@@ -1807,7 +1807,7 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false, Debug = false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = $sign, Debug = false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1816,7 +1816,12 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$opcode",
                           llvm::ICmpInst::getPredicateName(
                               dyn_cast<llvm::ICmpInst>(this->getInstruction())
-                                  ->getUnsignedPredicate()));
+                                  ->getSignedPredicate()));
+
+            if(dyn_cast<llvm::ICmpInst>(this->getInstruction())->isSigned())
+                helperReplace(_text, "$sign", "true");
+            else
+                helperReplace(_text, "$sign", "false");
 
             break;
         case PrintType::Dot:
@@ -3082,20 +3087,16 @@ std::string GepNode::printDefinition(PrintType _pt) {
                       std::prev(this->gep_info.element_size.end()),
                       std::experimental::make_ostream_joiner(_array, ", "));
 
-            // outs() << "SIZE: " << this->gep_info.element_size.size() << "\n";
-
-            // if (this->gep_info.element_size.size() > 1) {
-            // std::copy(
-            // this->gep_info.element_size.begin(),
-            // std::prev(this->gep_info.element_size.end()),
-            // std::experimental::make_ostream_joiner(std::cout, ", "));
-            //} else
-            //_array << *this->gep_info.element_size.begin();
-
-            // for(this->gep_info.element_size)
-
-            helperReplace(_text, "$size",
-                          *std::prev(this->gep_info.element_size.end()));
+            /**
+             * TODO: Currently our simulation framework only supports 64bit data
+             * hence, after initialization we only write 64bit data to the memory
+             * even the actual data size 32bit. We need to address this limitation from
+             * simulation and then uncomment the follwoing line to use proper elementSize
+             * instead of hard-coded version.
+             */
+            //helperReplace(_text, "$size",
+                          //*std::prev(this->gep_info.element_size.end()));
+            helperReplace(_text, "$size", 8);
 
             helperReplace(_text, "$array", "List(" + _array.str() + ")");
 

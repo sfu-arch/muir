@@ -658,7 +658,6 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         assert(!"No gep information");
     }
 
-    // auto src_type = I.getSourceElementType();
     map_value_node[&I] =
         this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepAddress[&I]);
     if (map_value_node.count(&I) == 0) {

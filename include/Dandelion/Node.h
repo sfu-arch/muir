@@ -1187,61 +1187,6 @@ class AllocaNode : public InstructionNode {
     std::string printOffset(PrintType);
 };
 
-// class GepArrayNode : public InstructionNode {
-// private:
-// GepArrayInfo gep_info;
-
-// public:
-// explicit GepArrayNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
-//_ins) {}
-// explicit GepArrayNode(NodeInfo _ni, GepArrayInfo _info,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
-// gep_info(_info) {}
-
-// static bool classof(const InstructionNode *T) {
-// return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
-//}
-// static bool classof(const Node *T) {
-// return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
-//}
-
-// virtual std::string printDefinition(PrintType) override;
-// virtual std::string printInputEnable(PrintType) override;
-// virtual std::string printInputEnable(PrintType, uint32_t) override;
-// virtual std::string printInputData(PrintType, uint32_t) override;
-// virtual std::string printOutputData(PrintType, uint32_t) override;
-//};
-
-// class GepStructNode : public InstructionNode {
-// private:
-// GepStructInfo gep_info;
-
-// public:
-// explicit GepStructNode(NodeInfo _ni,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
-//_ins) {}
-// explicit GepStructNode(NodeInfo _ni, GepStructInfo _info,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
-// gep_info(_info) {}
-
-// static bool classof(const InstructionNode *T) {
-// return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
-//}
-// static bool classof(const Node *T) {
-// return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
-//}
-
-// virtual std::string printDefinition(PrintType) override;
-// virtual std::string printInputEnable(PrintType) override;
-// virtual std::string printInputEnable(PrintType, uint32_t) override;
-// virtual std::string printInputData(PrintType, uint32_t) override;
-// virtual std::string printOutputData(PrintType, uint32_t) override;
-//};
-
 class GepNode : public InstructionNode {
    private:
     GepInfo gep_info;
