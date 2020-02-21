@@ -225,6 +225,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void connectParalleNodes(llvm::Function &);
     void connectingCalldependencies(llvm::Function &);
     void connectingAliasEdges(llvm::Function &);
+    void connectingStoreToBranch(llvm::Function &F);
 
     void buildingGraph();
 

@@ -1279,6 +1279,7 @@ class StoreNode : public InstructionNode {
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;

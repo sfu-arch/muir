@@ -2510,6 +2510,26 @@ std::string StoreNode::printOutputEnable(PrintType pt, uint32_t _id) {
     return _text;
 }
 
+std::string StoreNode::printOutputEnable(PrintType pt) {
+    string _text;
+    string _name(this->getName());
+    switch (pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.SuccOp($id)";
+            helperReplace(_text, "$name", _name.c_str());
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+
 std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -3199,9 +3219,11 @@ std::string GepNode::printInputData(PrintType _pt, uint32_t _id) {
  */
 void LoopNode::setEndingInstructions() {
     // Iterate over the supernodes and then find the store nodes
+    outs() << "AMIRALI\n";
     for (auto &_s_node : this->bblocks()) {
         for (auto &_ins_node : _s_node->instructions()) {
             if (isa<StoreNode>(&*_ins_node)) {
+                _ins_node->getInstruction()->dump();
                 ending_instructions.push_back(&*_ins_node);
             }
         }

@@ -1483,8 +1483,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         // This function should be called after filling the containers
         // always
         // Here we look for Store nodes and then connect them to their
-        // endinge
-        // branch instruction
+        // ending branch instruction
         _loop_node->setEndingInstructions();
 
         for (auto _en_instruction : _loop_node->endings()) {
@@ -1495,7 +1494,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                                                 ->getInstList()
                                                 .back()];
 
-            // For now we connect all the store nodes within a for loop
+            // For now we connect all the store nodes within a loop
             // to their ending branch instruction
             // this condition can be ease down later on
             _en_instruction->addControlOutputPort(_br_ins);
@@ -1816,6 +1815,21 @@ void GraphGeneratorPass::connectLoopEdge() {
     }
 }
 
+void GraphGeneratorPass::connectingStoreToBranch(Function &F) {
+    for (auto &BB : F) {
+        for (auto &I : BB) {
+            if (isa<llvm::StoreInst>(I)) {
+                auto _store_node = map_value_node[&I];
+                auto _br_inst = --I.getParent()->getInstList().end();
+                _store_node->addControlOutputPort(map_value_node[&*_br_inst]);
+                map_value_node[&*_br_inst]->addControlInputPort(_store_node);
+            }
+        }
+    }
+}
+
+
+
 /**
  * All the initializations for function members
  */
@@ -1830,6 +1844,7 @@ void GraphGeneratorPass::init(Function &F) {
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);
+    connectingStoreToBranch(F);
     // connectingAliasEdges(F);
 
     // Printing the graph

@@ -103,6 +103,7 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             printMemInsConnections(PrintType::Scala);
             printSharedConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
+            printControlDependencies(PrintType::Scala);
             printOutPort(PrintType::Scala);
             printClosingclass(PrintType::Scala);
             //printScalaMainClass();
@@ -636,6 +637,34 @@ void Graph::printDatadependencies(PrintType _pt) {
             assert(!"Uknown print type!");
     }
 }
+
+
+void Graph::printControlDependencies(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Control dependencies\n");
+            this->outCode << helperScalaPrintHeader(
+                "Connecting data dependencies");
+
+            // Print ground ndoes
+            for (auto _st_node : getNodeList<StoreNode>(this)) {
+                for(auto _cn_node : _st_node->output_control_range()){
+                    auto branch_node = dyn_cast<BranchNode>(_cn_node.first);
+                    this->outCode << "  " <<
+                    branch_node->printInputEnable(PrintType::Scala, _cn_node.second.getID()) << " <> "
+                        << _st_node->printOutputEnable(PrintType::Scala, _st_node->findControlOutputNode(_cn_node.first)->second.getID()) << "\n\n";
+                }
+            }
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+}
+
+
 
 void Graph::printAllocaOffset(PrintType _pt) {
     switch (_pt) {
