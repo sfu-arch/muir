@@ -61,9 +61,9 @@ muIR-Generator uses [muIR-Lib](https://github.com/sfu-arch/muir-lib) chisel libr
 To be able to run and test the hardware accelerator, currently, we support the following back-ends:
 
 * [muIR-Sim](https://github.com/sfu-arch/muir-sim)
-* [Amazon AWS F1](https://github.com/amsharifian/dandelion-aws)
-* [FPGA SoC boards](https://github.com/sfu-arch/muir-fpga)
-* [RISCV Extension](https://github.com/amsharifian/rocket-rocc-examples)
+* [muIR-F1](https://github.com/amsharifian/dandelion-aws)
+* [muIR-SoC](https://github.com/sfu-arch/muir-fpga)
+* [muIR-V](https://github.com/amsharifian/rocket-rocc-examples)
 
 
 Each project, separately has tutorial on how to connect the generated hardware accelerator design and run the full-system application.
