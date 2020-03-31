@@ -86,7 +86,7 @@ class Graph {
     explicit Graph(NodeInfo _n_info)
         : graph_info(_n_info),
           split_call(
-              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+              std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
@@ -99,7 +99,7 @@ class Graph {
     explicit Graph(NodeInfo _n_info, llvm::raw_ostream &_output)
         : graph_info(_n_info),
           split_call(
-              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+              std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
@@ -113,7 +113,7 @@ class Graph {
                    llvm::Function *_fn)
         : graph_info(_n_info),
           split_call(
-              std::make_unique<SplitCallNode>(NodeInfo(0, "InputSplitter"))),
+              std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
           memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),

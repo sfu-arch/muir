@@ -274,7 +274,7 @@ class Node {
 
     uint32_t getType() const { return node_type; }
 
-   //protected:
+    // protected:
     /**
      * Adding a node to a specific index of control input port
      */
@@ -353,9 +353,7 @@ class Node {
                std::string(" -> MemOutput with ID Not defined!");
     }
 
-    void dump(){
-        outs() << info.Name << "\n";
-    }
+    void dump() { outs() << info.Name << "\n"; }
 };
 
 /**
@@ -442,18 +440,21 @@ class ArgumentNode : public Node {
         LoopLiveOut,
         CarryDependency
     };
+    enum DataType { PtrType, IntegerType };
 
    private:
     ArgumentType arg_type;
+    DataType arg_data_type;
     ContainerNode *parent_call_node;
     llvm::Value *parent_argument;
 
    public:
     explicit ArgumentNode(NodeInfo _ni, ArgumentType _arg_type,
-                          ContainerNode *_call_node = nullptr,
+                          DataType _d_type, ContainerNode *_call_node = nullptr,
                           llvm::Value *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni),
           arg_type(_arg_type),
+          arg_data_type(_d_type),
           parent_call_node(_call_node),
           parent_argument(_arg) {}
 
@@ -465,6 +466,7 @@ class ArgumentNode : public Node {
     }
 
     auto getArgType() { return arg_type; }
+    auto getDataArgType() { return arg_data_type; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -479,9 +481,10 @@ class ContainerNode : public Node {
     enum ContainType { LoopNodeTy = 0, SplitCallTy };
     using RegisterList = std::list<std::shared_ptr<ArgumentNode>>;
 
-   private:
+   protected:
     ContainType con_type;
-    RegisterList live_in;
+    RegisterList live_in_ptrs;
+    RegisterList live_in_vals;
     RegisterList live_out;
     RegisterList carry_depen;
 
@@ -514,14 +517,22 @@ class ContainerNode : public Node {
     uint32_t findLiveOutArgumentIndex(ArgumentNode *);
     uint32_t findCarryDepenArgumentIndex(ArgumentNode *);
 
-    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type);
+    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type, ArgumentNode::DataType dtype);
     uint32_t numLiveOutArgList(ArgumentNode::ArgumentType type);
     uint32_t numCarryDepenArgList(ArgumentNode::ArgumentType type);
 
-    auto live_in_begin() { return this->live_in.begin(); }
-    auto live_in_end() { return this->live_in.end(); }
-    auto live_in_lists() {
-        return helpers::make_range(live_in_begin(), live_in_end());
+    auto live_in_ptrs_begin() { return this->live_in_ptrs.begin(); }
+    auto live_in_ptrs_end() { return this->live_in_ptrs.end(); }
+
+    auto live_in_vals_begin() { return this->live_in_vals.begin(); }
+    auto live_in_vals_end() { return this->live_in_vals.end(); }
+
+    auto live_in_ptrs_lists() {
+        return helpers::make_range(live_in_ptrs_begin(), live_in_ptrs_end());
+    }
+
+    auto live_in_vals_lists() {
+        return helpers::make_range(live_in_vals_begin(), live_in_vals_end());
     }
 
     auto live_out_begin() { return this->live_out.begin(); }
@@ -1002,11 +1013,12 @@ class IcmpNode : public InstructionNode {
 
 class FcmpNode : public InstructionNode {
     std::map<std::string, std::string> op_codes;
+
    public:
     FcmpNode(NodeInfo _ni, llvm::FCmpInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::FcmpInstructionTy, _ins) {
-            op_codes = {{"ogt",">GT"}, {"olt","<LT"}, {"oeq","=EQ"}};
-        }
+        op_codes = {{"ogt", ">GT"}, {"olt", "<LT"}, {"oeq", "=EQ"}};
+    }
 
     static bool classof(const InstructionNode *I) {
         return I->getOpCode() == InstType::FcmpInstructionTy;
@@ -1486,6 +1498,12 @@ class ConstFPNode : public Node {
  */
 class SplitCallNode : public ContainerNode {
    public:
+    enum ArgType { Ptrs = 0, Vals };
+
+   private:
+    std::map<ArgumentNode *, ArgType> arg_types;
+
+   public:
     explicit SplitCallNode(NodeInfo _nf)
         : ContainerNode(_nf, ContainerNode::SplitCallTy) {}
 
@@ -1573,10 +1591,10 @@ class ZextNode : public InstructionNode {
 /**
  * truncate node
  */
-class TruncNode: public InstructionNode {
+class TruncNode : public InstructionNode {
    public:
     TruncNode(NodeInfo _ni, llvm::TruncInst *_ins = nullptr,
-             NodeType _nd = UnkonwTy)
+              NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::TruncInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1595,10 +1613,10 @@ class TruncNode: public InstructionNode {
 /**
  * stiofp node
  */
-class STIoFPNode: public InstructionNode {
+class STIoFPNode : public InstructionNode {
    public:
     STIoFPNode(NodeInfo _ni, llvm::SIToFPInst *_ins = nullptr,
-             NodeType _nd = UnkonwTy)
+               NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::STIoFPInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1614,14 +1632,13 @@ class STIoFPNode: public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
-
 /**
  * stiofp node
  */
-class FPToUINode: public InstructionNode {
+class FPToUINode : public InstructionNode {
    public:
     FPToUINode(NodeInfo _ni, llvm::FPToUIInst *_ins = nullptr,
-             NodeType _nd = UnkonwTy)
+               NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::FPToUIInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1636,10 +1653,6 @@ class FPToUINode: public InstructionNode {
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
-
-
-
-
 
 class ReattachNode : public InstructionNode {
    private:

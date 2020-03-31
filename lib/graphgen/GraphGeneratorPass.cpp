@@ -617,17 +617,13 @@ void GraphGeneratorPass::visitTruncInst(llvm::TruncInst &I) {
     map_value_node[&I] = this->dependency_graph->insertTruncNode(I);
 }
 
-void GraphGeneratorPass::visitSIToFPInst(llvm::SIToFPInst &I){
-
+void GraphGeneratorPass::visitSIToFPInst(llvm::SIToFPInst &I) {
     map_value_node[&I] = this->dependency_graph->insertSTIoFPNode(I);
 }
 
-void GraphGeneratorPass::visitFPToUIInst(llvm::FPToUIInst &I){
-
+void GraphGeneratorPass::visitFPToUIInst(llvm::FPToUIInst &I) {
     map_value_node[&I] = this->dependency_graph->insertFPToUINode(I);
 }
-
-
 
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
@@ -1061,7 +1057,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
                                         return ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it));
+                                                (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
@@ -1105,7 +1101,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
                                         return ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it));
+                                                (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
@@ -1828,8 +1824,6 @@ void GraphGeneratorPass::connectingStoreToBranch(Function &F) {
     }
 }
 
-
-
 /**
  * All the initializations for function members
  */
@@ -1850,7 +1844,7 @@ void GraphGeneratorPass::init(Function &F) {
     // Printing the graph
     dependency_graph->optimizationPasses();
     dependency_graph->printGraph(PrintType::Scala, config_path);
-    dependency_graph->printNodeSummary();
+    //dependency_graph->printNodeSummary();
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {

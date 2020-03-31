@@ -22,8 +22,7 @@ using namespace helpers;
 using namespace std::placeholders;
 
 std::string printFloatingPointIEEE754(FloatingPointIEEE754 _number) {
-
-    //TODO: Enable if the following lines if it's needed
+    // TODO: Enable if the following lines if it's needed
     // auto sign = std::bitset<1>(_number.raw.sign);
     // auto exponent = std::bitset<8>(_number.raw.exponent);
     // auto mantissa = std::bitset<23>(_number.raw.mantissa);
@@ -579,10 +578,11 @@ std::string MemoryNode::printDefinition(PrintType pt) {
                 "NReads = $num_read, NWrites = $num_write)\n"
                 "  (WControl = new "
                 "WriteMemoryController(NumOps = $write_num_op, "
-                "BaseSize = $read_base_size, NumEntries = $read_num_entries))\n"
+                "BaseSize = $read_base_size, NumEntries = $read_num_entries, "
+                "Serialize = true))\n"
                 "  (RControl = new ReadMemoryController(NumOps = $read_num_op, "
                 "BaseSize = $write_base_size, "
-                "NumEntries = $write_num_entries))\n"
+                "NumEntries = $write_num_entries, Serialize = true))\n"
                 "  (RWArbiter = new ReadWriteArbiter()))"
                 "\n\n"
                 "  io.MemReq <> $name.io.MemReq\n"
@@ -724,34 +724,62 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
 
 ArgumentNode *ContainerNode::insertLiveInArgument(
     llvm::Value *_val, ArgumentNode::ArgumentType _type) {
-    auto ff = std::find_if(live_in.begin(), live_in.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == live_in.end()) {
-        live_in.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_in.size(), _val->getName().str()), _type, this,
-            _val));
+    if (_val->getType()->isPointerTy()) {
+        auto ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                               [&_val](auto &arg) -> bool {
+                                   return arg.get()->getArgumentValue() == _val;
+                               });
+        if (ff == live_in_ptrs.end()) {
+            live_in_ptrs.push_back(std::make_unique<ArgumentNode>(
+                NodeInfo(live_in_ptrs.size(), _val->getName().str()), _type,
+                ArgumentNode::PtrType, this, _val));
 
-        ff = std::find_if(live_in.begin(), live_in.end(),
-                          [&_val](auto &arg) -> bool {
-                              return arg.get()->getArgumentValue() == _val;
-                          });
+            ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                              [&_val](auto &arg) -> bool {
+                                  return arg.get()->getArgumentValue() == _val;
+                              });
+        }
+
+        return ff->get();
+    } else if (_val->getType()->isStructTy()) {
+        assert(!"The input argument type in unkonw!");
+    } else {
+        auto ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
+                               [&_val](auto &arg) -> bool {
+                                   return arg.get()->getArgumentValue() == _val;
+                               });
+        if (ff == live_in_vals.end()) {
+            live_in_vals.push_back(std::make_unique<ArgumentNode>(
+                NodeInfo(live_in_vals.size(), _val->getName().str()), _type,
+                ArgumentNode::IntegerType, this, _val));
+
+            ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
+                              [&_val](auto &arg) -> bool {
+                                  return arg.get()->getArgumentValue() == _val;
+                              });
+        }
+        return ff->get();
     }
-
-    return ff->get();
 }
 
 ArgumentNode *ContainerNode::insertLiveOutArgument(
     llvm::Value *_val, ArgumentNode::ArgumentType _type) {
+    ArgumentNode::DataType arg_dtype;
+    if (_val->getType()->isPointerTy()) {
+        arg_dtype = ArgumentNode::PtrType;
+    } else if (_val->getType()->isStructTy()) {
+        assert(!"Input argument type is unkonwn");
+    } else
+        arg_dtype = ArgumentNode::IntegerType;
+
     auto ff = std::find_if(live_out.begin(), live_out.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
                            });
     if (ff == live_out.end()) {
         live_out.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(live_out.size(), _val->getName().str()), _type, this,
-            _val));
+            NodeInfo(live_out.size(), _val->getName().str()), _type, arg_dtype,
+            this, _val));
 
         ff = std::find_if(live_out.begin(), live_out.end(),
                           [&_val](auto &arg) -> bool {
@@ -764,14 +792,22 @@ ArgumentNode *ContainerNode::insertLiveOutArgument(
 
 ArgumentNode *ContainerNode::insertCarryDepenArgument(
     llvm::Value *_val, ArgumentNode::ArgumentType _type) {
+    ArgumentNode::DataType arg_dtype;
+    if (_val->getType()->isPointerTy()) {
+        arg_dtype = ArgumentNode::PtrType;
+    } else if (_val->getType()->isStructTy()) {
+        assert(!"Input argument type is unkonwn");
+    } else
+        arg_dtype = ArgumentNode::IntegerType;
+
     auto ff = std::find_if(carry_depen.begin(), carry_depen.end(),
                            [&_val](auto &arg) -> bool {
                                return arg.get()->getArgumentValue() == _val;
                            });
     if (ff == carry_depen.end()) {
         carry_depen.push_back(std::make_unique<ArgumentNode>(
-            NodeInfo(carry_depen.size(), _val->getName().str()), _type, this,
-            _val));
+            NodeInfo(carry_depen.size(), _val->getName().str()), _type,
+            arg_dtype, this, _val));
 
         ff = std::find_if(carry_depen.begin(), carry_depen.end(),
                           [&_val](auto &arg) -> bool {
@@ -783,17 +819,35 @@ ArgumentNode *ContainerNode::insertCarryDepenArgument(
 }
 
 Node *ContainerNode::findLiveInNode(llvm::Value *_val) {
-    auto ff = std::find_if(live_in.begin(), live_in.end(),
-                           [&_val](auto &arg) -> bool {
-                               return arg.get()->getArgumentValue() == _val;
-                           });
-    if (ff == live_in.end()) {
-        DEBUG(_val->print(errs(), true));
-        return nullptr;
-        // assert(!"Couldn't find the live-in");
+    Node *return_ptr = nullptr;
+
+    if (_val->getType()->isPointerTy()) {
+        auto ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                               [&_val](auto &arg) -> bool {
+                                   return arg.get()->getArgumentValue() == _val;
+                               });
+        if (ff == live_in_ptrs.end()) {
+            DEBUG(_val->print(errs(), true));
+            return nullptr;
+            // assert(!"Couldn't find the live-in");
+        }
+
+        return_ptr = ff->get();
+    } else {
+        auto ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
+                               [&_val](auto &arg) -> bool {
+                                   return arg.get()->getArgumentValue() == _val;
+                               });
+        if (ff == live_in_vals.end()) {
+            DEBUG(_val->print(errs(), true));
+            return nullptr;
+            // assert(!"Couldn't find the live-in");
+        }
+
+        return_ptr = ff->get();
     }
 
-    return ff->get();
+    return return_ptr;
 }
 
 Node *ContainerNode::findLiveOutNode(llvm::Value *_val) {
@@ -826,14 +880,21 @@ Node *ContainerNode::findCarryDepenNode(llvm::Value *_val) {
 
 uint32_t ContainerNode::findLiveInArgumentIndex(ArgumentNode *_arg_node) {
     auto _arg_type = _arg_node->getArgType();
+    auto _arg_data_type = _arg_node->getDataArgType();
+
     RegisterList _local_list;
 
     auto find_function = [_arg_type](auto &node) {
         return (node->getArgType() == _arg_type);
     };
 
-    std::copy_if(live_in.begin(), live_in.end(),
-                 std::back_inserter(_local_list), find_function);
+    if (_arg_data_type == ArgumentNode::PtrType) {
+        std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                     std::back_inserter(_local_list), find_function);
+    } else if (_arg_data_type == ArgumentNode::IntegerType) {
+        std::copy_if(live_in_vals.begin(), live_in_vals.end(),
+                     std::back_inserter(_local_list), find_function);
+    }
 
     auto arg_find = std::find_if(
         _local_list.begin(), _local_list.end(),
@@ -867,7 +928,7 @@ uint32_t ContainerNode::findCarryDepenArgumentIndex(ArgumentNode *_arg_node) {
     RegisterList _local_list;
 
     auto find_function = [_arg_type](auto &node) {
-        return (node->getArgType() == _arg_type) ;
+        return (node->getArgType() == _arg_type);
     };
 
     std::copy_if(carry_depen.begin(), carry_depen.end(),
@@ -881,15 +942,21 @@ uint32_t ContainerNode::findCarryDepenArgumentIndex(ArgumentNode *_arg_node) {
     return pos;
 }
 
-uint32_t ContainerNode::numLiveInArgList(ArgumentNode::ArgumentType type) {
+uint32_t ContainerNode::numLiveInArgList(ArgumentNode::ArgumentType type,
+                                         ArgumentNode::DataType dtype) {
     RegisterList _local_list;
 
     auto find_function = [type](auto &node) {
         return (node->getArgType() == type);
     };
 
-    std::copy_if(live_in.begin(), live_in.end(),
-                 std::back_inserter(_local_list), find_function);
+    if (dtype == ArgumentNode::PtrType) {
+        std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                     std::back_inserter(_local_list), find_function);
+    } else if (dtype == ArgumentNode::IntegerType) {
+        std::copy_if(live_in_vals.begin(), live_in_vals.end(),
+                     std::back_inserter(_local_list), find_function);
+    }
 
     return _local_list.size();
 }
@@ -938,24 +1005,30 @@ std::string SplitCallNode::printDefinition(PrintType _pt) {
         case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(List($<input_vector>)))\n"
+                "  val $name = Module(new $type(ptrsArgTypes = "
+                "List($<ptrs_input_vector>), valsArgTypes = "
+                "List($<vals_input_vector>)))\n"
                 "  $name.io.In <> io.in\n\n";
 
-            helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$type", "SplitCallNew");
+            helperReplace(_text, "$name", _name);
+            helperReplace(_text, "$type", "SplitCallDCR");
             helperReplace(_text, "$id", std::to_string(this->getID()));
 
             // TODO make a list of liveins first
             auto find_function = [](auto &node) {
                 return (node->getArgType() == ArgumentNode::LiveIn);
             };
-            RegisterList _local_list;
+            RegisterList _local_list_ptrs;
+            RegisterList _local_list_vals;
+            std::copy_if(live_in_ptrs_begin(), live_in_ptrs_end(),
+                         std::back_inserter(_local_list_ptrs), find_function);
+            std::copy_if(live_in_vals_begin(), live_in_vals_end(),
+                         std::back_inserter(_local_list_vals), find_function);
 
-            std::copy_if(live_in_begin(), live_in_end(),
-                         std::back_inserter(_local_list), find_function);
-
-            helperReplace(_text, "$<input_vector>",
-                          make_argument_port(_local_list), ", ");
+            helperReplace(_text, "$<ptrs_input_vector>",
+                          make_argument_port(_local_list_ptrs), ", ");
+            helperReplace(_text, "$<vals_input_vector>",
+                          make_argument_port(_local_list_vals), ", ");
 
             break;
         }
@@ -1238,7 +1311,7 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
             switch (this->getArgType()) {
                 case ArgumentNode::LiveIn: {
                     std::replace(_name.begin(), _name.end(), '.', '_');
-                    _text = "$call.io.$out.data.elements(\"field$num\")($id)";
+                    _text = "$call.io.$out.$data.elements(\"field$num\")($id)";
                     helperReplace(_text, "$call",
                                   this->parent_call_node->getName());
                     helperReplace(
@@ -1247,6 +1320,12 @@ std::string ArgumentNode::printOutputData(PrintType _pt, uint32_t _idx) {
                     helperReplace(_text, "$out", "Out");
 
                     helperReplace(_text, "$id", _idx);
+
+                    if (this->getDataArgType() == ArgumentNode::PtrType)
+                        helperReplace(_text, "$data", "dataPtrs");
+                    else if (this->getDataArgType() ==
+                             ArgumentNode::IntegerType)
+                        helperReplace(_text, "$data", "dataVals");
 
                     break;
                 }
@@ -1342,7 +1421,8 @@ std::string BinaryOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false, Debug = false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = false, Debug "
+                "= false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1807,7 +1887,8 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(sign = $sign, Debug = false))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(sign = $sign, Debug "
+                "= false))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1818,7 +1899,7 @@ std::string IcmpNode::printDefinition(PrintType _pt) {
                               dyn_cast<llvm::ICmpInst>(this->getInstruction())
                                   ->getSignedPredicate()));
 
-            if(dyn_cast<llvm::ICmpInst>(this->getInstruction())->isSigned())
+            if (dyn_cast<llvm::ICmpInst>(this->getInstruction())->isSigned())
                 helperReplace(_text, "$sign", "true");
             else
                 helperReplace(_text, "$sign", "false");
@@ -2528,8 +2609,6 @@ std::string StoreNode::printOutputEnable(PrintType pt) {
     return _text;
 }
 
-
-
 std::string StoreNode::printInputData(PrintType _pt, uint32_t _id) {
     string _name(this->getName());
     std::replace(_name.begin(), _name.end(), '.', '_');
@@ -2917,8 +2996,6 @@ std::string TruncNode::printInputEnable(PrintType pt) {
     return _text;
 }
 
-
-
 //===----------------------------------------------------------------------===//
 //                            STIoFPNode Class
 //===----------------------------------------------------------------------===//
@@ -2996,7 +3073,6 @@ std::string STIoFPNode::printInputEnable(PrintType pt) {
     }
     return _text;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                            FPToUINode Class
@@ -3076,8 +3152,6 @@ std::string FPToUINode::printInputEnable(PrintType pt) {
     return _text;
 }
 
-
-
 //===----------------------------------------------------------------------===//
 //                            GetElementPtrStruct Class
 //===----------------------------------------------------------------------===//
@@ -3109,13 +3183,13 @@ std::string GepNode::printDefinition(PrintType _pt) {
 
             /**
              * TODO: Currently our simulation framework only supports 64bit data
-             * hence, after initialization we only write 64bit data to the memory
-             * even the actual data size 32bit. We need to address this limitation from
-             * simulation and then uncomment the follwoing line to use proper elementSize
-             * instead of hard-coded version.
+             * hence, after initialization we only write 64bit data to the
+             * memory even the actual data size 32bit. We need to address this
+             * limitation from simulation and then uncomment the follwoing line
+             * to use proper elementSize instead of hard-coded version.
              */
-            //helperReplace(_text, "$size",
-                          //*std::prev(this->gep_info.element_size.end()));
+            // helperReplace(_text, "$size",
+            //*std::prev(this->gep_info.element_size.end()));
             helperReplace(_text, "$size", 8);
 
             helperReplace(_text, "$array", "List(" + _array.str() + ")");
@@ -3257,8 +3331,12 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_exit",
                           static_cast<uint32_t>(this->loop_exits.size()));
 
-            helperReplace(_text, "$<input_vector>",
-                          make_argument_port(live_in_lists()), ", ");
+            auto live_in_args = make_argument_port(live_in_ptrs_lists());
+            auto live_in_vals_args = make_argument_port(live_in_vals_lists());
+
+            live_in_args.insert(live_in_args.end(), live_in_vals_args.begin(),
+                                live_in_vals_args.end());
+            helperReplace(_text, "$<input_vector>", live_in_args, ", ");
 
             helperReplace(_text, "$<num_out>",
                           make_argument_port(live_out_lists()), ", ");
@@ -3326,7 +3404,7 @@ std::string LoopNode::printOutputEnable(PrintType _pt, PortEntry _port) {
 
     auto port_equal = [](auto port_1, auto port_2) -> bool {
         return ((port_1.first == port_2.first) &&
-            (port_1.second.getID() == port_2.second.getID()));
+                (port_1.second.getID() == port_2.second.getID()));
     };
 
     switch (_pt) {
