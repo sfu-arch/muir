@@ -483,8 +483,13 @@ class ContainerNode : public Node {
 
    protected:
     ContainType con_type;
+    //ptrs and vals are fore split call
     RegisterList live_in_ptrs;
     RegisterList live_in_vals;
+
+    //live_in is for loop nodes
+    RegisterList live_in;
+
     RegisterList live_out;
     RegisterList carry_depen;
 
@@ -521,11 +526,18 @@ class ContainerNode : public Node {
     uint32_t numLiveOutArgList(ArgumentNode::ArgumentType type);
     uint32_t numCarryDepenArgList(ArgumentNode::ArgumentType type);
 
+    auto live_in_begin() { return this->live_in.begin(); }
+    auto live_in_end() { return this->live_in.end(); }
+
     auto live_in_ptrs_begin() { return this->live_in_ptrs.begin(); }
     auto live_in_ptrs_end() { return this->live_in_ptrs.end(); }
 
     auto live_in_vals_begin() { return this->live_in_vals.begin(); }
     auto live_in_vals_end() { return this->live_in_vals.end(); }
+
+    auto live_in_lists() {
+        return helpers::make_range(live_in_begin(), live_in_end());
+    }
 
     auto live_in_ptrs_lists() {
         return helpers::make_range(live_in_ptrs_begin(), live_in_ptrs_end());

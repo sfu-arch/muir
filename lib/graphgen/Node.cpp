@@ -724,41 +724,69 @@ std::string MemoryNode::printUninitilizedUnit(PrintType _pt) {
 
 ArgumentNode *ContainerNode::insertLiveInArgument(
     llvm::Value *_val, ArgumentNode::ArgumentType _type) {
-    if (_val->getType()->isPointerTy()) {
-        auto ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
-                               [&_val](auto &arg) -> bool {
-                                   return arg.get()->getArgumentValue() == _val;
-                               });
-        if (ff == live_in_ptrs.end()) {
-            live_in_ptrs.push_back(std::make_unique<ArgumentNode>(
-                NodeInfo(live_in_ptrs.size(), _val->getName().str()), _type,
-                ArgumentNode::PtrType, this, _val));
+    switch (con_type) {
+        case ContainerNode::LoopNodeTy: {
+            auto ff = std::find_if(
+                live_in.begin(), live_in.end(), [&_val](auto &arg) -> bool {
+                    return arg.get()->getArgumentValue() == _val;
+                });
+            if (ff == live_in.end()) {
+                live_in.push_back(std::make_unique<ArgumentNode>(
+                    NodeInfo(live_in.size(), _val->getName().str()), _type,
+                    ArgumentNode::PtrType, this, _val));
 
-            ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
-                              [&_val](auto &arg) -> bool {
-                                  return arg.get()->getArgumentValue() == _val;
-                              });
+                ff = std::find_if(
+                    live_in.begin(), live_in.end(), [&_val](auto &arg) -> bool {
+                        return arg.get()->getArgumentValue() == _val;
+                    });
+            }
+
+            return ff->get();
         }
+        case SplitCallTy: {
+            if (_val->getType()->isPointerTy()) {
+                auto ff = std::find_if(
+                    live_in_ptrs.begin(), live_in_ptrs.end(),
+                    [&_val](auto &arg) -> bool {
+                        return arg.get()->getArgumentValue() == _val;
+                    });
+                if (ff == live_in_ptrs.end()) {
+                    live_in_ptrs.push_back(std::make_unique<ArgumentNode>(
+                        NodeInfo(live_in_ptrs.size(), _val->getName().str()),
+                        _type, ArgumentNode::PtrType, this, _val));
 
-        return ff->get();
-    } else if (_val->getType()->isStructTy()) {
-        assert(!"The input argument type in unkonw!");
-    } else {
-        auto ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
-                               [&_val](auto &arg) -> bool {
-                                   return arg.get()->getArgumentValue() == _val;
-                               });
-        if (ff == live_in_vals.end()) {
-            live_in_vals.push_back(std::make_unique<ArgumentNode>(
-                NodeInfo(live_in_vals.size(), _val->getName().str()), _type,
-                ArgumentNode::IntegerType, this, _val));
+                    ff = std::find_if(
+                        live_in_ptrs.begin(), live_in_ptrs.end(),
+                        [&_val](auto &arg) -> bool {
+                            return arg.get()->getArgumentValue() == _val;
+                        });
+                }
 
-            ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
-                              [&_val](auto &arg) -> bool {
-                                  return arg.get()->getArgumentValue() == _val;
-                              });
+                return ff->get();
+            } else if (_val->getType()->isStructTy()) {
+                assert(!"The input argument type in unkonw!");
+            } else {
+                auto ff = std::find_if(
+                    live_in_vals.begin(), live_in_vals.end(),
+                    [&_val](auto &arg) -> bool {
+                        return arg.get()->getArgumentValue() == _val;
+                    });
+                if (ff == live_in_vals.end()) {
+                    live_in_vals.push_back(std::make_unique<ArgumentNode>(
+                        NodeInfo(live_in_vals.size(), _val->getName().str()),
+                        _type, ArgumentNode::IntegerType, this, _val));
+
+                    ff = std::find_if(
+                        live_in_vals.begin(), live_in_vals.end(),
+                        [&_val](auto &arg) -> bool {
+                            return arg.get()->getArgumentValue() == _val;
+                        });
+                }
+                return ff->get();
+            }
         }
-        return ff->get();
+        default:
+            assert(!"Container type is unkonw!");
     }
 }
 
@@ -821,30 +849,49 @@ ArgumentNode *ContainerNode::insertCarryDepenArgument(
 Node *ContainerNode::findLiveInNode(llvm::Value *_val) {
     Node *return_ptr = nullptr;
 
-    if (_val->getType()->isPointerTy()) {
-        auto ff = std::find_if(live_in_ptrs.begin(), live_in_ptrs.end(),
-                               [&_val](auto &arg) -> bool {
-                                   return arg.get()->getArgumentValue() == _val;
-                               });
-        if (ff == live_in_ptrs.end()) {
-            DEBUG(_val->print(errs(), true));
-            return nullptr;
-            // assert(!"Couldn't find the live-in");
-        }
+    switch (con_type) {
+        case ContainerNode::SplitCallTy: {
+            if (_val->getType()->isPointerTy()) {
+                auto ff = std::find_if(
+                    live_in_ptrs.begin(), live_in_ptrs.end(),
+                    [&_val](auto &arg) -> bool {
+                        return arg.get()->getArgumentValue() == _val;
+                    });
+                if (ff == live_in_ptrs.end()) {
+                    DEBUG(_val->print(errs(), true));
+                    //assert(!"Couldn't find the live-in");
+                    return nullptr;
+                }
 
-        return_ptr = ff->get();
-    } else {
-        auto ff = std::find_if(live_in_vals.begin(), live_in_vals.end(),
-                               [&_val](auto &arg) -> bool {
-                                   return arg.get()->getArgumentValue() == _val;
-                               });
-        if (ff == live_in_vals.end()) {
-            DEBUG(_val->print(errs(), true));
-            return nullptr;
-            // assert(!"Couldn't find the live-in");
-        }
+                return_ptr = ff->get();
+            } else {
+                auto ff = std::find_if(
+                    live_in_vals.begin(), live_in_vals.end(),
+                    [&_val](auto &arg) -> bool {
+                        return arg.get()->getArgumentValue() == _val;
+                    });
+                if (ff == live_in_vals.end()) {
+                    DEBUG(_val->print(errs(), true));
+                    //assert(!"Couldn't find the live-in");
+                    return nullptr;
+                }
 
-        return_ptr = ff->get();
+                return_ptr = ff->get();
+            }
+        }
+        case ContainerNode::LoopNodeTy: {
+            auto ff = std::find_if(
+                live_in.begin(), live_in.end(), [&_val](auto &arg) -> bool {
+                    return arg.get()->getArgumentValue() == _val;
+                });
+            if (ff == live_in.end()) {
+                DEBUG(_val->print(errs(), true));
+                //assert(!"Couldn't find the live-in");
+                return nullptr;
+            }
+
+            return_ptr = ff->get();
+        }
     }
 
     return return_ptr;
@@ -888,12 +935,20 @@ uint32_t ContainerNode::findLiveInArgumentIndex(ArgumentNode *_arg_node) {
         return (node->getArgType() == _arg_type);
     };
 
-    if (_arg_data_type == ArgumentNode::PtrType) {
-        std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
-                     std::back_inserter(_local_list), find_function);
-    } else if (_arg_data_type == ArgumentNode::IntegerType) {
-        std::copy_if(live_in_vals.begin(), live_in_vals.end(),
-                     std::back_inserter(_local_list), find_function);
+    switch (con_type) {
+        case ContainerNode::SplitCallTy: {
+            if (_arg_data_type == ArgumentNode::PtrType) {
+                std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                             std::back_inserter(_local_list), find_function);
+            } else if (_arg_data_type == ArgumentNode::IntegerType) {
+                std::copy_if(live_in_vals.begin(), live_in_vals.end(),
+                             std::back_inserter(_local_list), find_function);
+            }
+        }
+        case ContainerNode::LoopNodeTy: {
+            std::copy_if(live_in.begin(), live_in.end(),
+                         std::back_inserter(_local_list), find_function);
+        }
     }
 
     auto arg_find = std::find_if(
@@ -950,12 +1005,20 @@ uint32_t ContainerNode::numLiveInArgList(ArgumentNode::ArgumentType type,
         return (node->getArgType() == type);
     };
 
-    if (dtype == ArgumentNode::PtrType) {
-        std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
-                     std::back_inserter(_local_list), find_function);
-    } else if (dtype == ArgumentNode::IntegerType) {
-        std::copy_if(live_in_vals.begin(), live_in_vals.end(),
-                     std::back_inserter(_local_list), find_function);
+    switch (con_type) {
+        case ContainerNode::SplitCallTy: {
+            if (dtype == ArgumentNode::PtrType) {
+                std::copy_if(live_in_ptrs.begin(), live_in_ptrs.end(),
+                             std::back_inserter(_local_list), find_function);
+            } else if (dtype == ArgumentNode::IntegerType) {
+                std::copy_if(live_in_vals.begin(), live_in_vals.end(),
+                             std::back_inserter(_local_list), find_function);
+            }
+        }
+        case ContainerNode::LoopNodeTy: {
+            std::copy_if(live_in.begin(), live_in.end(),
+                         std::back_inserter(_local_list), find_function);
+        }
     }
 
     return _local_list.size();
@@ -3293,7 +3356,7 @@ std::string GepNode::printInputData(PrintType _pt, uint32_t _id) {
  */
 void LoopNode::setEndingInstructions() {
     // Iterate over the supernodes and then find the store nodes
-    outs() << "AMIRALI\n";
+    //outs() << "AMIRALI\n";
     for (auto &_s_node : this->bblocks()) {
         for (auto &_ins_node : _s_node->instructions()) {
             if (isa<StoreNode>(&*_ins_node)) {
@@ -3331,11 +3394,7 @@ std::string LoopNode::printDefinition(PrintType _pt) {
             helperReplace(_text, "$num_exit",
                           static_cast<uint32_t>(this->loop_exits.size()));
 
-            auto live_in_args = make_argument_port(live_in_ptrs_lists());
-            auto live_in_vals_args = make_argument_port(live_in_vals_lists());
-
-            live_in_args.insert(live_in_args.end(), live_in_vals_args.begin(),
-                                live_in_vals_args.end());
+            auto live_in_args = make_argument_port(live_in_lists());
             helperReplace(_text, "$<input_vector>", live_in_args, ", ");
 
             helperReplace(_text, "$<num_out>",

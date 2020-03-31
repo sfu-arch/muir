@@ -1592,26 +1592,26 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
                 uint32_t c = 0;
-                for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
-                    if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
-                        continue;
-                    for (auto &_data_in : _live_in->input_data_range()) {
-                        this->outCode
-                            << "  "
-                            << _live_in->printInputData(PrintType::Scala, c++)
-                            << " <> "
-                            << _data_in.first->printOutputData(
-                                   PrintType::Scala,
-                                   _data_in.first
-                                       ->returnDataOutputPortIndex(
-                                           _live_in.get())
-                                       .getID())
-                            << "\n\n";
-                    }
-                }
+                //for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
+                    //if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
+                        //continue;
+                    //for (auto &_data_in : _live_in->input_data_range()) {
+                        //this->outCode
+                            //<< "  "
+                            //<< _live_in->printInputData(PrintType::Scala, c++)
+                            //<< " <> "
+                            //<< _data_in.first->printOutputData(
+                                   //PrintType::Scala,
+                                   //_data_in.first
+                                       //->returnDataOutputPortIndex(
+                                           //_live_in.get())
+                                       //.getID())
+                            //<< "\n\n";
+                    //}
+                //}
 
                 // c = 0;
-                for (auto &_live_in : _l_node->live_in_vals_lists()) {
+                for (auto &_live_in : _l_node->live_in_lists()) {
                     if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
                         continue;
                     for (auto &_data_in : _live_in->input_data_range()) {
@@ -1633,30 +1633,7 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-in dependencies");
             for (auto &_l_node : loop_nodes) {
-                for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
-                    if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
-                        continue;
-                    for (auto &_data_out : _live_in->output_data_range()) {
-                        if (isa<ArgumentNode>(_data_out.first)) continue;
-                        this->outCode << "  "
-                                      << _data_out.first->printInputData(
-                                             PrintType::Scala,
-                                             _data_out.first
-                                                 ->returnDataInputPortIndex(
-                                                     _live_in.get())
-                                                 .getID())
-                                      << " <> "
-                                      << _live_in->printOutputData(
-                                             PrintType::Scala,
-                                             _live_in
-                                                 ->returnDataOutputPortIndex(
-                                                     _data_out.first)
-                                                 .getID())
-                                      << "\n\n";
-                    }
-                }
-
-                for (auto &_live_in : _l_node->live_in_vals_lists()) {
+                for (auto &_live_in : _l_node->live_in_lists()) {
                     if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
                         continue;
                     for (auto &_data_out : _live_in->output_data_range()) {

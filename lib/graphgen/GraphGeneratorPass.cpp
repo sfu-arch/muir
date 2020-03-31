@@ -1765,6 +1765,9 @@ void GraphGeneratorPass::connectLoopEdge() {
             auto _loop_dest = this->loop_value_node[_tar];
             auto _node_dest = _loop_dest->findLiveInNode(_edge.first);
 
+            if(_node_dest == nullptr)
+                assert(!"There is a bug in loop connections!");
+
             _node_src->second->addDataOutputPort(_node_dest);
             _node_dest->addDataInputPort(_node_src->second);
         }
