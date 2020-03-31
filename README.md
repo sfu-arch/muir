@@ -7,14 +7,9 @@ muIR-Generator is a tool to generator hardware accelerator from software program
 
 ## Getting Started
 
-**Step one: Installing dependencies:** Official supported environment for building and running muIR-Generator is ubuntu 18.04. To start using muIR-Generator you have to first install muIR-Generator dependencies:
+Official supported environment for building and running muIR-Generator is ubuntu 18.04.
 
-``` bash
-sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
-sudo apt-get install gcc-8-multilib g++-8-multilib
-```
-
-**Step Two: Building LLVM/TAPIR-6:**  muIR-Generator uses LLVM/TAPIR compiler (LLVM compiler with parallel instruction extension to support Cilk programs). The following link contains a forked version of of [LLVM/TAPIR-6](https://github.com/sfu-arch/Tapir-Meta) with a minor changes which muIR is compatible with.
+**Step One: Building LLVM/TAPIR-6:**  muIR-Generator uses LLVM/TAPIR compiler (LLVM compiler with parallel instruction extension to support Cilk programs). The following link contains a forked version of of [LLVM/TAPIR-6](https://github.com/sfu-arch/Tapir-Meta) with a minor changes which muIR is compatible with.
 To ease of building TAPIR, we have scripted the build process of TAPIR:
 
 ``` bash
@@ -23,20 +18,18 @@ cd muir
 ./scripts/dandelion.sh
 ```
 
-**Step Three: Building muIR-Generator:** Now we have installed and built all the muIR-Generator dependencies we can build the project:
+**Step Two: Building muIR-Generator:** Now we have installed and built all the muIR-Generator dependencies we can build the project:
 
 ```bash
-cd muir
 mkdir build
 cd build
 cmake -DLLVM_DIR=<your_repository_path>/dependencies/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
 make -jN
 ```
 
-**Step Four: Setting your PATH:** To set your ``PATH`` variable you can use the following script which is under **build** directory:
+**Step Three: Setting your PATH:** To set your ``PATH`` variable you can use the following script which is under **build** directory:
 
 ``` bash
-cd muir/build
 source ./scripts/setup-env.sh
 ```
 
