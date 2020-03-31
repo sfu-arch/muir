@@ -1,7 +1,9 @@
 # muIR-Generator
 
+[![CircleCI](https://circleci.com/gh/sfu-arch/muir.svg?style=svg)](https://circleci.com/gh/sfu-arch/muir)
 [![Gitter](https://badges.gitter.im/sfu-arch/community.svg)](https://gitter.im/sfu-arch/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![CircleCI](https://circleci.com/gh/sfu-arch/uir.svg?style=svg)](https://circleci.com/gh/sfu-arch/uir)
+[![](https://tokei.rs/b1/github/sfu-arch/muir)](https://github.com/sfu-arch/muir)
+
 
 muIR-Generator is a tool to generator hardware accelerator from software programs. muIR-Generator uses muIR as an intermediate representation (IR) to design hardware accelerators. Currently, muIR-Generator supports C/C++ and Cilk programs.
 
@@ -59,9 +61,10 @@ muIR-Generator uses [muIR-Lib](https://github.com/sfu-arch/muir-lib) chisel libr
 To be able to run and test the hardware accelerator, currently, we support the following back-ends:
 
 * [muIR-Sim](https://github.com/sfu-arch/muir-sim)
+* [Amazon AWS F1](https://github.com/amsharifian/dandelion-aws)
 * [FPGA SoC boards](https://github.com/sfu-arch/muir-fpga)
 * [RISCV Extension](https://github.com/amsharifian/rocket-rocc-examples)
-* Amazon AWS F1
+
 
 Each project, separately has tutorial on how to connect the generated hardware accelerator design and run the full-system application.
 
