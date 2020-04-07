@@ -574,45 +574,16 @@ std::string MemoryNode::printDefinition(PrintType pt) {
         case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $reg_type(ID = $id, Size = $size, "
-                "NReads = $num_read, NWrites = $num_write)\n"
-                "  (WControl = new "
-                "WriteMemoryController(NumOps = $write_num_op, "
-                "BaseSize = $read_base_size, NumEntries = $read_num_entries, "
-                "Serialize = true))\n"
-                "  (RControl = new ReadMemoryController(NumOps = $read_num_op, "
-                "BaseSize = $write_base_size, "
-                "NumEntries = $write_num_entries, Serialize = true))\n"
-                "  (RWArbiter = new ReadWriteArbiter()))"
-                "\n\n"
-                "  io.MemReq <> $name.io.MemReq\n"
-                "  $name.io.MemResp <> io.MemResp\n\n";
+                "  val $name = Module(new $module_type(ID = $id, NumRead = $num_rd, NumWrite = $num_wr))\n"
+                "\n"
+                "  io.MemReq <> $name.io.cache.MemReq\n"
+                "  $name.io.cache.MemResp <> io.MemResp\n";
             ;
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$reg_type", "UnifiedController");
+            helperReplace(_text, "$module_type", "CacheMemoryEngine");
             helperReplace(_text, "$id", std::to_string(this->getID()));
-
-            auto returnMinimumPort = [](auto _num, uint32_t _base) {
-                if (_num > _base)
-                    return _num;
-                else
-                    return _base;
-            };
-
-            // TODO this part can be parametrize using config file
-            helperReplace(_text, "$size", MEM_SIZE);
-            helperReplace(_text, "$num_read",
-                          returnMinimumPort(this->numReadDataInputPort(), 0));
-            helperReplace(_text, "$num_write",
-                          returnMinimumPort(this->numWriteDataInputPort(), 0));
-            helperReplace(_text, "$read_num_op",
-                          returnMinimumPort(this->numReadDataInputPort(), 0));
-            helperReplace(_text, "$read_base_size", BASE_SIZE);
-            helperReplace(_text, "$read_num_entries", BASE_SIZE);
-            helperReplace(_text, "$write_num_op",
-                          returnMinimumPort(this->numWriteDataOutputPort(), 0));
-            helperReplace(_text, "$write_base_size", BASE_SIZE);
-            helperReplace(_text, "$write_num_entries", BASE_SIZE);
+            helperReplace(_text, "$num_rd", this->numReadDataInputPort());
+            helperReplace(_text, "$num_wr", this->numWriteDataInputPort());
 
         } break;
         case PrintType::Dot:
@@ -629,7 +600,7 @@ std::string MemoryNode::printMemReadInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.ReadIn($mid)";
+            _text = "$name.io.rd.mem($mid).MemReq";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
@@ -648,7 +619,7 @@ std::string MemoryNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.ReadOut($mid)";
+            _text = "$name.io.rd.mem($mid).MemResp";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
@@ -667,7 +638,7 @@ std::string MemoryNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.WriteIn($mid)";
+            _text = "$name.io.wr.mem($mid).MemReq";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
@@ -686,7 +657,7 @@ std::string MemoryNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.WriteOut($mid)";
+            _text = "$name.io.wr.mem($mid).MemResp";
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$mid", _id);
@@ -2445,7 +2416,7 @@ std::string LoadNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumPredOps = $npo, "
                 "NumSuccOps = $nso, "
                 "NumOuts = $num_out, ID = $id, RouteID = $rid))\n\n";
-            helperReplace(_text, "$type", "UnTypLoad");
+            helperReplace(_text, "$type", "UnTypLoadCache");
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
@@ -2541,7 +2512,7 @@ std::string LoadNode::printMemReadInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.memResp";
+            _text = "$name.io.MemResp";
 
             helperReplace(_text, "$name", _name.c_str());
             break;
@@ -2558,7 +2529,7 @@ std::string LoadNode::printMemReadOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.memReq";
+            _text = "$name.io.MemReq";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:
@@ -2583,7 +2554,7 @@ std::string StoreNode::printDefinition(PrintType _pt) {
                 "  val $name = Module(new $type(NumPredOps = $npo, "
                 "NumSuccOps = $nso, "
                 "ID = $id, RouteID = $rid))\n\n";
-            helperReplace(_text, "$type", "UnTypStore");
+            helperReplace(_text, "$type", "UnTypStoreCache");
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
@@ -2698,7 +2669,7 @@ std::string StoreNode::printMemWriteInput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.memResp";
+            _text = "$name.io.MemResp";
 
             helperReplace(_text, "$name", _name.c_str());
             break;
@@ -2732,7 +2703,7 @@ std::string StoreNode::printMemWriteOutput(PrintType _pt, uint32_t _id) {
     string _text;
     switch (_pt) {
         case PrintType::Scala:
-            _text = "$name.io.memReq";
+            _text = "$name.io.MemReq";
             helperReplace(_text, "$name", _name.c_str());
             break;
         default:

@@ -1571,6 +1571,21 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     }
 }
 
+
+/**
+ * There is a limitation in forming the graph at this moment
+ * this function makes sure, all the store's routeIDs are
+ * assigned after load nodes
+ */
+void GraphGeneratorPass::updateRouteIDs(Function &F){
+
+    auto load_list = getNodeList<LoadNode>(this->dependency_graph.get());
+    auto store_list = getNodeList<StoreNode>(this->dependency_graph.get());
+    for(auto s_node : store_list){
+        s_node->setRouteID(s_node->getRouteID() + load_list.size());
+    }
+}
+
 // void GraphGeneratorPass::connectingAliasEdges(Function &F) {
 // auto alias_context = &getAnalysis<aew::AliasEdgeWriter>();
 
@@ -1832,6 +1847,7 @@ void GraphGeneratorPass::connectingStoreToBranch(Function &F) {
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
+    updateRouteIDs(F);
     buildLoopNodes(F, *LI);
     connectLoopEdge();
     // findControlPorts(F);

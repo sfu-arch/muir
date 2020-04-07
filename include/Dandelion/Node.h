@@ -1290,6 +1290,7 @@ class StoreNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    void setRouteID(uint32_t _id) { route_id = _id; }
     auto getRouteID() { return route_id; }
 
     auto isGround() {
