@@ -1546,7 +1546,7 @@ std::string FaddOperatorNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(t = p(FTYP)))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(fType))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1634,8 +1634,7 @@ std::string FdiveOperatorNode::printDefinition(PrintType _pt) {
             _text =
                 "  val $name = Module(new $type(NumOuts = "
                 "$num_out, ID = $id, RouteID = $route_id, opCode = "
-                "\"$opcode\")(t = "
-                "p(FTYP)))\n\n";
+                "\"$opcode\")(fType))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -1762,7 +1761,7 @@ std::string FcmpNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts = "
-                "$num_out, ID = $id, opCode = \"$opcode\")(t = p(FTYP)))\n\n";
+                "$num_out, ID = $id, opCode = \"$opcode\")(fType))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$num_out",
                           std::to_string(this->numDataOutputPort()));
@@ -4239,7 +4238,7 @@ std::string FloatingPointNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val SharedFPU = Module(new SharedFPU(NumOps = $op, "
-                "PipeDepth = 32)(t = p(FTYP)))\n\n";
+                "PipeDepth = 32)(fType))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$op", this->numReadDataInputPort());
 

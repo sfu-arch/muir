@@ -1,4 +1,4 @@
-LLVM_DIR=/home/amirali/git/Tapir-Meta/tapir/build/bin
+LLVM_DIR=@LLVM_BUILD_BINARY_DIR@
 CC=$(LLVM_DIR)/clang
 OPT=$(LLVM_DIR)/opt
 DIS=$(LLVM_DIR)/llvm-dis
@@ -17,7 +17,7 @@ SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
-DANDELION_CONFIG=../../scripts/config.json
+DANDELION_CONFIG=@CMAKE_BINARY_DIR@/scripts/config.json
 
 .PRECIOUS: %.ll
 

@@ -94,6 +94,7 @@ set(CMAKE_TEMP_LIBRARY_PATH "${PROJECT_BINARY_DIR}/lib")
 #configure_file("${CMAKE_SOURCE_DIR}/tests" "${CMAKE_CURRENT_BINARY_DIR}/" @COPYONLY)
 file(COPY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
 configure_file("${CMAKE_SOURCE_DIR}/tests/c/Makefile" "${CMAKE_CURRENT_BINARY_DIR}/tests/c/Makefile" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/tests/bc/Machsuite/common.mk" "${CMAKE_CURRENT_BINARY_DIR}/tests/bc/Machsuite/common.mk" @ONLY)
 configure_file("${CMAKE_SOURCE_DIR}/scripts/colors.sh" "${CMAKE_CURRENT_BINARY_DIR}/scripts/colors.sh" @ONLY)
 configure_file("${CMAKE_SOURCE_DIR}/scripts/config.json" "${CMAKE_CURRENT_BINARY_DIR}/scripts" @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/setup.sh"

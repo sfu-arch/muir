@@ -1,0 +1,8 @@
+LLVM_DIR=@LLVM_BUILD_BINARY_DIR@
+CC=$(LLVM_DIR)/clang
+OPT=$(LLVM_DIR)/opt
+DIS=$(LLVM_DIR)/llvm-dis
+
+DANDELION=dandelion
+DANDELION_CONFIG=@CMAKE_BINARY_DIR@/scripts/config.json
+
