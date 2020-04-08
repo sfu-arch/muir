@@ -1,4 +1,4 @@
-LLVM_DIR=../../dependencies/Tapir-Meta/tapir/build/bin
+LLVM_DIR=/home/amirali/git/Tapir-Meta/tapir/build/bin
 CC=$(LLVM_DIR)/clang
 OPT=$(LLVM_DIR)/opt
 DIS=$(LLVM_DIR)/llvm-dis
@@ -13,7 +13,7 @@ endif
 
 DANDELION=dandelion
 CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -S -o -
-SOURCES=$(shell ls test*.c)
+SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
