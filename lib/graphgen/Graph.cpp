@@ -12,6 +12,8 @@
 #include <sstream>
 #include <string>
 
+#define DATA_SIZE 64
+
 using namespace std;
 using namespace llvm;
 using namespace dandelion;
@@ -85,6 +87,7 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             doInitialization();
 
             printScalaFunctionHeader();
+            printCallIO(PrintType::Scala);
             printSharedModules(PrintType::Scala);
             printScalaInputSpliter();
             printLoopHeader(PrintType::Scala);
@@ -837,27 +840,90 @@ void Graph::printScalaFunctionHeader() {
 
     string _final_command;
     _final_command =
-        "\n\nclass $module_nameDF(PtrsIn: Seq[Int] = List($<input_vector_ptrs>), ValsIn: Seq[Int] = List($<input_vector_vals>), "
+        "\n\nclass $module_nameDF(PtrsIn: Seq[Int] = "
+        "List($<input_vector_ptrs>), ValsIn: Seq[Int] = "
+        "List($<input_vector_vals>), "
         "Returns: Seq[Int] = List($<output_vector>))\n"
         "\t\t\t(implicit p: Parameters)"
         " extends DandelionAccelDCRModule(PtrsIn, ValsIn, Returns){\n";
     helperReplace(_final_command, "$module_name", graph_info.Name);
-    auto num_in_args_ptrs =
-        this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn, ArgumentNode::PtrType);
-    auto num_in_args_vals =
-        this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn, ArgumentNode::IntegerType);
+    auto num_in_args_ptrs = this->getSplitCall()->numLiveInArgList(
+        ArgumentNode::LiveIn, ArgumentNode::PointerType);
+    auto num_in_args_vals = this->getSplitCall()->numLiveInArgList(
+        ArgumentNode::LiveIn, ArgumentNode::IntegerType);
     uint32_t num_out_args =
         (!function_ptr->getReturnType()->isVoidTy()) ? 1 : 0;
-    std::vector<uint32_t> _input_args_ptrs(num_in_args_ptrs, 32);
-    std::vector<uint32_t> _input_args_vals(num_in_args_vals, 32);
-    std::vector<uint32_t> _output_args(num_out_args, 32);
+    std::vector<uint32_t> _input_args_ptrs(num_in_args_ptrs, DATA_SIZE);
+    std::vector<uint32_t> _input_args_vals(num_in_args_vals, DATA_SIZE);
+    std::vector<uint32_t> _output_args(num_out_args, DATA_SIZE);
 
-    helperReplace(_final_command, "$<input_vector_ptrs>", _input_args_ptrs, ", ");
-    helperReplace(_final_command, "$<input_vector_vals>", _input_args_vals, ", ");
+    helperReplace(_final_command, "$<input_vector_ptrs>", _input_args_ptrs,
+                  ", ");
+    helperReplace(_final_command, "$<input_vector_vals>", _input_args_vals,
+                  ", ");
     helperReplace(_final_command, "$<output_vector>", _output_args, ", ");
 
     helperScalaPrintHeader("Printing Module Definition");
     outCode << _final_command;
+}
+
+void Graph::printCallIO(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            auto call_node_list = getNodeList<CallNode>(this);
+            if (call_node_list.size()) {
+                this->outCode << "  /**\n    * Call Interfaces\n    */\n";
+                string _final_command;
+                for (auto &call_node : call_node_list) {
+                    auto call_in = call_node->getCallIn();
+                    auto call_out = call_node->getCallOut();
+
+                    _final_command =
+                        "  val $<name_out>_io = IO(Decoupled(new "
+                        "CallDCR(ptrsArgTypes = List($<input_vector_ptrs>), "
+                        "valsArgTypes = List($<input_vector_vals>))))\n";
+                    _final_command +=
+                        "  val $<name_in>_io  = IO(Flipped(Decoupled(new "
+                        "Call(List($<output_vector>)))))";
+                    helperReplace(_final_command, "$<name_out>",
+                                  call_out->getName());
+                    helperReplace(_final_command, "$<name_in>",
+                                  call_in->getName());
+
+                    uint32_t num_in_vals = 0;
+                    uint32_t num_in_ptrs = 0;
+                    for (auto input_ins : call_out->input_data_range()) {
+                        if (auto instruction_node =
+                                dyn_cast<InstructionNode>(&*input_ins.first)) {
+                            if (instruction_node->isPointerType())
+                                num_in_ptrs++;
+                            else if (instruction_node->isIntegerType() ||
+                                     instruction_node->isFloatType())
+                                num_in_vals++;
+                            else
+                                throw std::runtime_error(
+                                    "Input datatype is Uknown");
+                        }
+                    }
+                    std::vector<uint32_t> _input_vals(num_in_vals, DATA_SIZE);
+                    std::vector<uint32_t> _input_ptrs(num_in_ptrs, DATA_SIZE);
+                    std::vector<uint32_t> _output_vector(
+                        call_in->numDataOutputPort(), DATA_SIZE);
+
+                    helperReplace(_final_command, "$<input_vector_ptrs>",
+                                  _input_ptrs, ", ");
+                    helperReplace(_final_command, "$<input_vector_vals>",
+                                  _input_vals, ", ");
+                    helperReplace(_final_command, "$<output_vector>",
+                                  _output_vector, ", ");
+                }
+                this->outCode << _final_command;
+            }
+            break;
+        }
+        default:
+            assert(!"We don't support the other types right now");
+    }
 }
 
 /**
@@ -1210,9 +1276,20 @@ InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     auto _load_list = getNodeList<LoadNode>(this);
-    inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit(), _load_list.size()));
+
+    if (I.getType()->isIntegerTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::IntegerType, &I, this->getMemoryUnit(),
+            _load_list.size()));
+    } else if (I.getType()->isPointerTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::PointerType, &I, this->getMemoryUnit(),
+            _load_list.size()));
+    }
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1592,22 +1669,22 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
                 uint32_t c = 0;
-                //for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
-                    //if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
-                        //continue;
-                    //for (auto &_data_in : _live_in->input_data_range()) {
-                        //this->outCode
-                            //<< "  "
-                            //<< _live_in->printInputData(PrintType::Scala, c++)
-                            //<< " <> "
-                            //<< _data_in.first->printOutputData(
-                                   //PrintType::Scala,
-                                   //_data_in.first
-                                       //->returnDataOutputPortIndex(
-                                           //_live_in.get())
-                                       //.getID())
-                            //<< "\n\n";
-                    //}
+                // for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
+                // if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
+                // continue;
+                // for (auto &_data_in : _live_in->input_data_range()) {
+                // this->outCode
+                //<< "  "
+                //<< _live_in->printInputData(PrintType::Scala, c++)
+                //<< " <> "
+                //<< _data_in.first->printOutputData(
+                // PrintType::Scala,
+                //_data_in.first
+                //->returnDataOutputPortIndex(
+                //_live_in.get())
+                //.getID())
+                //<< "\n\n";
+                //}
                 //}
 
                 // c = 0;
@@ -1797,17 +1874,20 @@ void Graph::printOutPort(PrintType _pt) {
             for (auto _c_node : call_node_list) {
                 this->outCode << helperScalaPrintHeader(
                     "Printing callin and callout interface");
+
                 this->outCode
-                    << "  "
-                    << _c_node->getCallIn()->printInputData(PrintType::Scala)
+                    << "  " << _c_node->getCallOut()->getName() + "_io"
                     << " <> "
-                    << "io." + _c_node->getCallIn()->getName() << "\n\n";
-                this->outCode
-                    << "  "
-                    << "io." + _c_node->getCallOut()->getName() << " <> "
                     << _c_node->getCallOut()->printOutputData(PrintType::Scala,
                                                               0)
                     << "\n\n";
+
+                this->outCode
+                    << "  "
+                    << _c_node->getCallIn()->printInputData(PrintType::Scala)
+                    << " <> " << _c_node->getCallIn()->getName() + "_io"
+                    << "\n\n";
+
                 if (_c_node->getCallIn()->numControlOutputPort() == 0)
                     this->outCode << "  "
                                   << _c_node->getCallIn()->printOutputEnable(
@@ -1818,10 +1898,18 @@ void Graph::printOutPort(PrintType _pt) {
                         this->outCode
                             << "  "
                             << _ctrl_node.first->printInputEnable(
-                                   PrintType::Scala, 0)
+                                   PrintType::Scala,
+                                   _ctrl_node.first
+                                       ->returnControlInputPortIndex(
+                                           _c_node->getCallIn())
+                                       .getID())
                             << " <> "
                             << _c_node->getCallIn()->printOutputEnable(
-                                   PrintType::Scala, 0)
+                                   PrintType::Scala,
+                                   _c_node->getCallIn()
+                                       ->returnControlOutputPortIndex(
+                                           _ctrl_node.first)
+                                       .getID())
                             << "\n\n";
                     }
                 }
@@ -1911,8 +1999,6 @@ void Graph::doInitialization() {
                                _node.first->returnDataInputPortIndex(&*_arg)));
         }
     }
-
-
 
     for (auto &_node : inst_list) {
         if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {

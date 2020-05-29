@@ -102,9 +102,12 @@ class Node {
 
     };
 
+    enum DataType { IntegerType = 0, FloatType, PointerType, UknownType };
+
    private:
     // Type of the Node
     NodeType node_type;
+
     // Node information
     NodeInfo info;
 
@@ -440,11 +443,10 @@ class ArgumentNode : public Node {
         LoopLiveOut,
         CarryDependency
     };
-    enum DataType { PtrType, IntegerType };
 
    private:
     ArgumentType arg_type;
-    DataType arg_data_type;
+    DataType data_type;
     ContainerNode *parent_call_node;
     llvm::Value *parent_argument;
 
@@ -454,7 +456,7 @@ class ArgumentNode : public Node {
                           llvm::Value *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni),
           arg_type(_arg_type),
-          arg_data_type(_d_type),
+          data_type(_d_type),
           parent_call_node(_call_node),
           parent_argument(_arg) {}
 
@@ -466,7 +468,7 @@ class ArgumentNode : public Node {
     }
 
     auto getArgType() { return arg_type; }
-    auto getDataArgType() { return arg_data_type; }
+    auto getDataArgType() { return data_type; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -483,11 +485,11 @@ class ContainerNode : public Node {
 
    protected:
     ContainType con_type;
-    //ptrs and vals are fore split call
+    // ptrs and vals are fore split call
     RegisterList live_in_ptrs;
     RegisterList live_in_vals;
 
-    //live_in is for loop nodes
+    // live_in is for loop nodes
     RegisterList live_in;
 
     RegisterList live_out;
@@ -522,7 +524,8 @@ class ContainerNode : public Node {
     uint32_t findLiveOutArgumentIndex(ArgumentNode *);
     uint32_t findCarryDepenArgumentIndex(ArgumentNode *);
 
-    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type, ArgumentNode::DataType dtype);
+    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type,
+                              ArgumentNode::DataType dtype);
     uint32_t numLiveOutArgList(ArgumentNode::ArgumentType type);
     uint32_t numCarryDepenArgList(ArgumentNode::ArgumentType type);
 
@@ -911,6 +914,7 @@ class InstructionNode : public Node {
 
    private:
     InstType ins_type;
+    DataType data_type;
     llvm::Instruction *parent_instruction;
 
    public:
@@ -918,9 +922,22 @@ class InstructionNode : public Node {
                     llvm::Instruction *_ins = nullptr)
         : Node(Node::InstructionNodeTy, _ni),
           ins_type(_ins_t),
+          data_type(UknownType),
+          parent_instruction(_ins) {}
+
+    InstructionNode(NodeInfo _ni, InstType _ins_t, DataType _dtype,
+                    llvm::Instruction *_ins = nullptr)
+        : Node(Node::InstructionNodeTy, _ni),
+          ins_type(_ins_t),
+          data_type(_dtype),
           parent_instruction(_ins) {}
 
     llvm::Instruction *getInstruction();
+
+    DataType getDataType() const { return data_type; }
+    bool isPointerType() const { return data_type == Node::PointerType; }
+    bool isIntegerType() const { return data_type == Node::IntegerType; }
+    bool isFloatType() const { return data_type == Node::FloatType; }
 
     uint32_t getOpCode() const { return ins_type; }
 
@@ -1248,6 +1265,14 @@ class LoadNode : public InstructionNode {
         : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins),
           mem_unit(_node),
           route_id(_id) {}
+
+    LoadNode(NodeInfo _ni, DataType _type, llvm::LoadInst *_ins = nullptr,
+             MemoryNode *_node = nullptr, uint32_t _id = 0)
+        : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _type, _ins),
+          mem_unit(_node),
+          route_id(_id) {}
+
+
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::LoadInstructionTy;

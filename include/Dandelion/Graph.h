@@ -230,6 +230,7 @@ class Graph {
    protected:
     // General print functions with accepting print type
     void printFunctionArgument(PrintType);
+    void printCallIO(PrintType);
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printConstants(PrintType);
