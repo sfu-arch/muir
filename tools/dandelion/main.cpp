@@ -41,6 +41,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <experimental/iterator>
 #include <memory>
 #include <string>
 
@@ -51,6 +52,8 @@
 //#include "LoopClouser.h"
 #include "TargetLoopExtractor.h"
 
+#define DATA_SIZE 64
+
 using namespace llvm;
 using llvm::legacy::PassManager;
 using llvm::sys::ExecuteAndWait;
@@ -58,6 +61,8 @@ using llvm::sys::findProgramByName;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+
+using namespace helpers;
 
 static cl::OptionCategory dandelionCategory{"dandelion options"};
 
@@ -319,6 +324,98 @@ static void splitGeps(Function &F) {
 }
 
 /**
+ * Create root scala file
+ */
+static void runRootGraph(llvm::Function &function,
+                         SetVector<Function *> call_inst, string file_name) {
+    auto print_port = [](llvm::Function *function, string &ptrs, string &vals,
+                         string &rets) {
+        uint32_t num_ptrs = 0;
+        uint32_t num_vals = 0;
+        for (auto &arg : function->args()) {
+            if (arg.getType()->isPointerTy())
+                num_ptrs++;
+            else
+                num_vals++;
+        }
+
+        std::vector<uint32_t> input_ptrs(num_ptrs, DATA_SIZE);
+        std::vector<uint32_t> input_vals(num_vals, DATA_SIZE);
+        std::vector<uint32_t> return_vals(
+            function->getReturnType()->isVoidTy() ? 0 : 1, DATA_SIZE);
+
+        std::stringstream in_ptrs;
+        std::stringstream in_vals;
+        std::stringstream ret_vals;
+        std::copy(input_ptrs.begin(), input_ptrs.end(),
+                  std::experimental::make_ostream_joiner(in_ptrs, ", "));
+        std::copy(input_vals.begin(), input_vals.end(),
+                  std::experimental::make_ostream_joiner(in_vals, ", "));
+        std::copy(return_vals.begin(), return_vals.end(),
+                  std::experimental::make_ostream_joiner(ret_vals, ", "));
+
+        rets = ret_vals.str();
+        vals = in_vals.str();
+        ptrs = in_ptrs.str();
+    };
+    if (file_name.empty()) {
+        errs() << "o command line option must be specified.\n";
+        exit(-1);
+    }
+
+    std::error_code errc;
+    raw_fd_ostream out(file_name + "_root.scala", errc, sys::fs::F_None);
+
+    string ptrs, vals, rets;
+    print_port(&function, ptrs, vals, rets);
+    out << "package dandelion.generator \n\n"
+           "import chipsalliance.rocketchip.config._\n"
+           "import chisel3._\n"
+           "import dandelion.accel._\n"
+           "import dandelion.memory._\n\n"
+           "class "
+        << file_name << "RootDF("
+        << "PtrsIn : Seq[Int] = List (" << ptrs
+        << "), ValsIn : Seq[Int] = List(" << vals
+        << "), Returns: Seq[Int] = List(" << rets << "))\n"
+        << "                  (implicit p: Parameters) extends "
+           "DandelionAccelDCRModule(PtrsIn, ValsIn, Returns) {\n\n"
+           "  val NumKernels = "
+        << call_inst.size()
+        << "\n"
+           "  val memory_arbiter = Module(new MemArbiter(NumKernels))\n\n";
+
+    for (auto func : call_inst) {
+        string ptrs, vals, rets;
+        print_port(func, ptrs, vals, rets);
+
+        out << "  val " << func->getName() << "="
+            << " Module(new " << function.getName() << "DF(PtrsIn = List("
+            << ptrs << "), ValsIn = List(" << vals << "), Returns = List( "
+            << rets << "))\n\n";
+    }
+
+    out << "  " << function.getName()
+        << ".io.in <> io.in\n"
+           "  io.out <> "
+        << function.getName() << ".io.out\n\n";
+
+    uint32_t ind = 0;
+    for (auto func : call_inst) {
+        out << "  memory_arbiter.io.cpu.MemReq(" << ind << ") <> "
+            << func->getName() << ".io.MemReq\n  " << func->getName()
+            << ".io.MemResp <> memory_arbiter.io.cpu.MemResp(" << ind
+            << ")\n\n";
+        ind++;
+    }
+    out << "  io.MemReq <> memory_arbiter.io.cache.MemReq\n"
+        "  memory_arbiter.io.cache.MemResp <> io.MemResp\n\n"
+        "}"
+           "\n";
+    out.close();
+}
+
+/**
  * Function lists
  */
 static void runGraphGen(Module &M, string file_name) {
@@ -359,6 +456,8 @@ static void runGraphGen(Module &M, string file_name) {
     pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, file_name), out));
     pm.add(createVerifierPass());
     pm.run(M);
+
+    out.close();
 }
 
 void getCallInst(llvm::Function *F, SetVector<Function *> &call_inst) {
@@ -425,10 +524,15 @@ int main(int argc, char **argv) {
         if (F.getName() == target_fn) {
             SetVector<Function *> call_inst;
             getCallInst(&F, call_inst);
+
+            // Insert root function
             call_inst.insert(&F);
             for (auto ff : call_inst) {
                 runGraphGen(*module, ff->getName());
             }
+
+            // Create root scala file
+            runRootGraph(F, call_inst, target_fn);
         }
     }
 

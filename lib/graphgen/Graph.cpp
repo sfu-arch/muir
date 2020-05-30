@@ -829,12 +829,6 @@ void Graph::printScalaInputSpliter() {
  * Print the basicblock definition
  */
 void Graph::printScalaFunctionHeader() {
-    auto make_argument_port = [](const auto &_list) {
-        std::vector<uint32_t> _arg_count;
-        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
-        return _arg_count;
-    };
-
     // print the header
     // this->outCode << helperScalaPrintHeader("Printing ports definition");
 
