@@ -23,7 +23,7 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++14 -fno-rtti -Wall -fvisibility=hidde -fdiagnostics-color=always")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fno-rtti -Wall \
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -g -fno-rtti -Wall \
     -fno-omit-frame-pointer -Wno-unused-function -fdiagnostics-color=always")
 
 if(APPLE)

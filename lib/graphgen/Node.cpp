@@ -4078,8 +4078,10 @@ std::string CallOutNode::printDefinition(PrintType _pt) {
                         num_vals++;
                     else if (instruction_node->getType() == Node::PointerType)
                         num_ptrs++;
-                    else
+                    else {
+                        std::cout << instruction_node->getName() << "\n";
                         throw std::runtime_error("Input datatype is Uknown");
+                    }
                 }
             }
 
@@ -4131,8 +4133,16 @@ std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
                     _text = "$name.io.inPtrs.elements(\"field$id\")";
                 else
                     _text = "$name.io.inVals.elements(\"field$id\")";
-            } else
+            } else if(auto arg = dyn_cast<ArgumentNode>(&*iter->first)){
+                if (arg->getDataArgType() == Node::PointerType)
+                    _text = "$name.io.inPtrs.elements(\"field$id\")";
+                else
+                    _text = "$name.io.inVals.elements(\"field$id\")";
+            }
+            else {
+                std::cout << instr->getName() << "\n";
                 throw std::runtime_error("Input datatype is Uknown");
+            }
 
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);

@@ -894,9 +894,13 @@ void Graph::printCallIO(PrintType _pt) {
                             else if (instruction_node->isIntegerType() ||
                                      instruction_node->isFloatType())
                                 num_in_vals++;
-                            else
-                                throw std::runtime_error(
-                                    "Input datatype is Uknown");
+                            else {
+                                std::cout << instruction_node->getName()
+                                          << "\n";
+                                assert(!"Input datatype is Uknonw");
+                                // throw std::runtime_error(
+                                //"Input datatype is Uknown");
+                            }
                         }
                     }
                     std::vector<uint32_t> _input_vals(num_in_vals, DATA_SIZE);
@@ -1193,11 +1197,22 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
 
     // if (reverse) I.dump();
 
-    inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(),
-                 "phi" + I.getName().str() + to_string(inst_list.size())),
-        reverse, &I));
-
+    if (I.getType()->isPointerTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::PointerType, reverse, &I));
+    } else if (I.getType()->isIntegerTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::IntegerType, reverse, &I));
+    } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::FloatType, reverse, &I));
+    }
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
@@ -1282,6 +1297,12 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
             NodeInfo(inst_list.size(),
                      "ld_" + std::to_string(inst_list.size())),
             Node::DataType::PointerType, &I, this->getMemoryUnit(),
+            _load_list.size()));
+    } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::FloatType, &I, this->getMemoryUnit(),
             _load_list.size()));
     }
 

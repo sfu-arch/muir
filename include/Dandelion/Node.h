@@ -1165,6 +1165,12 @@ class PhiSelectNode : public InstructionNode {
         : InstructionNode(_ni, InstType::PhiInstructionTy, _ins),
           reverse(_rev) {}
 
+    PhiSelectNode(NodeInfo _ni, DataType _type, bool _rev, llvm::PHINode *_ins = nullptr,
+                  SuperNode *_parent = nullptr)
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _type, _ins),
+          reverse(_rev) {}
+
+
     SuperNode *getMaskNode() const { return mask_node; }
 
     static bool classof(const InstructionNode *T) {
@@ -1271,8 +1277,6 @@ class LoadNode : public InstructionNode {
         : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _type, _ins),
           mem_unit(_node),
           route_id(_id) {}
-
-
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::LoadInstructionTy;
