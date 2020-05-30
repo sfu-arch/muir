@@ -64,6 +64,16 @@ using std::vector;
 
 using namespace helpers;
 
+template <class T>
+std::vector<T *> getInstList(Function *func) {
+    std::vector<T *> return_list;
+    for (auto &_node : llvm::instructions(func)) {
+        if (auto cast_node = dyn_cast<T>(&_node))
+            return_list.push_back(cast_node);
+    }
+    return return_list;
+}
+
 static cl::OptionCategory dandelionCategory{"dandelion options"};
 
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
@@ -391,14 +401,42 @@ static void runRootGraph(llvm::Function &function,
 
         out << "  val " << func->getName() << "="
             << " Module(new " << function.getName() << "DF(PtrsIn = List("
-            << ptrs << "), ValsIn = List(" << vals << "), Returns = List( "
-            << rets << "))\n\n";
+            << ptrs << "), ValsIn = List(" << vals << "), Returns = List("
+            << rets << "))\n";
     }
 
-    out << "  " << function.getName()
+    out << "\n  " << function.getName()
         << ".io.in <> io.in\n"
            "  io.out <> "
         << function.getName() << ".io.out\n\n";
+
+    std::map<Instruction *, uint32_t> calls;
+    uint32_t inst_id = 0;
+    for (auto &ins : llvm::instructions(function)) {
+        if (auto _call = dyn_cast<llvm::CallInst>(&ins)) {
+            auto called = dyn_cast<Function>(
+                CallSite(_call).getCalledValue()->stripPointerCasts());
+            if (!called) continue;
+
+            // Skip debug function
+            if (called->isDeclaration()) continue;
+            calls.insert(std::make_pair(_call, inst_id));
+        }
+        inst_id++;
+    }
+
+    for (auto &_cins : calls) {
+        auto called = dyn_cast<Function>(
+            CallSite(_cins.first).getCalledValue()->stripPointerCasts());
+        out << "  " << called->getName() << ".io.in <> "
+            << _cins.first->getFunction()->getName() << "."
+            << _cins.first->getName() << "_" << _cins.second
+            << "_out_io\n"
+               "  "
+            << _cins.first->getFunction()->getName() << "."
+            << _cins.first->getName() << "_" << _cins.second << "_in_io <> "
+            << called->getName() << ".io.out\n\n";
+    }
 
     uint32_t ind = 0;
     for (auto func : call_inst) {
@@ -409,8 +447,8 @@ static void runRootGraph(llvm::Function &function,
         ind++;
     }
     out << "  io.MemReq <> memory_arbiter.io.cache.MemReq\n"
-        "  memory_arbiter.io.cache.MemResp <> io.MemResp\n\n"
-        "}"
+           "  memory_arbiter.io.cache.MemResp <> io.MemResp\n\n"
+           "}"
            "\n";
     out.close();
 }
