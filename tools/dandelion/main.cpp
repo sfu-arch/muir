@@ -399,10 +399,10 @@ static void runRootGraph(llvm::Function &function,
         string ptrs, vals, rets;
         print_port(func, ptrs, vals, rets);
 
-        out << "  val " << func->getName() << "="
-            << " Module(new " << function.getName() << "DF(PtrsIn = List("
+        out << "  val " << func->getName() << " = "
+            << " Module(new " << func->getName() << "DF(PtrsIn = List("
             << ptrs << "), ValsIn = List(" << vals << "), Returns = List("
-            << rets << "))\n";
+            << rets << ")))\n";
     }
 
     out << "\n  " << function.getName()
