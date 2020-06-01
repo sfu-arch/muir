@@ -88,6 +88,7 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
 
             printScalaFunctionHeader();
             printCallIO(PrintType::Scala);
+            printMemIO(PrintType::Scala);
             printSharedModules(PrintType::Scala);
             printScalaInputSpliter();
             printLoopHeader(PrintType::Scala);
@@ -233,6 +234,11 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
+                if (ins_node->numDataOutputPort() == 0 &&
+                    ins_node->numControlOutputPort() == 0)
+                    continue;
+                if(auto alloca = dyn_cast<AllocaNode>(&*ins_node))
+                    continue;
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
                 this->outCode << "\n";
@@ -923,6 +929,34 @@ void Graph::printCallIO(PrintType _pt) {
             assert(!"We don't support the other types right now");
     }
 }
+
+
+void Graph::printMemIO(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            auto alloca_node_list = getNodeList<AllocaNode>(this);
+            if (alloca_node_list.size()) {
+                this->outCode << "\n  /**\n    * Memory Interfaces\n    */\n";
+                string _final_command;
+                for (auto &alloca_node : alloca_node_list) {
+
+                    _final_command =
+                        "  val $<name>_mem_req = IO(Decoupled(new MemReq))\n"
+                        "  val $<name>_mem_resp  = IO(Flipped(Valid(new MemResp)))\n\n";
+                    helperReplace(_final_command, "$<name>",
+                                  alloca_node->getName());
+
+                }
+                this->outCode << _final_command;
+            }
+            break;
+        }
+        default:
+            assert(!"We don't support the other types right now");
+    }
+}
+
+
 
 /**
  * Print specific scala header files

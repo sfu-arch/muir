@@ -1284,6 +1284,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     if (called->isDeclaration()) continue;
                 }
 
+                if (auto _call = dyn_cast<AllocaInst>(&I)) continue;
+
                 // Iterate over the basicblock's instructions
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
@@ -1571,17 +1573,15 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
     }
 }
 
-
 /**
  * There is a limitation in forming the graph at this moment
  * this function makes sure, all the store's routeIDs are
  * assigned after load nodes
  */
-void GraphGeneratorPass::updateRouteIDs(Function &F){
-
+void GraphGeneratorPass::updateRouteIDs(Function &F) {
     auto load_list = getNodeList<LoadNode>(this->dependency_graph.get());
     auto store_list = getNodeList<StoreNode>(this->dependency_graph.get());
-    for(auto s_node : store_list){
+    for (auto s_node : store_list) {
         s_node->setRouteID(s_node->getRouteID() + load_list.size());
     }
 }
@@ -1780,7 +1780,7 @@ void GraphGeneratorPass::connectLoopEdge() {
             auto _loop_dest = this->loop_value_node[_tar];
             auto _node_dest = _loop_dest->findLiveInNode(_edge.first);
 
-            if(_node_dest == nullptr)
+            if (_node_dest == nullptr)
                 assert(!"There is a bug in loop connections!");
 
             _node_src->second->addDataOutputPort(_node_dest);
@@ -1863,7 +1863,7 @@ void GraphGeneratorPass::init(Function &F) {
     // Printing the graph
     dependency_graph->optimizationPasses();
     dependency_graph->printGraph(PrintType::Scala, config_path);
-    //dependency_graph->printNodeSummary();
+    // dependency_graph->printNodeSummary();
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {

@@ -87,7 +87,7 @@ class Graph {
         : graph_info(_n_info),
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
-          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
+          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "mem_ctrl_cache"))),
           stack_allocator(
               std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
           floating_point_unit(
@@ -231,6 +231,7 @@ class Graph {
     // General print functions with accepting print type
     void printFunctionArgument(PrintType);
     void printCallIO(PrintType);
+    void printMemIO(PrintType);
     void printBasicBlocks(PrintType);
     void printInstructions(PrintType);
     void printConstants(PrintType);
