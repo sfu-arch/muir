@@ -1152,7 +1152,7 @@ std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
         case PrintType::Scala:
             _text = "$name.io.PredOp($id)";
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$id", _id);
+            helperReplace(_text, "$id", _id - 1);
             break;
         default:
             break;
@@ -1857,13 +1857,13 @@ std::string ConstFPNode::printDefinition(PrintType _pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
-                "  val $name = Module(new $type(value = $val"
+                "  val $name = Module(new $type(value = $valL"
                 ", ID = $id))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             // helperReplace(_text, "$num_out",
             // std::to_string(this->numDataOutputPort()));
             helperReplace(_text, "$id", this->getID());
-            helperReplace(_text, "$type", "ConstNode");
+            helperReplace(_text, "$type", "ConstFastNode");
             helperReplace(_text, "$val",
                           printFloatingPointIEEE754(this->getFloatIEEE()));
 
@@ -1882,7 +1882,8 @@ std::string ConstFPNode::printOutputData(PrintType _pt, uint32_t _id) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.Out($id)";
+            //_text = "$name.io.Out($id)";
+            _text = "$name.io.Out";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _id);
 
