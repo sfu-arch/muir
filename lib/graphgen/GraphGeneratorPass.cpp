@@ -632,11 +632,17 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     uint32_t size = 1;
 
     if (alloca_type->isIntegerTy() || alloca_type->isArrayTy()) {
-        map_value_node[&I] =
+        auto alloca_node =
             this->dependency_graph->insertAllocaNode(I, size, num_byte);
+        map_value_node[&I] = alloca_node;
+        memory_buffer_map[&I] = this->dependency_graph->createBufferMemory(
+            alloca_node, size, num_byte);
     } else if (alloca_type->isPointerTy()) {
-        map_value_node[&I] =
+        auto alloca_node =
             this->dependency_graph->insertAllocaNode(I, size, num_byte);
+        map_value_node[&I] = alloca_node;
+        memory_buffer_map[&I] = this->dependency_graph->createBufferMemory(
+            alloca_node, size, num_byte);
         I.print(errs(), true);
         errs() << "Alloca is pointer\n";
         // assert(!"Don't support for this alloca");
@@ -667,6 +673,16 @@ void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
 }
 
 void GraphGeneratorPass::visitBitCastInst(llvm::BitCastInst &I) {
+    for (auto ins : I.users()) {
+        auto called = dyn_cast<Function>(
+            CallSite(ins).getCalledValue()->stripPointerCasts());
+        if (!called) {
+            return;
+        }
+        if (called->isDeclaration()) {
+            return;
+        }
+    }
     map_value_node[&I] = this->dependency_graph->insertBitcastNode(I);
 }
 
@@ -1031,6 +1047,8 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 auto _src = _node_src->second;
                 auto _dst = _node_dest->second;
 
+                if (_dst == nullptr) continue;
+
                 // TODO later we need to get ride of these lines
                 if (auto call_out = dyn_cast<CallNode>(_node_dest->second))
                     _dst = call_out->getCallOut();
@@ -1180,54 +1198,74 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
         // Connecting Load and Store nodes to Memory system
         // TODO: We need to decide how to connect the memory nodes
         // to the memory system
-        if (auto _ld_node = dyn_cast<LoadNode>(
-                this->map_value_node.find(&*ins_it)->second)) {
+        auto node_inst = this->map_value_node.find(&*ins_it);
+        if (node_inst->second == nullptr) continue;
+        if (auto _ld_node = dyn_cast<LoadNode>(node_inst->second)) {
             // TODO right now we consider all the connections to the cache
             // or
             // regfile
             // We need a pass to trace the pointers
-            this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
-                _ld_node);
-            this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
-                _ld_node);
-            _ld_node->addReadMemoryReqPort(
-                this->dependency_graph->getMemoryUnit());
-            _ld_node->addReadMemoryRespPort(
-                this->dependency_graph->getMemoryUnit());
+            auto load_inst = dyn_cast<LoadInst>(&*ins_it);
+            auto gep_inst =
+                dyn_cast<GetElementPtrInst>(load_inst->getPointerOperand());
+            if (auto alloca =
+                    dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                auto scratchpad_mem =
+                    this->dependency_graph->returnScratchpadMem(alloca);
+                scratchpad_mem->addReadMemoryReqPort(_ld_node);
+                scratchpad_mem->addReadMemoryRespPort(_ld_node);
+                _ld_node->addReadMemoryReqPort(scratchpad_mem);
+                _ld_node->addReadMemoryRespPort(scratchpad_mem);
+            } else {
+                this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
+                    _ld_node);
+                this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
+                    _ld_node);
+                _ld_node->addReadMemoryReqPort(
+                    this->dependency_graph->getMemoryUnit());
+                _ld_node->addReadMemoryRespPort(
+                    this->dependency_graph->getMemoryUnit());
+            }
 
         }
 
         // Store node connection
         //
-        else if (auto _st_node = dyn_cast<StoreNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
-            this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
-                _st_node);
-            this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
-                _st_node);
-            _st_node->addWriteMemoryReqPort(
-                this->dependency_graph->getMemoryUnit());
-            _st_node->addWriteMemoryRespPort(
-                this->dependency_graph->getMemoryUnit());
+        else if (auto _st_node = dyn_cast<StoreNode>(node_inst->second)) {
+            auto store_inst = dyn_cast<StoreInst>(&*ins_it);
+            auto gep_inst =
+                dyn_cast<GetElementPtrInst>(store_inst->getPointerOperand());
+            if (auto alloca =
+                    dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                auto scratchpad_mem =
+                    this->dependency_graph->returnScratchpadMem(alloca);
+                scratchpad_mem->addWriteMemoryReqPort(_st_node);
+                scratchpad_mem->addWriteMemoryRespPort(_st_node);
+                _st_node->addWriteMemoryReqPort(scratchpad_mem);
+                _st_node->addWriteMemoryRespPort(scratchpad_mem);
+            } else {
+                this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
+                    _st_node);
+                this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
+                    _st_node);
+                _st_node->addWriteMemoryReqPort(
+                    this->dependency_graph->getMemoryUnit());
+                _st_node->addWriteMemoryRespPort(
+                    this->dependency_graph->getMemoryUnit());
+            }
         }
 
         // Alloca node connection to the stack allocator
-        //
-        else if (auto _alloca_node = dyn_cast<AllocaNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
-            this->dependency_graph->getStackAllocator()->addReadMemoryReqPort(
-                _alloca_node);
-            this->dependency_graph->getStackAllocator()->addReadMemoryRespPort(
-                _alloca_node);
-            _alloca_node->addReadMemoryReqPort(
-                this->dependency_graph->getStackAllocator());
-            _alloca_node->addReadMemoryRespPort(
-                this->dependency_graph->getStackAllocator());
-        }
+        // else if (auto _alloca_node = dyn_cast<AllocaNode>(
+        // this->map_value_node.find(&*ins_it)->second)) {
+
+        // auto new_mem = this->dependency_graph->createBufferMemory();
+        // memory_buffer_map.insert(std::make_pair(&*ins_it, new_mem));
+        //}
 
         // Connection FPNode operations
-        else if (auto _fpdiv_node = dyn_cast<FdiveOperatorNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
+        else if (auto _fpdiv_node =
+                     dyn_cast<FdiveOperatorNode>(node_inst->second)) {
             _fpdiv_node->setRouteID(
                 this->dependency_graph->getFPUNode()->numMemReqPort());
             this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
@@ -1284,9 +1322,9 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                     if (called->isDeclaration()) continue;
                 }
 
-                if (auto _call = dyn_cast<AllocaInst>(&I)) continue;
-
                 // Iterate over the basicblock's instructions
+                auto instruction_node = this->map_value_node[&I];
+                if (instruction_node == nullptr) continue;
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);

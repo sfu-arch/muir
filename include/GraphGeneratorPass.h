@@ -162,6 +162,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
     std::map<llvm::Value *, Node *> map_value_node;
     std::map<llvm::Loop *, LoopNode *> loop_value_node;
 
+    std::map<llvm::AllocaInst *, ScratchpadNode *> memory_buffer_map;
+
     uint32_t LID;
 
    private:

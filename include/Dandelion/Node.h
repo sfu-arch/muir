@@ -34,7 +34,7 @@ class ContainerNode;
 class InstructionNode;
 class LoopNode;
 class MemoryNode;
-class StackNode;
+class ScratchpadNode;
 class PhiSelectNode;
 class SelectNode;
 class SplitCallNode;
@@ -44,6 +44,7 @@ class CallInNode;
 class CallOutNode;
 class ConstIntNode;
 class ConstFPNode;
+class AllocaNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 struct PortID {
@@ -590,6 +591,7 @@ class MemoryNode : public Node {
     }
 
     bool isInitilized() {
+        //return true;
         return (this->numMemReqPort() && this->numMemRespPort());
     }
 
@@ -604,9 +606,18 @@ class MemoryNode : public Node {
 /**
  * Memory unit works as a local memory for each graph
  */
-class StackNode : public Node {
+class ScratchpadNode : public Node {
    public:
-    explicit StackNode(NodeInfo _nf) : Node(Node::StackUnitTy, _nf) {}
+    AllocaNode *alloca_node;
+    uint32_t size;
+    uint32_t num_byte;
+
+    explicit ScratchpadNode(NodeInfo _nf, AllocaNode *alloca, uint32_t mem_size,
+                            uint32_t mem_byte)
+        : Node(Node::StackUnitTy, _nf),
+          alloca_node(alloca),
+          size(mem_size),
+          num_byte(mem_byte) {}
 
     // Restrict access to data input ports
     virtual PortID addDataInputPort(Node *) override {
@@ -617,6 +628,12 @@ class StackNode : public Node {
         assert(!"You are not supposed to call this function!");
         return PortID();
     };
+
+    AllocaNode *getAllocaNode() { return alloca_node; }
+
+    uint32_t getMemSize() { return size; }
+    uint32_t getMemByte() { return num_byte; }
+
     uint32_t numDataInputPort() = delete;
     uint32_t numDataOutputPort() = delete;
 
@@ -1165,11 +1182,10 @@ class PhiSelectNode : public InstructionNode {
         : InstructionNode(_ni, InstType::PhiInstructionTy, _ins),
           reverse(_rev) {}
 
-    PhiSelectNode(NodeInfo _ni, DataType _type, bool _rev, llvm::PHINode *_ins = nullptr,
-                  SuperNode *_parent = nullptr)
+    PhiSelectNode(NodeInfo _ni, DataType _type, bool _rev,
+                  llvm::PHINode *_ins = nullptr, SuperNode *_parent = nullptr)
         : InstructionNode(_ni, InstType::PhiInstructionTy, _type, _ins),
           reverse(_rev) {}
-
 
     SuperNode *getMaskNode() const { return mask_node; }
 

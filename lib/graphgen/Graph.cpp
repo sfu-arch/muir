@@ -103,7 +103,6 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             printLoopDataDependencies(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
-            printAllocaOffset(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
             printSharedConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
@@ -237,8 +236,6 @@ void Graph::printInstructions(PrintType _pt) {
                 if (ins_node->numDataOutputPort() == 0 &&
                     ins_node->numControlOutputPort() == 0)
                     continue;
-                if(auto alloca = dyn_cast<AllocaNode>(&*ins_node))
-                    continue;
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
                 this->outCode << "\n";
@@ -301,8 +298,11 @@ void Graph::printSharedModules(PrintType _pt) {
                 outCode << memory_unit->printDefinition(PrintType::Scala);
             else
                 outCode << memory_unit->printUninitilizedUnit(PrintType::Scala);
-            if (stack_allocator->numReadDataInputPort() > 0)
-                outCode << stack_allocator->printDefinition(PrintType::Scala);
+
+            // Printing local memories
+            for (auto &mem : scratchpad_memories) {
+                outCode << mem->printDefinition(PrintType::Scala);
+            }
             if (floating_point_unit->numReadDataInputPort() > 0)
                 outCode << floating_point_unit->printDefinition(
                     PrintType::Scala);
@@ -661,7 +661,10 @@ void Graph::printControlDependencies(PrintType _pt) {
                     this->outCode
                         << "  "
                         << branch_node->printInputEnable(
-                               PrintType::Scala, _cn_node.second.getID())
+                               PrintType::Scala,
+                               branch_node
+                                   ->returnControlInputPortIndex(_st_node)
+                                   .getID())
                         << " <> "
                         << _st_node->printOutputEnable(
                                PrintType::Scala,
@@ -672,23 +675,6 @@ void Graph::printControlDependencies(PrintType _pt) {
             }
 
             break;
-        case PrintType::Dot:
-            assert(!"Dot file format is not supported!");
-        default:
-            assert(!"Uknown print type!");
-    }
-}
-
-void Graph::printAllocaOffset(PrintType _pt) {
-    switch (_pt) {
-        case PrintType::Scala: {
-            this->outCode << helperScalaPrintHeader("Print alloca offset");
-            auto alloca_list = getNodeList<AllocaNode>(this);
-            for (auto _al_node : alloca_list) {
-                this->outCode << _al_node->printOffset(_pt) << "\n\n";
-            }
-            break;
-        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -883,7 +869,7 @@ void Graph::printCallIO(PrintType _pt) {
                         "CallDCR(ptrsArgTypes = List($<input_vector_ptrs>), "
                         "valsArgTypes = List($<input_vector_vals>))))\n";
                     _final_command +=
-                        "  val $<name_in>_io  = IO(Flipped(Decoupled(new "
+                        "  val $<name_in>_io = IO(Flipped(Decoupled(new "
                         "Call(List($<output_vector>)))))";
                     helperReplace(_final_command, "$<name_out>",
                                   call_out->getName());
@@ -930,7 +916,6 @@ void Graph::printCallIO(PrintType _pt) {
     }
 }
 
-
 void Graph::printMemIO(PrintType _pt) {
     switch (_pt) {
         case PrintType::Scala: {
@@ -939,13 +924,12 @@ void Graph::printMemIO(PrintType _pt) {
                 this->outCode << "\n  /**\n    * Memory Interfaces\n    */\n";
                 string _final_command;
                 for (auto &alloca_node : alloca_node_list) {
-
                     _final_command =
                         "  val $<name>_mem_req = IO(Decoupled(new MemReq))\n"
-                        "  val $<name>_mem_resp  = IO(Flipped(Valid(new MemResp)))\n\n";
+                        "  val $<name>_mem_resp = IO(Flipped(Valid(new "
+                        "MemResp)))\n\n";
                     helperReplace(_final_command, "$<name>",
                                   alloca_node->getName());
-
                 }
                 this->outCode << _final_command;
             }
@@ -955,8 +939,6 @@ void Graph::printMemIO(PrintType _pt) {
             assert(!"We don't support the other types right now");
     }
 }
-
-
 
 /**
  * Print specific scala header files
@@ -1271,8 +1253,8 @@ InstructionNode *Graph::insertSelectNode(SelectInst &I) {
 /**
  * Insert a new Alloca node
  */
-InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
-                                         uint32_t num_byte) {
+AllocaNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
+                                    uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
         NodeInfo(inst_list.size(),
                  "alloca_" + I.getName().str() + to_string(inst_list.size())),
@@ -1281,7 +1263,7 @@ InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-    return ff->get();
+    return dyn_cast<AllocaNode>(ff->get());
 }
 
 /**
@@ -1466,6 +1448,7 @@ Edge *Graph::findEdge(const Node *_src, const Node *_dst) const {
     else
         return nullptr;
 }
+
 /**
  * Inserting memory edges
  */
@@ -1480,6 +1463,30 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
         });
 
     return ff->get();
+}
+
+/**
+ * Inserting memory edges
+ */
+ScratchpadNode *Graph::createBufferMemory(AllocaNode *alloca, uint32_t size,
+                                          uint32_t num_byte) {
+    scratchpad_memories.push_back(std::make_unique<ScratchpadNode>(
+        NodeInfo(
+            scratchpad_memories.size(),
+            "buffer_memories_" + std::to_string(scratchpad_memories.size())),
+        alloca, size, num_byte));
+
+    return scratchpad_memories.end()->get();
+}
+
+ScratchpadNode *Graph::returnScratchpadMem(AllocaInst *alloca) {
+    auto mem = std::find_if(
+        scratchpad_memories.begin(), scratchpad_memories.end(),
+        [alloca](auto &scratch) {
+            return scratch->getAllocaNode()->getInstruction() == alloca;
+        });
+
+    return mem->get();
 }
 
 /**
@@ -2090,25 +2097,25 @@ void Graph::doInitialization() {
                                           getMemoryUnit())));
         } else if (auto _alloca_node = dyn_cast<AllocaNode>(&*_node)) {
             // Adding edges
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(_alloca_node,
-                               _alloca_node->returnMemoryReadOutputPortIndex(
-                                   this->getStackAllocator())),
-                std::make_pair(
-                    this->getStackAllocator(),
-                    this->getStackAllocator()->returnMemoryReadInputPortIndex(
-                        _alloca_node)));
+            // insertEdge(
+            // Edge::MemoryReadTypeEdge,
+            // std::make_pair(_alloca_node,
+            //_alloca_node->returnMemoryReadOutputPortIndex(
+            // this->getStackAllocator())),
+            // std::make_pair(
+            // this->getStackAllocator(),
+            // this->getStackAllocator()->returnMemoryReadInputPortIndex(
+            //_alloca_node)));
 
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    getStackAllocator(),
-                    getStackAllocator()->returnMemoryReadOutputPortIndex(
-                        _alloca_node)),
-                std::make_pair(_alloca_node,
-                               _alloca_node->returnMemoryReadInputPortIndex(
-                                   this->getStackAllocator())));
+            // insertEdge(
+            // Edge::MemoryReadTypeEdge,
+            // std::make_pair(
+            // getStackAllocator(),
+            // getStackAllocator()->returnMemoryReadOutputPortIndex(
+            //_alloca_node)),
+            // std::make_pair(_alloca_node,
+            //_alloca_node->returnMemoryReadInputPortIndex(
+            // this->getStackAllocator())));
         }
     }
 }

@@ -578,11 +578,12 @@ std::string MemoryNode::printDefinition(PrintType pt) {
         case PrintType::Scala: {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
+                "  //Cache\n"
                 "  val $name = Module(new $module_type(ID = $id, NumRead = "
                 "$num_rd, NumWrite = $num_wr))\n"
                 "\n"
                 "  io.MemReq <> $name.io.cache.MemReq\n"
-                "  $name.io.cache.MemResp <> io.MemResp\n";
+                "  $name.io.cache.MemResp <> io.MemResp\n\n";
             ;
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$module_type", "CacheMemoryEngine");
@@ -1152,6 +1153,8 @@ std::string BranchNode::printInputEnable(PrintType _pt, uint32_t _id) {
         case PrintType::Scala:
             _text = "$name.io.PredOp($id)";
             helperReplace(_text, "$name", _name.c_str());
+            // std::cout << _id << "\n";
+            // std::cout << this->numControlInputPort() << "\n";
             helperReplace(_text, "$id", _id - 1);
             break;
         default:
@@ -4134,13 +4137,12 @@ std::string CallOutNode::printInputData(PrintType _pt, uint32_t _id) {
                     _text = "$name.io.inPtrs.elements(\"field$id\")";
                 else
                     _text = "$name.io.inVals.elements(\"field$id\")";
-            } else if(auto arg = dyn_cast<ArgumentNode>(&*iter->first)){
+            } else if (auto arg = dyn_cast<ArgumentNode>(&*iter->first)) {
                 if (arg->getDataArgType() == Node::PointerType)
                     _text = "$name.io.inPtrs.elements(\"field$id\")";
                 else
                     _text = "$name.io.inVals.elements(\"field$id\")";
-            }
-            else {
+            } else {
                 std::cout << instr->getName() << "\n";
                 throw std::runtime_error("Input datatype is Uknown");
             }
@@ -4213,17 +4215,27 @@ std::string CallInNode::printInputData(PrintType _pt) {
 }
 
 //===----------------------------------------------------------------------===//
-//                            StackNode Class
+//                            ScratchpadNode Class
 //===----------------------------------------------------------------------===//
-std::string StackNode::printDefinition(PrintType _pt) {
+std::string ScratchpadNode::printDefinition(PrintType _pt) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "  val StackPointer = Module(new Stack(NumOps = $op))\n\n";
+            _text =
+                "  //$name"
+                "\n  val $name = Module(new CacheMemoryEngine(ID = $id, "
+                "NumRead = $num_read, NumWrite = $num_write))\n\n"
+                "  $alloca_mem_req <> $name.io.cache.MemReq\n"
+                "  $name.io.cache.MemResp <> $alloca_mem_resp\n\n";
+
+            helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$name", _name.c_str());
-            helperReplace(_text, "$op", this->numReadDataInputPort());
+            helperReplace(_text, "$alloca", this->getAllocaNode()->getName());
+            helperReplace(_text, "$num_read", this->numReadDataInputPort());
+            helperReplace(_text, "$num_write", this->numWriteDataInputPort());
+            helperReplace(_text, "$size", this->getMemSize());
 
             break;
         case PrintType::Dot:
@@ -4234,7 +4246,7 @@ std::string StackNode::printDefinition(PrintType _pt) {
     return _text;
 }
 
-std::string StackNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
+std::string ScratchpadNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
     switch (_pt) {
@@ -4253,7 +4265,7 @@ std::string StackNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
     return _text;
 }
 
-std::string StackNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
+std::string ScratchpadNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
     string _text;
     string _name(this->getName());
     switch (_pt) {

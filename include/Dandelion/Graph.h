@@ -32,6 +32,7 @@ using GlobalValueList = std::list<GlobalValueNode>;
 using ConstIntList = std::list<std::unique_ptr<ConstIntNode>>;
 using ConstFPList = std::list<std::unique_ptr<ConstFPNode>>;
 using LoopNodeList = std::list<std::unique_ptr<LoopNode>>;
+using ScratchpadList = std::list<std::unique_ptr<ScratchpadNode>>;
 using EdgeList = std::list<std::unique_ptr<Edge>>;
 using Port = std::pair<Node *, PortID>;
 
@@ -62,8 +63,8 @@ class Graph {
     // Memory units inside each graph
     std::unique_ptr<MemoryNode> memory_unit;
 
-    // Stack allocator
-    std::unique_ptr<StackNode> stack_allocator;
+    // Local memories
+    ScratchpadList scratchpad_memories;
 
     // Floating point unit
     std::unique_ptr<FloatingPointNode> floating_point_unit;
@@ -87,9 +88,8 @@ class Graph {
         : graph_info(_n_info),
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
-          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "mem_ctrl_cache"))),
-          stack_allocator(
-              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          memory_unit(
+              std::make_unique<MemoryNode>(NodeInfo(0, "mem_ctrl_cache"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           function_ptr(nullptr),
@@ -100,9 +100,8 @@ class Graph {
         : graph_info(_n_info),
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
-          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
-          stack_allocator(
-              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          memory_unit(
+              std::make_unique<MemoryNode>(NodeInfo(0, "mem_ctrl_cache"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           function_ptr(nullptr),
@@ -114,9 +113,8 @@ class Graph {
         : graph_info(_n_info),
           split_call(
               std::make_unique<SplitCallNode>(NodeInfo(0, "ArgSplitter"))),
-          memory_unit(std::make_unique<MemoryNode>(NodeInfo(0, "MemCtrl"))),
-          stack_allocator(
-              std::make_unique<StackNode>(NodeInfo(0, "StackPointer"))),
+          memory_unit(
+              std::make_unique<MemoryNode>(NodeInfo(0, "mem_ctrl_cache"))),
           floating_point_unit(
               std::make_unique<FloatingPointNode>(NodeInfo(0, "SharedFPU"))),
           function_ptr(_fn),
@@ -133,9 +131,10 @@ class Graph {
     void printGraph(PrintType);
     void printGraph(PrintType, std::string json_path);
 
+    ScratchpadNode *returnScratchpadMem(AllocaInst *alloca);
+
     bool isEmpty() { return graph_empty; }
     auto getMemoryUnit() const { return memory_unit.get(); }
-    auto getStackAllocator() const { return stack_allocator.get(); }
     auto getFPUNode() const { return floating_point_unit.get(); }
 
     // InstructionList *getInstructionList();
@@ -166,6 +165,7 @@ class Graph {
 
     void insertInstruction(llvm::Instruction &);
     void setFunction(llvm::Function *);
+    ScratchpadNode *createBufferMemory(AllocaNode *alloca, uint32_t size, uint32_t num_byte);
     SuperNode *insertSuperNode(llvm::BasicBlock &);
     InstructionNode *insertBinaryOperatorNode(llvm::BinaryOperator &);
     InstructionNode *insertBitcastNode(llvm::BitCastInst &);
@@ -173,7 +173,7 @@ class Graph {
     InstructionNode *insertBranchNode(llvm::BranchInst &);
     InstructionNode *insertPhiNode(llvm::PHINode &);
     InstructionNode *insertSelectNode(llvm::SelectInst &);
-    InstructionNode *insertAllocaNode(llvm::AllocaInst &, uint32_t size,
+    AllocaNode* insertAllocaNode(llvm::AllocaInst &, uint32_t size,
                                       uint32_t num_byte);
     // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepArrayInfo);
     // InstructionNode *insertGepNode(llvm::GetElementPtrInst &, GepStructInfo);
@@ -251,7 +251,6 @@ class Graph {
     void printLoopDataDependencies(PrintType);
     void printOutPort(PrintType);
     void printParallelConnections(PrintType);
-    void printAllocaOffset(PrintType);
 
     // Scala specific functions
     void printScalaHeader(std::string json_path);
