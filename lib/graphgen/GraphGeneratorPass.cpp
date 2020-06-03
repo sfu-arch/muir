@@ -1267,7 +1267,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
         else if (auto _fpdiv_node =
                      dyn_cast<FdiveOperatorNode>(node_inst->second)) {
             _fpdiv_node->setRouteID(
-                this->dependency_graph->getFPUNode()->numMemReqPort());
+                this->dependency_graph->getFPUNode()->numReadMemReqPort());
             this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
                 _fpdiv_node);
             this->dependency_graph->getFPUNode()->addReadMemoryRespPort(

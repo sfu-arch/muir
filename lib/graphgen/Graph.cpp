@@ -233,8 +233,9 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
+                auto call_ins = dyn_cast<ReturnNode>(&*ins_node);
                 if (ins_node->numDataOutputPort() == 0 &&
-                    ins_node->numControlOutputPort() == 0)
+                    ins_node->numControlOutputPort() == 0 && call_ins == nullptr)
                     continue;
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);

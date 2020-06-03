@@ -174,8 +174,11 @@ class Node {
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
-    uint32_t numMemReqPort() { return read_port_data.memory_req_port.size(); }
-    uint32_t numMemRespPort() { return read_port_data.memory_resp_port.size(); }
+    uint32_t numReadMemReqPort() { return read_port_data.memory_req_port.size(); }
+    uint32_t numReadMemRespPort() { return read_port_data.memory_resp_port.size(); }
+
+    uint32_t numWriteMemReqPort() { return write_port_data.memory_req_port.size(); }
+    uint32_t numWriteMemRespPort() { return write_port_data.memory_resp_port.size(); }
 
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
@@ -592,7 +595,7 @@ class MemoryNode : public Node {
 
     bool isInitilized() {
         //return true;
-        return (this->numMemReqPort() && this->numMemRespPort());
+        return (this->numReadMemReqPort() || this->numWriteMemReqPort());
     }
 
     virtual std::string printDefinition(PrintType) override;
