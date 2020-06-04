@@ -393,16 +393,36 @@ static void runRootGraph(llvm::Function &function,
            "  val NumKernels = "
         << call_inst.size()
         << "\n"
-           "  val memory_arbiter = Module(new MemArbiter(NumKernels))\n\n";
+           "  val memory_arbiter = Module(new MemArbiter(NumKernels))\n\n  "
+           "/**\n    * Local memories\n    */\n";
 
     for (auto func : call_inst) {
+        auto alloca_list = getInstList<AllocaInst>(func);
+        uint32_t mem_cnt = 0;
+
+        for (auto mem : alloca_list) {
+            // Getting alloca type size
+            // auto alloca_type = mem->getAllocatedType();
+            // auto DL = mem->getModule()->getDataLayout();
+            // auto num_byte = DL.getTypeAllocSize(alloca_type);
+
+            uint32_t num_elements =
+                mem->getAllocatedType()->getArrayNumElements();
+
+            out << "  val memory_" << mem_cnt
+                << " = Module(new ScratchPadMemory(Size = " << num_elements
+                << "))\n";
+        }
+
+        out << "\n  /**\n    * Kernel Modules\n    */\n";
+
         string ptrs, vals, rets;
         print_port(func, ptrs, vals, rets);
 
         out << "  val " << func->getName() << " = "
-            << " Module(new " << func->getName() << "DF(PtrsIn = List("
-            << ptrs << "), ValsIn = List(" << vals << "), Returns = List("
-            << rets << ")))\n";
+            << " Module(new " << func->getName() << "DF(PtrsIn = List(" << ptrs
+            << "), ValsIn = List(" << vals << "), Returns = List(" << rets
+            << ")))\n";
     }
 
     out << "\n  " << function.getName()
@@ -436,6 +456,22 @@ static void runRootGraph(llvm::Function &function,
             << _cins.first->getFunction()->getName() << "."
             << _cins.first->getName() << "_" << _cins.second << "_in_io <> "
             << called->getName() << ".io.out\n\n";
+    }
+
+    for (auto func : call_inst) {
+        auto alloca_list = getInstList<AllocaInst>(func);
+
+        uint32_t mem_cnt = 0;
+        for (auto mem : alloca_list) {
+            out << "  memory_" << mem_cnt << ".io.req <> " << func->getName() << "."
+                << mem->getName()
+                << "_mem_req\n"
+                   "  "
+                << mem->getName() << "_mem_resp <> "
+                << "memory_" << mem_cnt << ".io.resp\n";
+        }
+
+        out << "\n";
     }
 
     uint32_t ind = 0;

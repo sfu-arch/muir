@@ -725,69 +725,6 @@ void GraphGeneratorPass::visitFunction(Function &F) {
     }
 }
 
-// void GraphGeneratorPass::findControlPorts(Function &F) {
-// for (auto &_bb : F) {
-// outs() << "Name: " << _bb.getName().str() << "Pred :\n";
-// for (auto _bb_it : llvm::predecessors(&_bb)) {
-// auto _ins_it = _bb_it->getTerminator();
-
-// auto _node_src = this->map_value_node.find(
-//_ins_it);  // it should be Instruction node
-
-//// First we check if the edges is listed as blacklist
-// bool find = (find_if(blacklist_control_edge[_ins_it].begin(),
-// blacklist_control_edge[_ins_it].end(),
-//[_bb_it](auto _b_edge) {
-// return _b_edge == _bb_it;
-//}) != blacklist_control_edge[_ins_it].end())
-//? true
-//: false;
-// if (find) continue;
-
-// auto _node_dest =
-// this->map_value_node.find(_bb_it);  // it should be supernode
-// assert(isa<SuperNode>(_node_dest->second) &&
-//"Destination node should be super node!");
-
-// assert(isa<InstructionNode>(_node_src->second) &&
-//"Source node should be instruction node!");
-
-//// We don't connect reattach node data dependency
-// if (isa<ReattachNode>(_node_src->second)) continue;
-
-// auto _dst = _node_dest->second;
-// Node *_src = nullptr;
-// if (isa<BranchNode>(_node_src->second)) {
-//_src = dyn_cast<BranchNode>(_node_src->second);
-
-// uint32_t c = 0;
-// for (c = 0; c < _ins_it->getNumOperands(); ++c) {
-// auto _bb_tmp = dyn_cast<BasicBlock>(_ins_it->getOperand(c));
-// if (_bb_tmp == &_bb) break;
-//}
-
-// if (_ins_it->getNumOperands() == 3) {
-// auto _inst_branch = dyn_cast<BranchInst>(_ins_it);
-// auto _inst_operand = this->map_value_node.find(
-//_inst_branch->getSuccessor(c - 1));
-// if (c == 1) {
-// dyn_cast<BranchNode>(_src)->addTrueBranch(
-//_inst_operand->second);
-//} else if (c == 2) {
-// dyn_cast<BranchNode>(_src)->addFalseBranch(
-//_inst_operand->second);
-//}
-//} else {
-//// The node is Ubranch
-//_src->addControlOutputPort(_dst, c);
-//}
-
-//_dst->addControlInputPort(_src);
-//}
-//}
-//}
-//}
-
 /**
  * In this function we iterate over each function argument and connect all
  * of
@@ -1623,7 +1560,6 @@ void GraphGeneratorPass::updateRouteIDs(Function &F) {
         dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
         cnt++;
     }
-    cnt = 0;
     for (auto store_mem : cache->write_req_range()) {
         dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
         cnt++;
@@ -1635,7 +1571,6 @@ void GraphGeneratorPass::updateRouteIDs(Function &F) {
             dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
             cnt++;
         }
-        cnt = 0;
         for (auto store_mem : mem->write_req_range()) {
             dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
             cnt++;
