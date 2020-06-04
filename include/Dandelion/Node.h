@@ -174,11 +174,19 @@ class Node {
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
-    uint32_t numReadMemReqPort() { return read_port_data.memory_req_port.size(); }
-    uint32_t numReadMemRespPort() { return read_port_data.memory_resp_port.size(); }
+    uint32_t numReadMemReqPort() {
+        return read_port_data.memory_req_port.size();
+    }
+    uint32_t numReadMemRespPort() {
+        return read_port_data.memory_resp_port.size();
+    }
 
-    uint32_t numWriteMemReqPort() { return write_port_data.memory_req_port.size(); }
-    uint32_t numWriteMemRespPort() { return write_port_data.memory_resp_port.size(); }
+    uint32_t numWriteMemReqPort() {
+        return write_port_data.memory_req_port.size();
+    }
+    uint32_t numWriteMemRespPort() {
+        return write_port_data.memory_resp_port.size();
+    }
 
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
@@ -271,6 +279,48 @@ class Node {
     }
     auto output_control_range() {
         return helpers::make_range(outputControl_begin(), outputControl_end());
+    }
+
+    // Iterator over output control edges
+    auto read_req_begin() {
+        return this->read_port_data.memory_req_port.begin();
+    }
+
+    auto read_req_end() { return this->read_port_data.memory_req_port.end(); }
+    auto read_req_range() {
+        return helpers::make_range(read_req_begin(), read_req_end());
+    }
+
+    // Iterator over output control edges
+    auto write_req_begin() {
+        return this->write_port_data.memory_req_port.begin();
+    }
+
+    auto write_req_end() { return this->write_port_data.memory_req_port.end(); }
+    auto write_req_range() {
+        return helpers::make_range(write_req_begin(), write_req_end());
+    }
+
+    // Iterator over output control edges
+    auto read_resp_begin() {
+        return this->read_port_data.memory_resp_port.begin();
+    }
+
+    auto read_resp_end() { return this->read_port_data.memory_resp_port.end(); }
+    auto read_resp_range() {
+        return helpers::make_range(read_resp_begin(), read_resp_end());
+    }
+
+    // Iterator over output control edges
+    auto write_resp_begin() {
+        return this->write_port_data.memory_resp_port.begin();
+    }
+
+    auto write_resp_end() {
+        return this->write_port_data.memory_resp_port.end();
+    }
+    auto write_resp_range() {
+        return helpers::make_range(write_resp_begin(), write_resp_end());
     }
 
     uint32_t getID() { return info.ID; }
@@ -594,7 +644,7 @@ class MemoryNode : public Node {
     }
 
     bool isInitilized() {
-        //return true;
+        // return true;
         return (this->numReadMemReqPort() || this->numWriteMemReqPort());
     }
 

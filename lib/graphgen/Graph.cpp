@@ -235,7 +235,8 @@ void Graph::printInstructions(PrintType _pt) {
             for (auto &ins_node : this->inst_list) {
                 auto call_ins = dyn_cast<ReturnNode>(&*ins_node);
                 if (ins_node->numDataOutputPort() == 0 &&
-                    ins_node->numControlOutputPort() == 0 && call_ins == nullptr)
+                    ins_node->numControlOutputPort() == 0 &&
+                    call_ins == nullptr)
                     continue;
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
@@ -732,37 +733,132 @@ void Graph::printSharedConnections(PrintType _pt) {
  */
 void Graph::printMemInsConnections(PrintType _pt) {
     switch (_pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
             DEBUG(dbgs() << "\t Memory to instructions dependencies\n");
             this->outCode << helperScalaPrintHeader(
                 "Connecting memory connections");
-            for (auto &_mem_edge : edge_list) {
-                if (_mem_edge->getType() == Edge::MemoryReadTypeEdge) {
+            auto cache = this->getMemoryUnit();
+            for (auto mem : cache->read_req_range()) {
+                this->outCode
+                    << "  "
+                    << cache->printMemReadInput(
+                           PrintType::Scala,
+                           cache->returnMemoryReadInputPortIndex(mem.first)
+                               .getID())
+                    << " <> "
+                    << mem.first->printMemReadOutput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryReadOutputPortIndex(cache)
+                               .getID())
+                    << "\n";
+
+                this->outCode
+                    << "  "
+                    << mem.first->printMemReadInput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryReadInputPortIndex(cache)
+                               .getID())
+                    << " <> "
+                    << cache->printMemReadOutput(
+                           PrintType::Scala,
+                           cache->returnMemoryReadOutputPortIndex(mem.first)
+                               .getID())
+                    << "\n";
+            }
+
+            for (auto mem : cache->write_req_range()) {
+                this->outCode
+                    << "  "
+                    << cache->printMemWriteInput(
+                           PrintType::Scala,
+                           cache->returnMemoryWriteInputPortIndex(mem.first)
+                               .getID())
+                    << " <> "
+                    << mem.first->printMemWriteOutput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryWriteOutputPortIndex(cache)
+                               .getID())
+                    << "\n";
+
+                this->outCode
+                    << "  "
+                    << mem.first->printMemWriteInput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryWriteInputPortIndex(cache)
+                               .getID())
+                    << " <> "
+                    << cache->printMemWriteOutput(
+                           PrintType::Scala,
+                           cache->returnMemoryWriteOutputPortIndex(mem.first)
+                               .getID())
+                    << "\n\n";
+            }
+
+            // Print local buffers
+            //
+            for (auto &scratchpad: this->scratchpad_memories) {
+                for (auto mem : scratchpad->read_req_range()) {
                     this->outCode
                         << "  "
-                        << _mem_edge->getTar().first->printMemReadInput(
+                        << scratchpad->printMemReadInput(
                                PrintType::Scala,
-                               _mem_edge->getTar().second.getID())
+                               cache->returnMemoryReadInputPortIndex(mem.first)
+                                   .getID())
                         << " <> "
-                        << _mem_edge->getSrc().first->printMemReadOutput(
+                        << mem.first->printMemReadOutput(
                                PrintType::Scala,
-                               _mem_edge->getSrc().second.getID())
-                        << "\n\n";
-                } else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
+                               mem.first->returnMemoryReadOutputPortIndex(scratchpad.get())
+                                   .getID())
+                        << "\n";
+
                     this->outCode
                         << "  "
-                        << _mem_edge->getTar().first->printMemWriteInput(
+                        << mem.first->printMemReadInput(
                                PrintType::Scala,
-                               _mem_edge->getTar().second.getID())
+                               mem.first->returnMemoryReadInputPortIndex(scratchpad.get())
+                                   .getID())
                         << " <> "
-                        << _mem_edge->getSrc().first->printMemWriteOutput(
+                        << scratchpad->printMemReadOutput(
                                PrintType::Scala,
-                               _mem_edge->getSrc().second.getID())
-                        << "\n\n";
+                               cache->returnMemoryReadOutputPortIndex(mem.first)
+                                   .getID())
+                        << "\n";
+                }
+
+                for (auto mem : cache->write_req_range()) {
+                    this->outCode
+                        << "  "
+                        << cache->printMemWriteInput(
+                               PrintType::Scala,
+                               cache->returnMemoryWriteInputPortIndex(mem.first)
+                                   .getID())
+                        << " <> "
+                        << mem.first->printMemWriteOutput(
+                               PrintType::Scala,
+                               mem.first
+                                   ->returnMemoryWriteOutputPortIndex(cache)
+                                   .getID())
+                        << "\n";
+
+                    this->outCode
+                        << "  "
+                        << mem.first->printMemWriteInput(
+                               PrintType::Scala,
+                               mem.first->returnMemoryWriteInputPortIndex(cache)
+                                   .getID())
+                        << " <> "
+                        << cache->printMemWriteOutput(
+                               PrintType::Scala,
+                               cache
+                                   ->returnMemoryWriteOutputPortIndex(mem.first)
+                                   .getID())
+                        << "\n";
                 }
             }
 
-            break;
+        }
+
+        break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
