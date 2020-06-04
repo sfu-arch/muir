@@ -137,7 +137,15 @@ class Graph {
     auto getMemoryUnit() const { return memory_unit.get(); }
     auto getFPUNode() const { return floating_point_unit.get(); }
 
+    
     // InstructionList *getInstructionList();
+    auto scratchpad_begin() { return this->scratchpad_memories.cbegin(); }
+    auto scratchpad_end() { return this->scratchpad_memories.cend(); }
+    auto scratchpads() {
+        return helpers::make_range(scratchpad_begin(), scratchpad_end());
+    }
+
+
     auto instList_begin() { return this->inst_list.cbegin(); }
     auto instList_end() { return this->inst_list.cend(); }
     auto instructions() {

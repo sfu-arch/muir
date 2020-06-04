@@ -3791,12 +3791,11 @@ std::string AllocaNode::printDefinition(PrintType _pt) {
             std::replace(_name.begin(), _name.end(), '.', '_');
             _text =
                 "  val $name = Module(new $type(NumOuts=$num_out, ID = $id"
-                ", RouteID=$rid))\n\n";
+                "))\n\n";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", this->getID());
             helperReplace(_text, "$num_out", this->numDataOutputPort());
-            helperReplace(_text, "$type", "AllocaNode");
-            helperReplace(_text, "$rid", this->getRouteID());
+            helperReplace(_text, "$type", "AllocaConstNode");
 
             break;
         case PrintType::Dot:
@@ -4252,7 +4251,7 @@ std::string ScratchpadNode::printMemReadInput(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.InData($id)";
+            _text = "$name.io.rd.mem($id).MemReq";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _idx);
 
@@ -4271,7 +4270,45 @@ std::string ScratchpadNode::printMemReadOutput(PrintType _pt, uint32_t _idx) {
     switch (_pt) {
         case PrintType::Scala:
             std::replace(_name.begin(), _name.end(), '.', '_');
-            _text = "$name.io.OutData($id)";
+            _text = "$name.io.rd.mem($id).MemResp";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ScratchpadNode::printMemWriteInput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.wr.mem($id).MemReq";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+std::string ScratchpadNode::printMemWriteOutput(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.wr.mem($id).MemResp";
             helperReplace(_text, "$name", _name.c_str());
             helperReplace(_text, "$id", _idx);
 

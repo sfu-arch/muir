@@ -1617,10 +1617,29 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
  * assigned after load nodes
  */
 void GraphGeneratorPass::updateRouteIDs(Function &F) {
-    auto load_list = getNodeList<LoadNode>(this->dependency_graph.get());
-    auto store_list = getNodeList<StoreNode>(this->dependency_graph.get());
-    for (auto s_node : store_list) {
-        s_node->setRouteID(s_node->getRouteID() + load_list.size());
+    auto cache = this->dependency_graph->getMemoryUnit();
+    uint32_t cnt = 0;
+    for (auto load_mem : cache->read_req_range()) {
+        dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
+        cnt++;
+    }
+    cnt = 0;
+    for (auto store_mem : cache->write_req_range()) {
+        dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
+        cnt++;
+    }
+
+    for (auto &mem : this->dependency_graph->scratchpads()) {
+        uint32_t cnt = 0;
+        for (auto load_mem : mem->read_req_range()) {
+            dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
+            cnt++;
+        }
+        cnt = 0;
+        for (auto store_mem : mem->write_req_range()) {
+            dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
+            cnt++;
+        }
     }
 }
 

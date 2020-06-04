@@ -796,18 +796,21 @@ void Graph::printMemInsConnections(PrintType _pt) {
 
             // Print local buffers
             //
-            for (auto &scratchpad: this->scratchpad_memories) {
+            for (auto &scratchpad : this->scratchpad_memories) {
                 for (auto mem : scratchpad->read_req_range()) {
                     this->outCode
                         << "  "
                         << scratchpad->printMemReadInput(
                                PrintType::Scala,
-                               cache->returnMemoryReadInputPortIndex(mem.first)
+                               scratchpad
+                                   ->returnMemoryReadInputPortIndex(mem.first)
                                    .getID())
                         << " <> "
                         << mem.first->printMemReadOutput(
                                PrintType::Scala,
-                               mem.first->returnMemoryReadOutputPortIndex(scratchpad.get())
+                               mem.first
+                                   ->returnMemoryReadOutputPortIndex(
+                                       scratchpad.get())
                                    .getID())
                         << "\n";
 
@@ -815,44 +818,55 @@ void Graph::printMemInsConnections(PrintType _pt) {
                         << "  "
                         << mem.first->printMemReadInput(
                                PrintType::Scala,
-                               mem.first->returnMemoryReadInputPortIndex(scratchpad.get())
+                               mem.first
+                                   ->returnMemoryReadInputPortIndex(
+                                       scratchpad.get())
                                    .getID())
                         << " <> "
                         << scratchpad->printMemReadOutput(
                                PrintType::Scala,
-                               cache->returnMemoryReadOutputPortIndex(mem.first)
+                               scratchpad
+                                   ->returnMemoryReadOutputPortIndex(mem.first)
                                    .getID())
-                        << "\n";
+                        << "\n\n";
                 }
 
-                for (auto mem : cache->write_req_range()) {
-                    this->outCode
-                        << "  "
-                        << cache->printMemWriteInput(
-                               PrintType::Scala,
-                               cache->returnMemoryWriteInputPortIndex(mem.first)
-                                   .getID())
-                        << " <> "
-                        << mem.first->printMemWriteOutput(
-                               PrintType::Scala,
-                               mem.first
-                                   ->returnMemoryWriteOutputPortIndex(cache)
-                                   .getID())
-                        << "\n";
+                for (auto &scratchpad : this->scratchpad_memories) {
+                    for (auto mem : scratchpad->write_req_range()) {
+                        this->outCode
+                            << "  "
+                            << scratchpad->printMemWriteInput(
+                                   PrintType::Scala,
+                                   scratchpad
+                                       ->returnMemoryWriteInputPortIndex(
+                                           mem.first)
+                                       .getID())
+                            << " <> "
+                            << mem.first->printMemWriteOutput(
+                                   PrintType::Scala,
+                                   mem.first
+                                       ->returnMemoryWriteOutputPortIndex(
+                                           scratchpad.get())
+                                       .getID())
+                            << "\n";
 
-                    this->outCode
-                        << "  "
-                        << mem.first->printMemWriteInput(
-                               PrintType::Scala,
-                               mem.first->returnMemoryWriteInputPortIndex(cache)
-                                   .getID())
-                        << " <> "
-                        << cache->printMemWriteOutput(
-                               PrintType::Scala,
-                               cache
-                                   ->returnMemoryWriteOutputPortIndex(mem.first)
-                                   .getID())
-                        << "\n";
+                        this->outCode
+                            << "  "
+                            << mem.first->printMemWriteInput(
+                                   PrintType::Scala,
+                                   mem.first
+                                       ->returnMemoryWriteInputPortIndex(
+                                           scratchpad.get())
+                                       .getID())
+                            << " <> "
+                            << scratchpad->printMemWriteOutput(
+                                   PrintType::Scala,
+                                   scratchpad
+                                       ->returnMemoryWriteOutputPortIndex(
+                                           mem.first)
+                                       .getID())
+                            << "\n";
+                    }
                 }
             }
 
@@ -1403,20 +1417,17 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
         inst_list.push_back(std::make_unique<LoadNode>(
             NodeInfo(inst_list.size(),
                      "ld_" + std::to_string(inst_list.size())),
-            Node::DataType::IntegerType, &I, this->getMemoryUnit(),
-            _load_list.size()));
+            Node::DataType::IntegerType, &I, this->getMemoryUnit()));
     } else if (I.getType()->isPointerTy()) {
         inst_list.push_back(std::make_unique<LoadNode>(
             NodeInfo(inst_list.size(),
                      "ld_" + std::to_string(inst_list.size())),
-            Node::DataType::PointerType, &I, this->getMemoryUnit(),
-            _load_list.size()));
+            Node::DataType::PointerType, &I, this->getMemoryUnit()));
     } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
         inst_list.push_back(std::make_unique<LoadNode>(
             NodeInfo(inst_list.size(),
                      "ld_" + std::to_string(inst_list.size())),
-            Node::DataType::FloatType, &I, this->getMemoryUnit(),
-            _load_list.size()));
+            Node::DataType::FloatType, &I, this->getMemoryUnit()));
     }
 
     auto ff = std::find_if(
@@ -1432,8 +1443,7 @@ InstructionNode *Graph::insertStoreNode(StoreInst &I) {
     auto _store_list = getNodeList<StoreNode>(this);
     inst_list.push_back(std::make_unique<StoreNode>(
         NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit(), _store_list.size()));
-    // NodeInfo(inst_list.size(), I.getName().str()), &I));
+        &I, this->getMemoryUnit()));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -2150,69 +2160,6 @@ void Graph::doInitialization() {
                                _arg->returnDataOutputPortIndex(&*_node.first)),
                 std::make_pair(&*_node.first,
                                _node.first->returnDataInputPortIndex(&*_arg)));
-        }
-    }
-
-    for (auto &_node : inst_list) {
-        if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {
-            // Adding edges
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    _ld_node,
-                    _ld_node->returnMemoryReadOutputPortIndex(getMemoryUnit())),
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryReadInputPortIndex(_ld_node)));
-
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryReadOutputPortIndex(_ld_node)),
-                std::make_pair(
-                    _ld_node,
-                    _ld_node->returnMemoryReadInputPortIndex(getMemoryUnit())));
-        } else if (auto _st_node = dyn_cast<StoreNode>(&*_node)) {
-            // Adding edges
-            insertEdge(
-                Edge::MemoryWriteTypeEdge,
-                std::make_pair(_st_node,
-                               _st_node->returnMemoryWriteOutputPortIndex(
-                                   getMemoryUnit())),
-                std::make_pair(getMemoryUnit(),
-                               getMemoryUnit()->returnMemoryWriteInputPortIndex(
-                                   _st_node)));
-
-            insertEdge(Edge::MemoryWriteTypeEdge,
-                       std::make_pair(
-                           getMemoryUnit(),
-                           getMemoryUnit()->returnMemoryWriteOutputPortIndex(
-                               _st_node)),
-                       std::make_pair(_st_node,
-                                      _st_node->returnMemoryWriteInputPortIndex(
-                                          getMemoryUnit())));
-        } else if (auto _alloca_node = dyn_cast<AllocaNode>(&*_node)) {
-            // Adding edges
-            // insertEdge(
-            // Edge::MemoryReadTypeEdge,
-            // std::make_pair(_alloca_node,
-            //_alloca_node->returnMemoryReadOutputPortIndex(
-            // this->getStackAllocator())),
-            // std::make_pair(
-            // this->getStackAllocator(),
-            // this->getStackAllocator()->returnMemoryReadInputPortIndex(
-            //_alloca_node)));
-
-            // insertEdge(
-            // Edge::MemoryReadTypeEdge,
-            // std::make_pair(
-            // getStackAllocator(),
-            // getStackAllocator()->returnMemoryReadOutputPortIndex(
-            //_alloca_node)),
-            // std::make_pair(_alloca_node,
-            //_alloca_node->returnMemoryReadInputPortIndex(
-            // this->getStackAllocator())));
         }
     }
 }

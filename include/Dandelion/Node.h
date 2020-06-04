@@ -698,8 +698,8 @@ class ScratchpadNode : public Node {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printMemReadInput(PrintType, uint32_t) override;
     virtual std::string printMemReadOutput(PrintType, uint32_t) override;
-    // virtual std::string printMemWriteInput(PrintType, uint32_t) override;
-    // virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteInput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
 /**
@@ -1262,7 +1262,6 @@ class AllocaNode : public InstructionNode {
    private:
     uint32_t size;
     uint32_t num_byte;
-    uint32_t route_id;
 
    public:
     AllocaNode(NodeInfo _ni, llvm::AllocaInst *_ins = nullptr)
@@ -1273,8 +1272,7 @@ class AllocaNode : public InstructionNode {
                uint32_t rid = 0, llvm::AllocaInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins),
           size(_size),
-          num_byte(_num_byte),
-          route_id(rid) {}
+          num_byte(_num_byte) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
@@ -1288,9 +1286,6 @@ class AllocaNode : public InstructionNode {
 
     auto getSize() { return size; }
     void setSize(uint32_t _n) { size = _n; }
-
-    auto getRouteID() { return route_id; }
-    void setRouteID(uint32_t _id) { route_id = _id; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
