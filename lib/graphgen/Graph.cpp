@@ -264,7 +264,6 @@ void Graph::printConstants(PrintType _pt) {
         case PrintType::Scala:
             this->outCode << helperScalaPrintHeader("Printing constants nodes");
             for (auto &const_node : this->const_int_list) {
-                // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 if (const_node->getConstantParent())
                     const_node->getConstantParent()->print(this->outCode);
@@ -275,7 +274,6 @@ void Graph::printConstants(PrintType _pt) {
             }
 
             for (auto &const_node : this->const_fp_list) {
-                // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 const_node->getConstantParent()->print(this->outCode);
                 this->outCode << "\n";
@@ -659,20 +657,40 @@ void Graph::printControlDependencies(PrintType _pt) {
             // Print ground ndoes
             for (auto _st_node : getNodeList<StoreNode>(this)) {
                 for (auto _cn_node : _st_node->output_control_range()) {
-                    auto branch_node = dyn_cast<BranchNode>(_cn_node.first);
-                    this->outCode
-                        << "  "
-                        << branch_node->printInputEnable(
-                               PrintType::Scala,
-                               branch_node
-                                   ->returnControlInputPortIndex(_st_node)
-                                   .getID())
-                        << " <> "
-                        << _st_node->printOutputEnable(
-                               PrintType::Scala,
-                               _st_node->findControlOutputNode(_cn_node.first)
-                                   ->second.getID())
-                        << "\n\n";
+                    if (auto branch_node =
+                            dyn_cast<BranchNode>(_cn_node.first)) {
+                        this->outCode
+                            << "  "
+                            << branch_node->printInputEnable(
+                                   PrintType::Scala,
+                                   branch_node
+                                       ->returnControlInputPortIndex(_st_node)
+                                       .getID())
+                            << " <> "
+                            << _st_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _st_node
+                                       ->findControlOutputNode(_cn_node.first)
+                                       ->second.getID())
+                            << "\n\n";
+                    } else if (auto ret_node =
+                                   dyn_cast<ReturnNode>(_cn_node.first)) {
+                        this->outCode
+                            << "  "
+                            << ret_node->printInputEnable(
+                                   PrintType::Scala,
+                                   ret_node
+                                       ->returnControlInputPortIndex(_st_node)
+                                       .getID())
+                            << " <> "
+                            << _st_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _st_node
+                                       ->findControlOutputNode(_cn_node.first)
+                                       ->second.getID())
+                            << "\n\n";
+                    } else
+                        assert(!"Uknown ground node!\n");
                 }
             }
 
@@ -1000,9 +1018,9 @@ void Graph::printCallIO(PrintType _pt) {
                             else {
                                 std::cout << instruction_node->getName()
                                           << "\n";
+                                outs()
+                                    << instruction_node->getDataType() << "\n";
                                 assert(!"Input datatype is Uknonw");
-                                // throw std::runtime_error(
-                                //"Input datatype is Uknown");
                             }
                         }
                     }
@@ -1303,26 +1321,14 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         BasicBlock *_op = I.getIncomingBlock(i);
-        // I.dump();
-        // outs() << "In id: " << i << " ";
-        //_op->dump();
         int j = 0;
         for (auto _bb : llvm::predecessors(I.getParent())) {
-            // outs() << "Pred id " << j << " ";
-            //_bb->dump();
             if ((_op != _bb) && (i == j)) {
-                // I.dump();
-                //_op->dump();
-                //_bb->dump();
-                // outs() << "i " << i << "\n";
-                // outs() << "j " << j << "\n";
                 reverse = true;
             }
             j++;
         }
     }
-
-    // if (reverse) I.dump();
 
     if (I.getType()->isPointerTy()) {
         inst_list.push_back(std::make_unique<PhiSelectNode>(
@@ -1368,7 +1374,7 @@ AllocaNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
                                     uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
         NodeInfo(inst_list.size(),
-                 "alloca_" + I.getName().str() + to_string(inst_list.size())),
+                 "alloca_" + I.getName().str() + to_string(inst_list.size())), AllocaNode::DataType::PointerType,
         num_byte, size, inst_list.size(), &I));
 
     auto ff = std::find_if(
@@ -1381,13 +1387,10 @@ AllocaNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I, GepInfo _info) {
-    // for(auto f : _info.element_size){
-    // outs() << "LOG Size: " << f << "\n";
-    //}
     inst_list.push_back(std::make_unique<GepNode>(
         NodeInfo(inst_list.size(),
                  "Gep_" + I.getName().str() + to_string(inst_list.size())),
-        _info, &I));
+        BinaryOperatorNode::DataType::PointerType, _info, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1412,7 +1415,6 @@ InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     auto _load_list = getNodeList<LoadNode>(this);
-
     if (I.getType()->isIntegerTy()) {
         inst_list.push_back(std::make_unique<LoadNode>(
             NodeInfo(inst_list.size(),
@@ -1428,6 +1430,31 @@ InstructionNode *Graph::insertLoadNode(LoadInst &I) {
             NodeInfo(inst_list.size(),
                      "ld_" + std::to_string(inst_list.size())),
             Node::DataType::FloatType, &I, this->getMemoryUnit()));
+    } else if (I.getType()->isArrayTy()) {
+        if (I.getType()->getArrayElementType()->isIntegerTy()) {
+            inst_list.push_back(std::make_unique<LoadNode>(
+                NodeInfo(inst_list.size(),
+                         "ld_" + std::to_string(inst_list.size())),
+                Node::DataType::IntegerType, &I, this->getMemoryUnit()));
+        } else if (I.getType()->getArrayElementType()->isFloatTy()) {
+            inst_list.push_back(std::make_unique<LoadNode>(
+                NodeInfo(inst_list.size(),
+                         "ld_" + std::to_string(inst_list.size())),
+                Node::DataType::FloatType, &I, this->getMemoryUnit()));
+        } else {
+            I.getType()->getArrayElementType()->dump();
+            assert(!"Uncatched array type for load nodes");
+        }
+    } else if (I.getType()->isVectorTy()) {
+        I.getType()->dump();
+        assert(!"Load type is vector, "
+                "currently we don't support vector loads! "
+                "Please make sure you compile the your code "
+                "with following options: -fno-vectorize -fno-slp-vectorize -fno-unroll-loops");
+    } else {
+        I.dump();
+        I.getPointerOperandType()->dump();
+        assert(!"Uncatch load instruction\n");
     }
 
     auto ff = std::find_if(

@@ -1274,6 +1274,14 @@ class AllocaNode : public InstructionNode {
           size(_size),
           num_byte(_num_byte) {}
 
+    AllocaNode(NodeInfo _ni, DataType _type, uint32_t _num_byte,
+               uint32_t _size = 1, uint32_t rid = 0,
+               llvm::AllocaInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _type,
+                          _ins),
+          size(_size),
+          num_byte(_num_byte) {}
+
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
     }
@@ -1308,6 +1316,12 @@ class GepNode : public InstructionNode {
     explicit GepNode(NodeInfo _ni, common::GepInfo _info,
                      llvm::GetElementPtrInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins),
+          gep_info(_info) {}
+
+    explicit GepNode(NodeInfo _ni, DataType _type, common::GepInfo _info,
+                     llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _type,
+                          _ins),
           gep_info(_info) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1421,6 +1435,7 @@ class ReturnNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -1578,9 +1593,10 @@ class ConstFPNode : public Node {
         else if (parent_const_fp->getValueAPF().isNegative())
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isInteger()) {
-            value.f = parent_const_fp->getValueAPF().convertToFloat();
-        } else
-            value.f = parent_const_fp->getValueAPF().convertToFloat();
+            value.f = parent_const_fp->getValueAPF().convertToDouble();
+        } else{
+            value.f = parent_const_fp->getValueAPF().convertToDouble();
+        }
         // value.f = 0;
     }
 

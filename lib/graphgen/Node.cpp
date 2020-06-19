@@ -2353,6 +2353,28 @@ std::string ReturnNode::printInputEnable(PrintType _pt) {
     return _text;
 }
 
+
+std::string ReturnNode::printInputEnable(PrintType _pt, uint32_t _idx) {
+    string _text;
+    string _name(this->getName());
+    switch (_pt) {
+        case PrintType::Scala:
+            std::replace(_name.begin(), _name.end(), '.', '_');
+            _text = "$name.io.In.Succ($id)";
+            helperReplace(_text, "$name", _name.c_str());
+            helperReplace(_text, "$id", _idx);
+
+            break;
+        case PrintType::Dot:
+            assert(!"Dot file format is not supported!");
+        default:
+            assert(!"Uknown print type!");
+    }
+    return _text;
+}
+
+
+
 std::string ReturnNode::printInputData(PrintType _pt, uint32_t _id) {
     string _text;
     string _name(this->getName());

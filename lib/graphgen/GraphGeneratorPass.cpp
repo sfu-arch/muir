@@ -674,13 +674,15 @@ void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
 
 void GraphGeneratorPass::visitBitCastInst(llvm::BitCastInst &I) {
     for (auto ins : I.users()) {
-        auto called = dyn_cast<Function>(
-            CallSite(ins).getCalledValue()->stripPointerCasts());
-        if (!called) {
-            return;
-        }
-        if (called->isDeclaration()) {
-            return;
+        if (isa<CallInst>(&*ins)) {
+            auto called = dyn_cast<Function>(
+                CallSite(ins).getCalledValue()->stripPointerCasts());
+            if (!called) {
+                return;
+            }
+            if (called->isDeclaration()) {
+                return;
+            }
         }
     }
     map_value_node[&I] = this->dependency_graph->insertBitcastNode(I);
@@ -985,6 +987,13 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 auto _dst = _node_dest->second;
 
                 if (_dst == nullptr) continue;
+                if (_src == nullptr) continue;
+
+                //operand->dump();
+                //ins_it->dump();
+                //outs() << "Src: " << _node_src->second->getName() << "\n";
+                //outs() << "dest: " << _node_dest->second->getName() << "\n";
+
 
                 // TODO later we need to get ride of these lines
                 if (auto call_out = dyn_cast<CallNode>(_node_dest->second))
@@ -1143,16 +1152,26 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
             // regfile
             // We need a pass to trace the pointers
             auto load_inst = dyn_cast<LoadInst>(&*ins_it);
-            auto gep_inst =
-                dyn_cast<GetElementPtrInst>(load_inst->getPointerOperand());
-            if (auto alloca =
-                    dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
-                auto scratchpad_mem =
-                    this->dependency_graph->returnScratchpadMem(alloca);
-                scratchpad_mem->addReadMemoryReqPort(_ld_node);
-                scratchpad_mem->addReadMemoryRespPort(_ld_node);
-                _ld_node->addReadMemoryReqPort(scratchpad_mem);
-                _ld_node->addReadMemoryRespPort(scratchpad_mem);
+            if (auto gep_inst = dyn_cast<GetElementPtrInst>(
+                    load_inst->getPointerOperand())) {
+                if (auto alloca =
+                        dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                    auto scratchpad_mem =
+                        this->dependency_graph->returnScratchpadMem(alloca);
+                    scratchpad_mem->addReadMemoryReqPort(_ld_node);
+                    scratchpad_mem->addReadMemoryRespPort(_ld_node);
+                    _ld_node->addReadMemoryReqPort(scratchpad_mem);
+                    _ld_node->addReadMemoryRespPort(scratchpad_mem);
+                } else {
+                    this->dependency_graph->getMemoryUnit()
+                        ->addReadMemoryReqPort(_ld_node);
+                    this->dependency_graph->getMemoryUnit()
+                        ->addReadMemoryRespPort(_ld_node);
+                    _ld_node->addReadMemoryReqPort(
+                        this->dependency_graph->getMemoryUnit());
+                    _ld_node->addReadMemoryRespPort(
+                        this->dependency_graph->getMemoryUnit());
+                }
             } else {
                 this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
                     _ld_node);
@@ -1163,23 +1182,32 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 _ld_node->addReadMemoryRespPort(
                     this->dependency_graph->getMemoryUnit());
             }
-
         }
 
         // Store node connection
         //
         else if (auto _st_node = dyn_cast<StoreNode>(node_inst->second)) {
             auto store_inst = dyn_cast<StoreInst>(&*ins_it);
-            auto gep_inst =
-                dyn_cast<GetElementPtrInst>(store_inst->getPointerOperand());
-            if (auto alloca =
-                    dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
-                auto scratchpad_mem =
-                    this->dependency_graph->returnScratchpadMem(alloca);
-                scratchpad_mem->addWriteMemoryReqPort(_st_node);
-                scratchpad_mem->addWriteMemoryRespPort(_st_node);
-                _st_node->addWriteMemoryReqPort(scratchpad_mem);
-                _st_node->addWriteMemoryRespPort(scratchpad_mem);
+            if (auto gep_inst = dyn_cast<GetElementPtrInst>(
+                    store_inst->getPointerOperand())) {
+                if (auto alloca =
+                        dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                    auto scratchpad_mem =
+                        this->dependency_graph->returnScratchpadMem(alloca);
+                    scratchpad_mem->addWriteMemoryReqPort(_st_node);
+                    scratchpad_mem->addWriteMemoryRespPort(_st_node);
+                    _st_node->addWriteMemoryReqPort(scratchpad_mem);
+                    _st_node->addWriteMemoryRespPort(scratchpad_mem);
+                } else {
+                    this->dependency_graph->getMemoryUnit()
+                        ->addWriteMemoryReqPort(_st_node);
+                    this->dependency_graph->getMemoryUnit()
+                        ->addWriteMemoryRespPort(_st_node);
+                    _st_node->addWriteMemoryReqPort(
+                        this->dependency_graph->getMemoryUnit());
+                    _st_node->addWriteMemoryRespPort(
+                        this->dependency_graph->getMemoryUnit());
+                }
             } else {
                 this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
                     _st_node);
@@ -1556,9 +1584,12 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
 void GraphGeneratorPass::updateRouteIDs(Function &F) {
     auto cache = this->dependency_graph->getMemoryUnit();
     uint32_t cnt = 0;
+    outs() << "Enter route id update\n";
+    outs() << "Cache input: " << cache->numReadMemReqPort() << "\n";
     for (auto load_mem : cache->read_req_range()) {
         dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
         cnt++;
+        outs() << load_mem.first->getName() << "\n";
     }
     for (auto store_mem : cache->write_req_range()) {
         dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
@@ -1839,7 +1870,6 @@ void GraphGeneratorPass::connectingStoreToBranch(Function &F) {
  */
 void GraphGeneratorPass::init(Function &F) {
     // Running analysis on the elements
-    updateRouteIDs(F);
     buildLoopNodes(F, *LI);
     connectLoopEdge();
     // findControlPorts(F);
@@ -1854,6 +1884,7 @@ void GraphGeneratorPass::init(Function &F) {
 
     // Printing the graph
     dependency_graph->optimizationPasses();
+    updateRouteIDs(F);
     dependency_graph->printGraph(PrintType::Scala, config_path);
     // dependency_graph->printNodeSummary();
 }
