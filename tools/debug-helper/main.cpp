@@ -46,6 +46,7 @@
 #include <string>
 
 #include "Common.h"
+#include "DebugInfo.h"
 
 using namespace llvm;
 using llvm::legacy::PassManager;
@@ -56,25 +57,17 @@ using std::unique_ptr;
 using std::vector;
 
 using namespace helpers;
+using namespace debuginfo;
 
-//template <class T>
-//std::vector<T *> getInstList(Function *func) {
-    //std::vector<T *> return_list;
-    //for (auto &_node : llvm::instructions(func)) {
-        //if (auto cast_node = dyn_cast<T>(&_node))
-            //return_list.push_back(cast_node);
-    //}
-    //return return_list;
-//}
-
-static cl::OptionCategory ddebugCategory{"dandelion options"};
+static cl::OptionCategory ddebugCategory{"Debug dandelion options"};
 
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
                        cl::Required, cl::cat{ddebugCategory});
 
-cl::opt<string> function_name("function", cl::desc("Target function name"),
-                          cl::value_desc("Function name"), cl::Required,
+cl::opt<int> node_id("node-id", cl::desc("Passing node unique ID"),
+                          cl::value_desc("Node ID"), cl::Required,
+                          cl::init(0),
                           cl::cat{ddebugCategory});
 
 cl::opt<string> outFile("o", cl::desc("tapas output file"),
@@ -119,23 +112,12 @@ static void extractLoops(Module &m) {
     saveModule(m, inPath);
 }
 
-//void getCallInst(llvm::Function *F, SetVector<Function *> &call_inst) {
-    //for (auto &ins : llvm::instructions(F)) {
-        //if (auto _call = dyn_cast<CallInst>(&ins)) {
-            //auto called = dyn_cast<Function>(
-                //CallSite(_call).getCalledValue()->stripPointerCasts());
-            //if (!called) {
-                //continue;
-            //}
-
-            //// Skip debug function
-            //if (called->isDeclaration()) continue;
-            //call_inst.insert(called);
-            //getCallInst(called, call_inst);
-        //}
-    //}
-    //return;
-//}
+static void debugPass(Module &m) {
+    legacy::PassManager pm;
+    pm.add(new DebugInfo(node_id.getValue()));
+    pm.add(createVerifierPass());
+    pm.run(m);
+}
 
 /**
  * Running UIDLabel pss
@@ -169,10 +151,8 @@ int main(int argc, char **argv) {
     }
 
     labelFunctions(*module);
-
-    outs() << function_name.getValue() << "\n";
-
-    saveModule(*module, function_name.getValue() + ".final.bc");
+    debugPass(*module);
+    saveModule(*module, "debug.bc");
 
     return 0;
 }
