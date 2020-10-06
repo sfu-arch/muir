@@ -77,6 +77,10 @@ cl::opt<string> function_name("function", cl::desc("Target function name"),
                           cl::value_desc("Function name"), cl::Required,
                           cl::cat{ddebugCategory});
 
+cl::opt<string> instruction_id("id", cl::desc("Instruction ID"),
+                          cl::value_desc("ID of the instruction"), cl::Required,
+                          cl::cat{ddebugCategory});
+
 cl::opt<string> outFile("o", cl::desc("tapas output file"),
                         cl::value_desc("filename"), cl::init(""),
                         cl::cat{ddebugCategory});
@@ -119,24 +123,6 @@ static void extractLoops(Module &m) {
     saveModule(m, inPath);
 }
 
-//void getCallInst(llvm::Function *F, SetVector<Function *> &call_inst) {
-    //for (auto &ins : llvm::instructions(F)) {
-        //if (auto _call = dyn_cast<CallInst>(&ins)) {
-            //auto called = dyn_cast<Function>(
-                //CallSite(_call).getCalledValue()->stripPointerCasts());
-            //if (!called) {
-                //continue;
-            //}
-
-            //// Skip debug function
-            //if (called->isDeclaration()) continue;
-            //call_inst.insert(called);
-            //getCallInst(called, call_inst);
-        //}
-    //}
-    //return;
-//}
-
 /**
  * Running UIDLabel pss
  */
@@ -171,6 +157,7 @@ int main(int argc, char **argv) {
     labelFunctions(*module);
 
     outs() << function_name.getValue() << "\n";
+    outs() << instruction_id.getValue() << "\n";
 
     saveModule(*module, function_name.getValue() + ".final.bc");
 
