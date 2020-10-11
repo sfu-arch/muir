@@ -1,7 +1,5 @@
 #define DEBUG_TYPE "dandelion-debug"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -70,6 +68,11 @@ cl::opt<int> node_id("node-id", cl::desc("Passing node unique ID"),
                           cl::init(0),
                           cl::cat{ddebugCategory});
 
+cl::opt<string> fn_name("fn-name", cl::desc("Passing target function name"),
+                          cl::value_desc("Function name"), cl::Required,
+                          cl::init(""),
+                          cl::cat{ddebugCategory});
+
 cl::opt<string> outFile("o", cl::desc("tapas output file"),
                         cl::value_desc("filename"), cl::init(""),
                         cl::cat{ddebugCategory});
@@ -114,7 +117,7 @@ static void extractLoops(Module &m) {
 
 static void debugPass(Module &m) {
     legacy::PassManager pm;
-    pm.add(new DebugInfo(node_id.getValue()));
+    pm.add(new DebugInfo(fn_name.getValue(), node_id.getValue()));
     pm.add(createVerifierPass());
     pm.run(m);
 }
