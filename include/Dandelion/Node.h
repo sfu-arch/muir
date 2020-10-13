@@ -1593,7 +1593,7 @@ class ConstFPNode : public Node {
         else if (parent_const_fp->getValueAPF().isNegative())
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isInteger()) {
-            value.f = parent_const_fp->getValueAPF().convertToDouble();
+            value.f = parent_const_fp->getValueAPF().convertToFloat();
         } else{
             value.f = parent_const_fp->getValueAPF().convertToDouble();
         }
