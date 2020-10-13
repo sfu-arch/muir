@@ -67,7 +67,7 @@ function build_verilator(){
         git clone "http://git.veripool.org/git/verilator"
         cd verilator
         git pull
-        git checkout verilator_4_016
+        git checkout v4.016
         unset VERILATOR_ROOT
         autoconf
         ./configure
