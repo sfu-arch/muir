@@ -5,46 +5,47 @@
 
 Getting Started
 =======
-Official supported environment for building and running dandelion-generator is ubuntu 16.04. You have to run these commands to install required packages from ubuntu package repositories :
+Official supported environment for building and running muIR is ubuntu 18.04. You have to run these commands to install required packages from ubuntu package repositories :
 ```
 sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
 sudo apt-get install gcc-8-multilib g++-8-multilib
 ````
 
 Build
-=====
+======
 
-To build Dandelion dependencies, we have scripted installing the dependencies. To install the dependencies you need only to run the following commands:
+To build muIR dependencies, we have scripted installing the dependencies. To install the dependencies you need only to run the following commands:
 
 ``` bash
-cd dandelion-generator
-./scripts/dandelion.sh
-
-source ./setup-env.sh
-cd ..; mkdir build; cd build;
+cd muir
+source ./scripts/dandelion.sh
+cd ..
+mkdir build
+cd build
 cmake -DLLVM_DIR=<your repository>/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
 make
+source ./scripts/setup-env.sh
 ```
 
 Running tests
-=======
+===============
 Inside test directory there are set of test example which show the generality of dandelion-generator.
 To get the generated accelerator files for test cases you can run:
 
 ```
 # in your code repository
-cd test/c/
+cd build/test/c/
 make all
 ```
 
-For each test case there is going to be one sacala file which has the detailed implementation of dandelion-generator.
+For each test case there is going to be one Scala file which has the detailed implementation of dandelion-generator.
 
 How to run generator on your code (detailed way)?
 =================================================
 
 For generating `.scala` for your code the following steps need to be taken :
 
-1. Emit the llvm ir (`.ll`) for your code with supported Tapir/dandelion-generator compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
+1. Emit the llvm ir (`.ll`) for your code with supported Tapir/muIR compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
     * You can out put llvm ir with this command `./Tapir-Meta/tapir/build/bin/clang -emit-llvm [Your source code]`
 2. Run `opt` with `-mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce` arguments on your llvm ir (`.ll`) code.
 3. Run TAPAS generator on your `.ll` file like this :
