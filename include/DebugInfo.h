@@ -31,6 +31,8 @@ struct DebugInfo : public llvm::ModulePass {
         : llvm::ModulePass(ID), function_name(function_name), node_id(id) {}
 
     bool runOnModule(llvm::Module &m) override;
+    bool doFinalization(llvm::Module &M) override;
+
 };
 
 }  // namespace debuginfo

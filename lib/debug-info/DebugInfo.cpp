@@ -69,7 +69,7 @@ DebugInfo::runOnModule(Module& m) {
             }
 
           } else {
-            outs() << "\n Instruction (" << this->node_id << "): \n";
+            outs() << "\n[DEBUG] Instruction (" << this->node_id << "): ";
             ins.print(outs());
             outs() << "\n";
             for (auto& op : ins.operands()) {
@@ -83,8 +83,6 @@ DebugInfo::runOnModule(Module& m) {
                       }
                     }
                   }
-                  op->print(outs());
-                  outs() << "\n";
                 }
               } else {
                 // TODO: Enable this part after adding UIDs to
@@ -100,5 +98,19 @@ DebugInfo::runOnModule(Module& m) {
   }
 
   return false;
+}
+
+
+bool DebugInfo::doFinalization(llvm::Module &M){
+
+    outs() << "Print debug nodes:\n";
+    outs() << "node_ids: \n";
+    for(auto op : this->node_operands){
+        for(auto ids: op.second){
+            outs() << "\t" << ids << ",\n";
+        }
+    }
+
+    return false;
 }
 
