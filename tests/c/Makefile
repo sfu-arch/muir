@@ -1,4 +1,7 @@
-CC=clang
+LLVM_DIR=@LLVM_INSTALL_PREFIX@/bin
+CC=$(LLVM_DIR)/clang
+OPT=$(LLVM_DIR)/opt
+DIS=$(LLVM_DIR)/llvm-dis
 
 ifeq (, $(shell which clang))
 $(error "There is no clang compiler in PATH, consider source installing dandelion dependencies and setting up your PATH")
@@ -9,12 +12,12 @@ $(error "There is no dandelion in PATH, consider source scripts/setup.sh")
 endif
 
 DANDELION=dandelion
-CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -m32 -S -o -
-SOURCES=$(shell ls test*.c)
+CFLAGS=-O1 -g -fno-unroll-loops -fno-vectorize -fno-slp-vectorize -emit-llvm -S -o -
+SOURCES=$(shell ls *.c)
 SCALA=$(SOURCES:%.c=%.scala)
 DOT=$(shell ls *.dot)
 SVG=$(DOT:%.dot=%.svg)
-DANDELION_CONFIG=@CMAKE_CURRENT_BINARY_DIR@/scripts/config.json
+DANDELION_CONFIG=@CMAKE_BINARY_DIR@/scripts/config.json
 
 .PRECIOUS: %.ll
 
@@ -23,10 +26,10 @@ all: $(SCALA)
 svg: $(SVG)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | opt -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -dot-cfg -o $@
 
 %.ll: %.bc
-	llvm-dis $<
+	$(DIS) $<
 
 %.scala: %.ll
 	$(DANDELION) -fn-name=$* -config=$(DANDELION_CONFIG) $< -o $*

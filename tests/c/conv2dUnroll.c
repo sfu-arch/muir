@@ -36,8 +36,8 @@ static int32_t img_in[IMG_SIZE * IMG_SIZE];
 static int32_t img_out[IMG_SIZE * IMG_SIZE];
 
 void test_setup() {
-    for (unsigned i = 0; i != IMG_SIZE*IMG_SIZE; i++)
-        img_in[i] = i;
+  for (unsigned i = 0; i != IMG_SIZE*IMG_SIZE; i++)
+    img_in[i] = i;
 }
 
 int test_check() {
@@ -50,7 +50,7 @@ int test_check() {
     return 1;
 }
 
-void conv2d(int32_t* mat, int32_t* res,
+void conv2dUnroll(int32_t* mat, int32_t* res,
             const int32_t *coeffs,
             int W, int H, int K, uint32_t scf) {
   int R = K >> 1;
@@ -62,10 +62,11 @@ void conv2d(int32_t* mat, int32_t* res,
       int c = 0;
       int32_t val = 0;
       for(int y = 0; y <= 2*R; ++y) {
-          for(int x = 0; x <= 2*R; ++x){
-            printf("val: %d, coeffs: %d, mat: %d\n", val, coeffs[c], mat[index2 + i + (x-2)]);
-            val += coeffs[c++] * mat[index2 + i + (x - 2)];
-          }
+        val += coeffs[c++] * mat[index2 + i - 2];
+        val += coeffs[c++] * mat[index2 + i -1];
+        val += coeffs[c++] * mat[index2 + i];
+        val += coeffs[c++] * mat[index2 + i + 1];
+        val += coeffs[c++] * mat[index2 + i + 2];
         index2 += W;
       }
       res[index+i] = val >> scf;
@@ -76,7 +77,7 @@ void conv2d(int32_t* mat, int32_t* res,
 
 int main(){
   test_setup();
-  conv2d(img_in, img_out, coeffs, IMG_SIZE, IMG_SIZE, 5, 8);
+  conv2dUnroll(img_in, img_out, coeffs, IMG_SIZE, IMG_SIZE, 5, 8);
   if(test_check())
       printf("OK!\n");
   else

@@ -162,6 +162,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
     std::map<llvm::Value *, Node *> map_value_node;
     std::map<llvm::Loop *, LoopNode *> loop_value_node;
 
+    std::map<llvm::AllocaInst *, ScratchpadNode *> memory_buffer_map;
+
     uint32_t LID;
 
    private:
@@ -198,6 +200,8 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void visitSExtInst(llvm::SExtInst &);
     void visitZExtInst(llvm::ZExtInst &);
     void visitTruncInst(llvm::TruncInst&);
+    void visitSIToFPInst(llvm::SIToFPInst&);
+    void visitFPToUIInst(llvm::FPToUIInst&);
 
     void visitFAdd(llvm::BinaryOperator &);
     void visitFSub(llvm::BinaryOperator &);
@@ -216,6 +220,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
 
     // void makeLoopNodes(llvm::LoopInfo &loop_info);
     void buildLoopNodes(llvm::Function &, llvm::LoopInfo &loop_info);
+    void updateRouteIDs(llvm::Function &);
     void connectLoopEdge();
     void findControlPorts(llvm::Function &);
     void findDataPorts(llvm::Function &);
@@ -223,6 +228,7 @@ class GraphGeneratorPass : public llvm::ModulePass,
     void connectParalleNodes(llvm::Function &);
     void connectingCalldependencies(llvm::Function &);
     void connectingAliasEdges(llvm::Function &);
+    void connectingStoreToBranch(llvm::Function &F);
 
     void buildingGraph();
 

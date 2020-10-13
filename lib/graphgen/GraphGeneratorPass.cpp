@@ -497,10 +497,7 @@ LoopSummary GraphGeneratorPass::summarizeLoop(Loop *L, LoopInfo &LI) {
                         L->getSubLoopsVector().end(), false,
                         [](auto _l, auto _r) { return _l | _r; },
                         [&_inst_user, &summary, L](auto _sub_l) {
-                            if (_sub_l->contains(_inst_user)) {
-                                return true;
-                            } else
-                                return false;
+                            return (_sub_l->contains(_inst_user));
                         });
 
                     if (!contain) {
@@ -620,6 +617,14 @@ void GraphGeneratorPass::visitTruncInst(llvm::TruncInst &I) {
     map_value_node[&I] = this->dependency_graph->insertTruncNode(I);
 }
 
+void GraphGeneratorPass::visitSIToFPInst(llvm::SIToFPInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertSTIoFPNode(I);
+}
+
+void GraphGeneratorPass::visitFPToUIInst(llvm::FPToUIInst &I) {
+    map_value_node[&I] = this->dependency_graph->insertFPToUINode(I);
+}
+
 void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     auto alloca_type = I.getAllocatedType();
     auto DL = I.getModule()->getDataLayout();
@@ -627,11 +632,17 @@ void GraphGeneratorPass::visitAllocaInst(llvm::AllocaInst &I) {
     uint32_t size = 1;
 
     if (alloca_type->isIntegerTy() || alloca_type->isArrayTy()) {
-        map_value_node[&I] =
+        auto alloca_node =
             this->dependency_graph->insertAllocaNode(I, size, num_byte);
+        map_value_node[&I] = alloca_node;
+        memory_buffer_map[&I] = this->dependency_graph->createBufferMemory(
+            alloca_node, size, num_byte);
     } else if (alloca_type->isPointerTy()) {
-        map_value_node[&I] =
+        auto alloca_node =
             this->dependency_graph->insertAllocaNode(I, size, num_byte);
+        map_value_node[&I] = alloca_node;
+        memory_buffer_map[&I] = this->dependency_graph->createBufferMemory(
+            alloca_node, size, num_byte);
         I.print(errs(), true);
         errs() << "Alloca is pointer\n";
         // assert(!"Don't support for this alloca");
@@ -649,7 +660,6 @@ void GraphGeneratorPass::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
         assert(!"No gep information");
     }
 
-    // auto src_type = I.getSourceElementType();
     map_value_node[&I] =
         this->dependency_graph->insertGepNode(I, gep_pass_ctx.GepAddress[&I]);
     if (map_value_node.count(&I) == 0) {
@@ -663,6 +673,18 @@ void GraphGeneratorPass::visitLoadInst(llvm::LoadInst &I) {
 }
 
 void GraphGeneratorPass::visitBitCastInst(llvm::BitCastInst &I) {
+    for (auto ins : I.users()) {
+        if (isa<CallInst>(&*ins)) {
+            auto called = dyn_cast<Function>(
+                CallSite(ins).getCalledValue()->stripPointerCasts());
+            if (!called) {
+                return;
+            }
+            if (called->isDeclaration()) {
+                return;
+            }
+        }
+    }
     map_value_node[&I] = this->dependency_graph->insertBitcastNode(I);
 }
 
@@ -704,69 +726,6 @@ void GraphGeneratorPass::visitFunction(Function &F) {
             this->dependency_graph->insertFunctionGlobalValue(g_var);
     }
 }
-
-// void GraphGeneratorPass::findControlPorts(Function &F) {
-// for (auto &_bb : F) {
-// outs() << "Name: " << _bb.getName().str() << "Pred :\n";
-// for (auto _bb_it : llvm::predecessors(&_bb)) {
-// auto _ins_it = _bb_it->getTerminator();
-
-// auto _node_src = this->map_value_node.find(
-//_ins_it);  // it should be Instruction node
-
-//// First we check if the edges is listed as blacklist
-// bool find = (find_if(blacklist_control_edge[_ins_it].begin(),
-// blacklist_control_edge[_ins_it].end(),
-//[_bb_it](auto _b_edge) {
-// return _b_edge == _bb_it;
-//}) != blacklist_control_edge[_ins_it].end())
-//? true
-//: false;
-// if (find) continue;
-
-// auto _node_dest =
-// this->map_value_node.find(_bb_it);  // it should be supernode
-// assert(isa<SuperNode>(_node_dest->second) &&
-//"Destination node should be super node!");
-
-// assert(isa<InstructionNode>(_node_src->second) &&
-//"Source node should be instruction node!");
-
-//// We don't connect reattach node data dependency
-// if (isa<ReattachNode>(_node_src->second)) continue;
-
-// auto _dst = _node_dest->second;
-// Node *_src = nullptr;
-// if (isa<BranchNode>(_node_src->second)) {
-//_src = dyn_cast<BranchNode>(_node_src->second);
-
-// uint32_t c = 0;
-// for (c = 0; c < _ins_it->getNumOperands(); ++c) {
-// auto _bb_tmp = dyn_cast<BasicBlock>(_ins_it->getOperand(c));
-// if (_bb_tmp == &_bb) break;
-//}
-
-// if (_ins_it->getNumOperands() == 3) {
-// auto _inst_branch = dyn_cast<BranchInst>(_ins_it);
-// auto _inst_operand = this->map_value_node.find(
-//_inst_branch->getSuccessor(c - 1));
-// if (c == 1) {
-// dyn_cast<BranchNode>(_src)->addTrueBranch(
-//_inst_operand->second);
-//} else if (c == 2) {
-// dyn_cast<BranchNode>(_src)->addFalseBranch(
-//_inst_operand->second);
-//}
-//} else {
-//// The node is Ubranch
-//_src->addControlOutputPort(_dst, c);
-//}
-
-//_dst->addControlInputPort(_src);
-//}
-//}
-//}
-//}
 
 /**
  * In this function we iterate over each function argument and connect all
@@ -872,10 +831,6 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                         // = 2
                         // and second elemnt is C = 1
                         auto _inst_branch = dyn_cast<BranchInst>(&*ins_it);
-                        // outs() << "DEBUG BEGIN\n";
-                        // ins_it->dump();
-                        //_inst_branch->getSuccessor(c - 1)->dump();
-                        // outs() << "DEBUG END\n";
                         auto _inst_operand = this->map_value_node.find(
                             _inst_branch->getSuccessor(c - 1));
                         if (c == 1) {
@@ -941,7 +896,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                      */
                     if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
                         DEBUG(operand->dump());
-                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(dbgs() << "Index : " << c << "\n");
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
@@ -981,7 +936,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                      */
                     if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
                         DEBUG(operand->dump());
-                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(dbgs() << "Index : " << c << "\n");
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
@@ -1027,6 +982,10 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                 auto _src = _node_src->second;
                 auto _dst = _node_dest->second;
 
+                if (_dst == nullptr) continue;
+                if (_src == nullptr) continue;
+
+
                 // TODO later we need to get ride of these lines
                 if (auto call_out = dyn_cast<CallNode>(_node_dest->second))
                     _dst = call_out->getCallOut();
@@ -1052,11 +1011,8 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             find_if(_loop_edge.getSecond().begin(),
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
-                                        if ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it))
-                                            return true;
-                                        else
-                                            return false;
+                                        return ((_f_edge.first == operand) &&
+                                                (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
@@ -1099,11 +1055,8 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                             find_if(_loop_edge.getSecond().begin(),
                                     _loop_edge.getSecond().end(),
                                     [operand, ins_it](auto _f_edge) {
-                                        if ((_f_edge.first == operand) &&
-                                            (_f_edge.second == &*ins_it))
-                                            return true;
-                                        else
-                                            return false;
+                                        return ((_f_edge.first == operand) &&
+                                                (_f_edge.second == &*ins_it));
                                     });
 
                         if (_edge != _loop_edge.getSecond().end()) {
@@ -1182,56 +1135,95 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
         // Connecting Load and Store nodes to Memory system
         // TODO: We need to decide how to connect the memory nodes
         // to the memory system
-        if (auto _ld_node = dyn_cast<LoadNode>(
-                this->map_value_node.find(&*ins_it)->second)) {
+        auto node_inst = this->map_value_node.find(&*ins_it);
+        if (node_inst->second == nullptr) continue;
+        if (auto _ld_node = dyn_cast<LoadNode>(node_inst->second)) {
             // TODO right now we consider all the connections to the cache
             // or
             // regfile
             // We need a pass to trace the pointers
-            this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
-                _ld_node);
-            this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
-                _ld_node);
-            _ld_node->addReadMemoryReqPort(
-                this->dependency_graph->getMemoryUnit());
-            _ld_node->addReadMemoryRespPort(
-                this->dependency_graph->getMemoryUnit());
-
+            auto load_inst = dyn_cast<LoadInst>(&*ins_it);
+            if (auto gep_inst = dyn_cast<GetElementPtrInst>(
+                    load_inst->getPointerOperand())) {
+                if (auto alloca =
+                        dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                    auto scratchpad_mem =
+                        this->dependency_graph->returnScratchpadMem(alloca);
+                    scratchpad_mem->addReadMemoryReqPort(_ld_node);
+                    scratchpad_mem->addReadMemoryRespPort(_ld_node);
+                    _ld_node->addReadMemoryReqPort(scratchpad_mem);
+                    _ld_node->addReadMemoryRespPort(scratchpad_mem);
+                } else {
+                    this->dependency_graph->getMemoryUnit()
+                        ->addReadMemoryReqPort(_ld_node);
+                    this->dependency_graph->getMemoryUnit()
+                        ->addReadMemoryRespPort(_ld_node);
+                    _ld_node->addReadMemoryReqPort(
+                        this->dependency_graph->getMemoryUnit());
+                    _ld_node->addReadMemoryRespPort(
+                        this->dependency_graph->getMemoryUnit());
+                }
+            } else {
+                this->dependency_graph->getMemoryUnit()->addReadMemoryReqPort(
+                    _ld_node);
+                this->dependency_graph->getMemoryUnit()->addReadMemoryRespPort(
+                    _ld_node);
+                _ld_node->addReadMemoryReqPort(
+                    this->dependency_graph->getMemoryUnit());
+                _ld_node->addReadMemoryRespPort(
+                    this->dependency_graph->getMemoryUnit());
+            }
         }
 
         // Store node connection
         //
-        else if (auto _st_node = dyn_cast<StoreNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
-            this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
-                _st_node);
-            this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
-                _st_node);
-            _st_node->addWriteMemoryReqPort(
-                this->dependency_graph->getMemoryUnit());
-            _st_node->addWriteMemoryRespPort(
-                this->dependency_graph->getMemoryUnit());
+        else if (auto _st_node = dyn_cast<StoreNode>(node_inst->second)) {
+            auto store_inst = dyn_cast<StoreInst>(&*ins_it);
+            if (auto gep_inst = dyn_cast<GetElementPtrInst>(
+                    store_inst->getPointerOperand())) {
+                if (auto alloca =
+                        dyn_cast<AllocaInst>(gep_inst->getPointerOperand())) {
+                    auto scratchpad_mem =
+                        this->dependency_graph->returnScratchpadMem(alloca);
+                    scratchpad_mem->addWriteMemoryReqPort(_st_node);
+                    scratchpad_mem->addWriteMemoryRespPort(_st_node);
+                    _st_node->addWriteMemoryReqPort(scratchpad_mem);
+                    _st_node->addWriteMemoryRespPort(scratchpad_mem);
+                } else {
+                    this->dependency_graph->getMemoryUnit()
+                        ->addWriteMemoryReqPort(_st_node);
+                    this->dependency_graph->getMemoryUnit()
+                        ->addWriteMemoryRespPort(_st_node);
+                    _st_node->addWriteMemoryReqPort(
+                        this->dependency_graph->getMemoryUnit());
+                    _st_node->addWriteMemoryRespPort(
+                        this->dependency_graph->getMemoryUnit());
+                }
+            } else {
+                this->dependency_graph->getMemoryUnit()->addWriteMemoryReqPort(
+                    _st_node);
+                this->dependency_graph->getMemoryUnit()->addWriteMemoryRespPort(
+                    _st_node);
+                _st_node->addWriteMemoryReqPort(
+                    this->dependency_graph->getMemoryUnit());
+                _st_node->addWriteMemoryRespPort(
+                    this->dependency_graph->getMemoryUnit());
+            }
         }
 
         // Alloca node connection to the stack allocator
-        //
-        else if (auto _alloca_node = dyn_cast<AllocaNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
-            this->dependency_graph->getStackAllocator()->addReadMemoryReqPort(
-                _alloca_node);
-            this->dependency_graph->getStackAllocator()->addReadMemoryRespPort(
-                _alloca_node);
-            _alloca_node->addReadMemoryReqPort(
-                this->dependency_graph->getStackAllocator());
-            _alloca_node->addReadMemoryRespPort(
-                this->dependency_graph->getStackAllocator());
-        }
+        // else if (auto _alloca_node = dyn_cast<AllocaNode>(
+        // this->map_value_node.find(&*ins_it)->second)) {
+
+        // auto new_mem = this->dependency_graph->createBufferMemory();
+        // memory_buffer_map.insert(std::make_pair(&*ins_it, new_mem));
+        //}
 
         // Connection FPNode operations
-        else if (auto _fpdiv_node = dyn_cast<FdiveOperatorNode>(
-                     this->map_value_node.find(&*ins_it)->second)) {
+        else if (auto _fpdiv_node =
+                     dyn_cast<FdiveOperatorNode>(node_inst->second)) {
             _fpdiv_node->setRouteID(
-                this->dependency_graph->getFPUNode()->numMemReqPort());
+                this->dependency_graph->getFPUNode()->numReadMemReqPort());
             this->dependency_graph->getFPUNode()->addReadMemoryReqPort(
                 _fpdiv_node);
             this->dependency_graph->getFPUNode()->addReadMemoryRespPort(
@@ -1287,6 +1279,8 @@ void GraphGeneratorPass::fillBasicBlockDependencies(Function &F) {
                 }
 
                 // Iterate over the basicblock's instructions
+                auto instruction_node = this->map_value_node[&I];
+                if (instruction_node == nullptr) continue;
                 if (auto _ins =
                         dyn_cast<InstructionNode>(this->map_value_node[&I])) {
                     _bb->addInstruction(_ins);
@@ -1481,8 +1475,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
         // This function should be called after filling the containers
         // always
         // Here we look for Store nodes and then connect them to their
-        // endinge
-        // branch instruction
+        // ending branch instruction
         _loop_node->setEndingInstructions();
 
         for (auto _en_instruction : _loop_node->endings()) {
@@ -1493,7 +1486,7 @@ void GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo &loop_info) {
                                                 ->getInstList()
                                                 .back()];
 
-            // For now we connect all the store nodes within a for loop
+            // For now we connect all the store nodes within a loop
             // to their ending branch instruction
             // this condition can be ease down later on
             _en_instruction->addControlOutputPort(_br_ins);
@@ -1570,6 +1563,39 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
         if (isa<ReattachNode>(_end_node) || isa<BranchNode>(_end_node)) {
             _end_node->addControlInputPort(_call_node->getCallIn());
             _call_node->getCallIn()->addControlOutputPort(_end_node);
+        }
+    }
+}
+
+/**
+ * There is a limitation in forming the graph at this moment
+ * this function makes sure, all the store's routeIDs are
+ * assigned after load nodes
+ */
+void GraphGeneratorPass::updateRouteIDs(Function &F) {
+    auto cache = this->dependency_graph->getMemoryUnit();
+    uint32_t cnt = 0;
+    DEBUG(dbgs() << "Enter route id update\n");
+    DEBUG(dbgs() << "Cache input: " << cache->numReadMemReqPort() << "\n");
+    for (auto load_mem : cache->read_req_range()) {
+        dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
+        cnt++;
+        DEBUG(dbgs() << load_mem.first->getName() << "\n");
+    }
+    for (auto store_mem : cache->write_req_range()) {
+        dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
+        cnt++;
+    }
+
+    for (auto &mem : this->dependency_graph->scratchpads()) {
+        uint32_t cnt = 0;
+        for (auto load_mem : mem->read_req_range()) {
+            dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
+            cnt++;
+        }
+        for (auto store_mem : mem->write_req_range()) {
+            dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
+            cnt++;
         }
     }
 }
@@ -1768,6 +1794,9 @@ void GraphGeneratorPass::connectLoopEdge() {
             auto _loop_dest = this->loop_value_node[_tar];
             auto _node_dest = _loop_dest->findLiveInNode(_edge.first);
 
+            if (_node_dest == nullptr)
+                assert(!"There is a bug in loop connections!");
+
             _node_src->second->addDataOutputPort(_node_dest);
             _node_dest->addDataInputPort(_node_src->second);
         }
@@ -1814,6 +1843,19 @@ void GraphGeneratorPass::connectLoopEdge() {
     }
 }
 
+void GraphGeneratorPass::connectingStoreToBranch(Function &F) {
+    for (auto &BB : F) {
+        for (auto &I : BB) {
+            if (isa<llvm::StoreInst>(I)) {
+                auto _store_node = map_value_node[&I];
+                auto _br_inst = --I.getParent()->getInstList().end();
+                _store_node->addControlOutputPort(map_value_node[&*_br_inst]);
+                map_value_node[&*_br_inst]->addControlInputPort(_store_node);
+            }
+        }
+    }
+}
+
 /**
  * All the initializations for function members
  */
@@ -1828,11 +1870,16 @@ void GraphGeneratorPass::init(Function &F) {
     connectOutToReturn(F);
     connectParalleNodes(F);
     connectingCalldependencies(F);
+    connectingStoreToBranch(F);
     // connectingAliasEdges(F);
 
     // Printing the graph
     dependency_graph->optimizationPasses();
+    updateRouteIDs(F);
     dependency_graph->printGraph(PrintType::Scala, config_path);
+
+    //Printing muIR graph summary
+    dependency_graph->printNodeSummary();
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {

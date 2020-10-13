@@ -12,12 +12,32 @@
 #include <sstream>
 #include <string>
 
+#define DATA_SIZE 64
+
 using namespace std;
 using namespace llvm;
 using namespace dandelion;
 using namespace helpers;
 
 using InstructionList = std::list<InstructionNode>;
+
+static uint32_t                                                                       
+getUID(Instruction* I) {   
+  auto* N = I->getMetadata("UID");                            
+  if (N == nullptr)                                                     
+    return 0;                           
+  auto* S = dyn_cast<MDString>(N->getOperand(0));    
+  return stoi(S->getString().str());                                                     
+} 
+
+static uint32_t                                                                       
+getUID(BasicBlock* BB) {                                 
+  auto* N = BB->getTerminator()->getMetadata("BB_UID");                            
+  if (N == nullptr)                                                     
+    return 0;                           
+  auto* S = dyn_cast<MDString>(N->getOperand(0));    
+  return stoi(S->getString().str());                                                     
+} 
 
 /**
  * HELPER FUNCTIONS
@@ -85,6 +105,8 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             doInitialization();
 
             printScalaFunctionHeader();
+            printCallIO(PrintType::Scala);
+            printMemIO(PrintType::Scala);
             printSharedModules(PrintType::Scala);
             printScalaInputSpliter();
             printLoopHeader(PrintType::Scala);
@@ -99,13 +121,13 @@ void Graph::printGraph(PrintType _pt, std::string json_path) {
             printLoopDataDependencies(PrintType::Scala);
             printBasickBLockInstructionEdges(PrintType::Scala);
             printPhiNodesConnections(PrintType::Scala);
-            printAllocaOffset(PrintType::Scala);
             printMemInsConnections(PrintType::Scala);
             printSharedConnections(PrintType::Scala);
             printDatadependencies(PrintType::Scala);
+            printControlDependencies(PrintType::Scala);
             printOutPort(PrintType::Scala);
             printClosingclass(PrintType::Scala);
-            printScalaMainClass();
+            // printScalaMainClass();
 
             break;
         case PrintType::Dot:
@@ -229,6 +251,11 @@ void Graph::printInstructions(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Printing instruction nodes");
             for (auto &ins_node : this->inst_list) {
+                auto call_ins = dyn_cast<ReturnNode>(&*ins_node);
+                if (ins_node->numDataOutputPort() == 0 &&
+                    ins_node->numControlOutputPort() == 0 &&
+                    call_ins == nullptr)
+                    continue;
                 this->outCode << "  //";
                 ins_node->getInstruction()->print(this->outCode);
                 this->outCode << "\n";
@@ -255,7 +282,6 @@ void Graph::printConstants(PrintType _pt) {
         case PrintType::Scala:
             this->outCode << helperScalaPrintHeader("Printing constants nodes");
             for (auto &const_node : this->const_int_list) {
-                // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 if (const_node->getConstantParent())
                     const_node->getConstantParent()->print(this->outCode);
@@ -266,7 +292,6 @@ void Graph::printConstants(PrintType _pt) {
             }
 
             for (auto &const_node : this->const_fp_list) {
-                // ins_node->getInstruction()->dump();
                 this->outCode << "  //";
                 const_node->getConstantParent()->print(this->outCode);
                 this->outCode << "\n";
@@ -291,8 +316,11 @@ void Graph::printSharedModules(PrintType _pt) {
                 outCode << memory_unit->printDefinition(PrintType::Scala);
             else
                 outCode << memory_unit->printUninitilizedUnit(PrintType::Scala);
-            if (stack_allocator->numReadDataInputPort() > 0)
-                outCode << stack_allocator->printDefinition(PrintType::Scala);
+
+            // Printing local memories
+            for (auto &mem : scratchpad_memories) {
+                outCode << mem->printDefinition(PrintType::Scala);
+            }
             if (floating_point_unit->numReadDataInputPort() > 0)
                 outCode << floating_point_unit->printDefinition(
                     PrintType::Scala);
@@ -494,7 +522,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 
                         this->outCode
                             << "  "
-                            << _call_node->getCallIn()->printInputEnable(PrintType::Scala)
+                            << _call_node->getCallIn()->printInputEnable(
+                                   PrintType::Scala)
                             << " <> "
                             << _s_node->printOutputEnable(
                                    PrintType::Scala,
@@ -506,7 +535,8 @@ void Graph::printBasickBLockInstructionEdges(PrintType _pt) {
 
                         this->outCode
                             << "  "
-                            << _call_node->getCallOut()->printInputEnable(PrintType::Scala)
+                            << _call_node->getCallOut()->printInputEnable(
+                                   PrintType::Scala)
                             << " <> "
                             << _s_node->printOutputEnable(
                                    PrintType::Scala,
@@ -635,16 +665,54 @@ void Graph::printDatadependencies(PrintType _pt) {
     }
 }
 
-void Graph::printAllocaOffset(PrintType _pt) {
+void Graph::printControlDependencies(PrintType _pt) {
     switch (_pt) {
-        case PrintType::Scala: {
-            this->outCode << helperScalaPrintHeader("Print alloca offset");
-            auto alloca_list = getNodeList<AllocaNode>(this);
-            for (auto _al_node : alloca_list) {
-                this->outCode << _al_node->printOffset(_pt) << "\n\n";
+        case PrintType::Scala:
+            DEBUG(dbgs() << "\t Control dependencies\n");
+            this->outCode << helperScalaPrintHeader(
+                "Connecting data dependencies");
+
+            // Print ground ndoes
+            for (auto _st_node : getNodeList<StoreNode>(this)) {
+                for (auto _cn_node : _st_node->output_control_range()) {
+                    if (auto branch_node =
+                            dyn_cast<BranchNode>(_cn_node.first)) {
+                        this->outCode
+                            << "  "
+                            << branch_node->printInputEnable(
+                                   PrintType::Scala,
+                                   branch_node
+                                       ->returnControlInputPortIndex(_st_node)
+                                       .getID())
+                            << " <> "
+                            << _st_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _st_node
+                                       ->findControlOutputNode(_cn_node.first)
+                                       ->second.getID())
+                            << "\n\n";
+                    } else if (auto ret_node =
+                                   dyn_cast<ReturnNode>(_cn_node.first)) {
+                        this->outCode
+                            << "  "
+                            << ret_node->printInputEnable(
+                                   PrintType::Scala,
+                                   ret_node
+                                       ->returnControlInputPortIndex(_st_node)
+                                       .getID())
+                            << " <> "
+                            << _st_node->printOutputEnable(
+                                   PrintType::Scala,
+                                   _st_node
+                                       ->findControlOutputNode(_cn_node.first)
+                                       ->second.getID())
+                            << "\n\n";
+                    } else
+                        assert(!"Uknown ground node!\n");
+                }
             }
+
             break;
-        }
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -701,37 +769,146 @@ void Graph::printSharedConnections(PrintType _pt) {
  */
 void Graph::printMemInsConnections(PrintType _pt) {
     switch (_pt) {
-        case PrintType::Scala:
+        case PrintType::Scala: {
             DEBUG(dbgs() << "\t Memory to instructions dependencies\n");
             this->outCode << helperScalaPrintHeader(
                 "Connecting memory connections");
-            for (auto &_mem_edge : edge_list) {
-                if (_mem_edge->getType() == Edge::MemoryReadTypeEdge) {
+            auto cache = this->getMemoryUnit();
+            for (auto mem : cache->read_req_range()) {
+                this->outCode
+                    << "  "
+                    << cache->printMemReadInput(
+                           PrintType::Scala,
+                           cache->returnMemoryReadInputPortIndex(mem.first)
+                               .getID())
+                    << " <> "
+                    << mem.first->printMemReadOutput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryReadOutputPortIndex(cache)
+                               .getID())
+                    << "\n";
+
+                this->outCode
+                    << "  "
+                    << mem.first->printMemReadInput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryReadInputPortIndex(cache)
+                               .getID())
+                    << " <> "
+                    << cache->printMemReadOutput(
+                           PrintType::Scala,
+                           cache->returnMemoryReadOutputPortIndex(mem.first)
+                               .getID())
+                    << "\n";
+            }
+
+            for (auto mem : cache->write_req_range()) {
+                this->outCode
+                    << "  "
+                    << cache->printMemWriteInput(
+                           PrintType::Scala,
+                           cache->returnMemoryWriteInputPortIndex(mem.first)
+                               .getID())
+                    << " <> "
+                    << mem.first->printMemWriteOutput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryWriteOutputPortIndex(cache)
+                               .getID())
+                    << "\n";
+
+                this->outCode
+                    << "  "
+                    << mem.first->printMemWriteInput(
+                           PrintType::Scala,
+                           mem.first->returnMemoryWriteInputPortIndex(cache)
+                               .getID())
+                    << " <> "
+                    << cache->printMemWriteOutput(
+                           PrintType::Scala,
+                           cache->returnMemoryWriteOutputPortIndex(mem.first)
+                               .getID())
+                    << "\n\n";
+            }
+
+            // Print local buffers
+            //
+            for (auto &scratchpad : this->scratchpad_memories) {
+                for (auto mem : scratchpad->read_req_range()) {
                     this->outCode
                         << "  "
-                        << _mem_edge->getTar().first->printMemReadInput(
+                        << scratchpad->printMemReadInput(
                                PrintType::Scala,
-                               _mem_edge->getTar().second.getID())
+                               scratchpad
+                                   ->returnMemoryReadInputPortIndex(mem.first)
+                                   .getID())
                         << " <> "
-                        << _mem_edge->getSrc().first->printMemReadOutput(
+                        << mem.first->printMemReadOutput(
                                PrintType::Scala,
-                               _mem_edge->getSrc().second.getID())
-                        << "\n\n";
-                } else if (_mem_edge->getType() == Edge::MemoryWriteTypeEdge) {
+                               mem.first
+                                   ->returnMemoryReadOutputPortIndex(
+                                       scratchpad.get())
+                                   .getID())
+                        << "\n";
+
                     this->outCode
                         << "  "
-                        << _mem_edge->getTar().first->printMemWriteInput(
+                        << mem.first->printMemReadInput(
                                PrintType::Scala,
-                               _mem_edge->getTar().second.getID())
+                               mem.first
+                                   ->returnMemoryReadInputPortIndex(
+                                       scratchpad.get())
+                                   .getID())
                         << " <> "
-                        << _mem_edge->getSrc().first->printMemWriteOutput(
+                        << scratchpad->printMemReadOutput(
                                PrintType::Scala,
-                               _mem_edge->getSrc().second.getID())
+                               scratchpad
+                                   ->returnMemoryReadOutputPortIndex(mem.first)
+                                   .getID())
                         << "\n\n";
+                }
+
+                for (auto &scratchpad : this->scratchpad_memories) {
+                    for (auto mem : scratchpad->write_req_range()) {
+                        this->outCode
+                            << "  "
+                            << scratchpad->printMemWriteInput(
+                                   PrintType::Scala,
+                                   scratchpad
+                                       ->returnMemoryWriteInputPortIndex(
+                                           mem.first)
+                                       .getID())
+                            << " <> "
+                            << mem.first->printMemWriteOutput(
+                                   PrintType::Scala,
+                                   mem.first
+                                       ->returnMemoryWriteOutputPortIndex(
+                                           scratchpad.get())
+                                       .getID())
+                            << "\n";
+
+                        this->outCode
+                            << "  "
+                            << mem.first->printMemWriteInput(
+                                   PrintType::Scala,
+                                   mem.first
+                                       ->returnMemoryWriteInputPortIndex(
+                                           scratchpad.get())
+                                       .getID())
+                            << " <> "
+                            << scratchpad->printMemWriteOutput(
+                                   PrintType::Scala,
+                                   scratchpad
+                                       ->returnMemoryWriteOutputPortIndex(
+                                           mem.first)
+                                       .getID())
+                            << "\n";
+                    }
                 }
             }
 
-            break;
+        }
+
+        break;
         case PrintType::Dot:
             assert(!"Dot file format is not supported!");
         default:
@@ -765,7 +942,7 @@ void Graph::printScalaMainClass() {
         "object $class_nameTop extends App {\n"
         "  val dir = new File(\"RTL/$class_nameTop\");\n"
         "  dir.mkdirs\n"
-        "  implicit val p = config.Parameters.root((new "
+        "  implicit val p = Parameters.root((new "
         "MiniConfig).toInstance)\n"
         "  val chirrtl = firrtl.Parser.parse(chisel3.Driver.emit(() => new "
         "$module_name()))\n\n"
@@ -791,112 +968,123 @@ void Graph::printScalaInputSpliter() {
  * Print the basicblock definition
  */
 void Graph::printScalaFunctionHeader() {
-    auto make_argument_port = [](const auto &_list) {
-        std::vector<uint32_t> _arg_count;
-        for (auto &l : _list) _arg_count.push_back(l->numDataOutputPort());
-        return _arg_count;
-    };
-
     // print the header
-    this->outCode << helperScalaPrintHeader("Printing ports definition");
+    // this->outCode << helperScalaPrintHeader("Printing ports definition");
 
     string _final_command;
-    string _command =
-        "abstract class $module_nameDFIO"
-        "(implicit val p: Parameters) extends Module with CoreParams {\n"
-        "  val io = IO(new Bundle {\n";
-    helperReplace(_command, "$module_name", this->graph_info.Name.c_str());
-    _final_command.append(_command);
-
-    // Print input call parameters
-    _command = "    val in = Flipped(Decoupled(new Call(List(";
-    _final_command.append((_command));
-    for (uint32_t c = 0;
-         c < this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn);
-         c++) {
-        if (c ==
-            this->getSplitCall()->numLiveInArgList(ArgumentNode::LiveIn) - 1)
-            _command = "32";
-        else
-            _command = "32, ";
-        helperReplace(_command, "$index", c);
-        _final_command.append(_command);
-    }
-    //_final_command.pop_back();
-    _command = "))))\n";
-    _final_command.append(_command);
-
-    // Print sub-function call interface
-    uint32_t c = 0;
-    for (auto &_ins : this->inst_list) {
-        if (auto _fc = dyn_cast<CallNode>(_ins.get())) {
-            // Call arguments to subroutine
-            _command = "    val $call_out = Decoupled(new Call(List(";
-            helperReplace(_command, "$call", _ins->getName());
-            _final_command.append(_command);
-            for (auto ag : _fc->getCallOut()->input_data_range()) {
-                _command = "32, ";
-                _final_command.append(_command);
-            }
-            _final_command.pop_back();
-            _final_command.pop_back();
-            _command = ")))\n";
-            _final_command.append(_command);
-
-            // Return values from sub-routine.
-            // Only supports a single 32 bit data bundle for now
-            //
-            // TODO : Make the output depedent on the actual code
-            _command = "    val $call_in = Flipped(Decoupled(new Call(List(";
-            helperReplace(_command, "$call", _fc->getName());
-            _final_command.append(_command);
-
-            uint32_t c = 0;
-            for (auto ag : _fc->getCallIn()->output_data_range()) {
-                if (++c == _fc->getCallIn()->numDataOutputPort())
-                    _command = "32";
-                else
-                    _command = "32, ";
-
-                _final_command.append(_command);
-            }
-            if (_fc->getCallIn()->numDataInputPort()) {
-                _final_command.pop_back();
-                _final_command.pop_back();
-            }
-            _command = "))))\n";
-            _final_command.append(_command);
-        }
-    }
-
-    // Print cache memory interface
-    _final_command.append(
-        "    val MemResp = Flipped(Valid(new MemResp))\n"
-        "    val MemReq = Decoupled(new MemReq)\n");
-
-    // TODO make sure independent from return type we always need to have an
-    // output
-    // Print output (return) parameters
-    if (!function_ptr->getReturnType()->isVoidTy()) {
-        _final_command.append("    val out = Decoupled(new Call(List(32)))\n");
-    } else {
-        _final_command.append("    val out = Decoupled(new Call(List()))\n");
-    }
-
-    _final_command.append(
-        "  })\n"
-        "}\n\n");
-
-    // Printing Abstract
-    outCode << _final_command;
-
     _final_command =
-        "class $module_nameDF(implicit p: Parameters)"
-        " extends $module_nameDFIO()(p) {\n";
+        "\n\nclass $module_nameDF(PtrsIn: Seq[Int] = "
+        "List($<input_vector_ptrs>), ValsIn: Seq[Int] = "
+        "List($<input_vector_vals>), "
+        "Returns: Seq[Int] = List($<output_vector>))\n"
+        "\t\t\t(implicit p: Parameters)"
+        " extends DandelionAccelDCRModule(PtrsIn, ValsIn, Returns){\n";
     helperReplace(_final_command, "$module_name", graph_info.Name);
+    auto num_in_args_ptrs = this->getSplitCall()->numLiveInArgList(
+        ArgumentNode::LiveIn, ArgumentNode::PointerType);
+    auto num_in_args_vals = this->getSplitCall()->numLiveInArgList(
+        ArgumentNode::LiveIn, ArgumentNode::IntegerType);
+    uint32_t num_out_args =
+        (!function_ptr->getReturnType()->isVoidTy()) ? 1 : 0;
+    std::vector<uint32_t> _input_args_ptrs(num_in_args_ptrs, DATA_SIZE);
+    std::vector<uint32_t> _input_args_vals(num_in_args_vals, DATA_SIZE);
+    std::vector<uint32_t> _output_args(num_out_args, DATA_SIZE);
+
+    helperReplace(_final_command, "$<input_vector_ptrs>", _input_args_ptrs,
+                  ", ");
+    helperReplace(_final_command, "$<input_vector_vals>", _input_args_vals,
+                  ", ");
+    helperReplace(_final_command, "$<output_vector>", _output_args, ", ");
 
     helperScalaPrintHeader("Printing Module Definition");
     outCode << _final_command;
+}
+
+void Graph::printCallIO(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            auto call_node_list = getNodeList<CallNode>(this);
+            if (call_node_list.size()) {
+                this->outCode << "  /**\n    * Call Interfaces\n    */\n";
+                string _final_command;
+                for (auto &call_node : call_node_list) {
+                    auto call_in = call_node->getCallIn();
+                    auto call_out = call_node->getCallOut();
+
+                    _final_command =
+                        "  val $<name_out>_io = IO(Decoupled(new "
+                        "CallDCR(ptrsArgTypes = List($<input_vector_ptrs>), "
+                        "valsArgTypes = List($<input_vector_vals>))))\n";
+                    _final_command +=
+                        "  val $<name_in>_io = IO(Flipped(Decoupled(new "
+                        "Call(List($<output_vector>)))))";
+                    helperReplace(_final_command, "$<name_out>",
+                                  call_out->getName());
+                    helperReplace(_final_command, "$<name_in>",
+                                  call_in->getName());
+
+                    uint32_t num_in_vals = 0;
+                    uint32_t num_in_ptrs = 0;
+                    for (auto input_ins : call_out->input_data_range()) {
+                        if (auto instruction_node =
+                                dyn_cast<InstructionNode>(&*input_ins.first)) {
+                            if (instruction_node->isPointerType())
+                                num_in_ptrs++;
+                            else if (instruction_node->isIntegerType() ||
+                                     instruction_node->isFloatType())
+                                num_in_vals++;
+                            else {
+                                std::cout << instruction_node->getName()
+                                          << "\n";
+                                DEBUG(dbgs()
+                                    << instruction_node->getDataType() << "\n");
+                                assert(!"Input datatype is Uknonw");
+                            }
+                        }
+                    }
+                    std::vector<uint32_t> _input_vals(num_in_vals, DATA_SIZE);
+                    std::vector<uint32_t> _input_ptrs(num_in_ptrs, DATA_SIZE);
+                    std::vector<uint32_t> _output_vector(
+                        call_in->numDataOutputPort(), DATA_SIZE);
+
+                    helperReplace(_final_command, "$<input_vector_ptrs>",
+                                  _input_ptrs, ", ");
+                    helperReplace(_final_command, "$<input_vector_vals>",
+                                  _input_vals, ", ");
+                    helperReplace(_final_command, "$<output_vector>",
+                                  _output_vector, ", ");
+                }
+                this->outCode << _final_command;
+            }
+            break;
+        }
+        default:
+            assert(!"We don't support the other types right now");
+    }
+}
+
+void Graph::printMemIO(PrintType _pt) {
+    switch (_pt) {
+        case PrintType::Scala: {
+            auto alloca_node_list = getNodeList<AllocaNode>(this);
+            if (alloca_node_list.size()) {
+                this->outCode << "\n  /**\n    * Memory Interfaces\n    */\n";
+                string _final_command;
+                for (auto &alloca_node : alloca_node_list) {
+                    _final_command =
+                        "  val $<name>_mem_req = IO(Decoupled(new MemReq))\n"
+                        "  val $<name>_mem_resp = IO(Flipped(Valid(new "
+                        "MemResp)))\n\n";
+                    helperReplace(_final_command, "$<name>",
+                                  alloca_node->getName());
+                }
+                this->outCode << _final_command;
+            }
+            break;
+        }
+        default:
+            assert(!"We don't support the other types right now");
+    }
 }
 
 /**
@@ -912,7 +1100,7 @@ void Graph::printScalaHeader(string config_path) {
 
     // TODO add one level of package to the config json file
     auto package_name = _root_json["package-name"];
-    outCode << "package " << package_name.asString()  << "\n\n";
+    outCode << "package " << package_name.asString() << "\n\n";
 
     for (auto _it_obj = _root_json["import"].begin();
          _it_obj != _root_json["import"].end(); _it_obj++) {
@@ -942,10 +1130,10 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     string fix_name = BB.getName().str();
     std::replace(fix_name.begin(), fix_name.end(), '-', '_');
     fix_name = std::regex_replace(fix_name, std::regex("^\\."), "");
-    // outs() << a << "\n";
+    auto uid = getUID(&BB);
     super_node_list.push_back(std::make_unique<SuperNode>(
-        NodeInfo(super_node_list.size(),
-                 "bb_" + fix_name + to_string(super_node_list.size())),
+        NodeInfo(uid,
+                 "bb_" + fix_name + to_string(uid)),
         &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
@@ -958,9 +1146,10 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<BinaryOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "binaryOp_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "binaryOp_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -975,9 +1164,10 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -992,9 +1182,10 @@ InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1009,9 +1200,10 @@ InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1026,9 +1218,10 @@ InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FdiveOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1043,9 +1236,10 @@ InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FcmpNode>(
-        NodeInfo(inst_list.size(),
-                 "FPCMP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FPCMP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1151,38 +1345,36 @@ InstructionNode *Graph::insertPhiNode(PHINode &I) {
     bool reverse = false;
     for (int i = 0; i < I.llvm::User::getNumOperands(); ++i) {
         BasicBlock *_op = I.getIncomingBlock(i);
-        // I.dump();
-        // outs() << "In id: " << i << " ";
-        //_op->dump();
         int j = 0;
         for (auto _bb : llvm::predecessors(I.getParent())) {
-            // outs() << "Pred id " << j << " ";
-            //_bb->dump();
             if ((_op != _bb) && (i == j)) {
-                // I.dump();
-                //_op->dump();
-                //_bb->dump();
-                // outs() << "i " << i << "\n";
-                // outs() << "j " << j << "\n";
                 reverse = true;
             }
             j++;
         }
     }
 
-    // if (reverse) I.dump();
-
-    inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(),
-                 "phi" + I.getName().str() + to_string(inst_list.size())),
-        reverse, &I));
-
+    if (I.getType()->isPointerTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::PointerType, reverse, &I));
+    } else if (I.getType()->isIntegerTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::IntegerType, reverse, &I));
+    } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
+        inst_list.push_back(std::make_unique<PhiSelectNode>(
+            NodeInfo(inst_list.size(),
+                     "phi" + I.getName().str() + to_string(inst_list.size())),
+            Node::DataType::FloatType, reverse, &I));
+    }
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
     return ff->get();
 }
-
 
 /**
  * Insert a new select node
@@ -1202,31 +1394,27 @@ InstructionNode *Graph::insertSelectNode(SelectInst &I) {
 /**
  * Insert a new Alloca node
  */
-InstructionNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
-                                         uint32_t num_byte) {
+AllocaNode *Graph::insertAllocaNode(AllocaInst &I, uint32_t size,
+                                    uint32_t num_byte) {
     inst_list.push_back(std::make_unique<AllocaNode>(
         NodeInfo(inst_list.size(),
-                 "alloca_" + I.getName().str() + to_string(inst_list.size())),
+                 "alloca_" + I.getName().str() + to_string(inst_list.size())), AllocaNode::DataType::PointerType,
         num_byte, size, inst_list.size(), &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
         [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
-    return ff->get();
+    return dyn_cast<AllocaNode>(ff->get());
 }
 
 /**
  * Insert a new GEP node
  */
 InstructionNode *Graph::insertGepNode(GetElementPtrInst &I, GepInfo _info) {
-
-    //for(auto f : _info.element_size){
-        //outs() << "LOG Size: " << f << "\n";
-    //}
     inst_list.push_back(std::make_unique<GepNode>(
         NodeInfo(inst_list.size(),
                  "Gep_" + I.getName().str() + to_string(inst_list.size())),
-        _info, &I));
+        BinaryOperatorNode::DataType::PointerType, _info, &I));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1251,9 +1439,47 @@ InstructionNode *Graph::insertBitcastNode(BitCastInst &I) {
  */
 InstructionNode *Graph::insertLoadNode(LoadInst &I) {
     auto _load_list = getNodeList<LoadNode>(this);
-    inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit(), _load_list.size()));
+    if (I.getType()->isIntegerTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::IntegerType, &I, this->getMemoryUnit()));
+    } else if (I.getType()->isPointerTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::PointerType, &I, this->getMemoryUnit()));
+    } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
+        inst_list.push_back(std::make_unique<LoadNode>(
+            NodeInfo(inst_list.size(),
+                     "ld_" + std::to_string(inst_list.size())),
+            Node::DataType::FloatType, &I, this->getMemoryUnit()));
+    } else if (I.getType()->isArrayTy()) {
+        if (I.getType()->getArrayElementType()->isIntegerTy()) {
+            inst_list.push_back(std::make_unique<LoadNode>(
+                NodeInfo(inst_list.size(),
+                         "ld_" + std::to_string(inst_list.size())),
+                Node::DataType::IntegerType, &I, this->getMemoryUnit()));
+        } else if (I.getType()->getArrayElementType()->isFloatTy()) {
+            inst_list.push_back(std::make_unique<LoadNode>(
+                NodeInfo(inst_list.size(),
+                         "ld_" + std::to_string(inst_list.size())),
+                Node::DataType::FloatType, &I, this->getMemoryUnit()));
+        } else {
+            I.getType()->getArrayElementType()->dump();
+            assert(!"Uncatched array type for load nodes");
+        }
+    } else if (I.getType()->isVectorTy()) {
+        I.getType()->dump();
+        assert(!"Load type is vector, "
+                "currently we don't support vector loads! "
+                "Please make sure you compile the your code "
+                "with following options: -fno-vectorize -fno-slp-vectorize -fno-unroll-loops");
+    } else {
+        I.dump();
+        I.getPointerOperandType()->dump();
+        assert(!"Uncatch load instruction\n");
+    }
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1268,8 +1494,7 @@ InstructionNode *Graph::insertStoreNode(StoreInst &I) {
     auto _store_list = getNodeList<StoreNode>(this);
     inst_list.push_back(std::make_unique<StoreNode>(
         NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())),
-        &I, this->getMemoryUnit(), _store_list.size()));
-    // NodeInfo(inst_list.size(), I.getName().str()), &I));
+        &I, this->getMemoryUnit()));
 
     auto ff = std::find_if(
         inst_list.begin(), inst_list.end(),
@@ -1308,9 +1533,10 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
  * Insert a new Store node
  */
 InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<ReturnNode>(
-        NodeInfo(inst_list.size(),
-                 "ret_" + I.getName().str() + std::to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "ret_" + I.getName().str() + std::to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1381,6 +1607,7 @@ Edge *Graph::findEdge(const Node *_src, const Node *_dst) const {
     else
         return nullptr;
 }
+
 /**
  * Inserting memory edges
  */
@@ -1395,6 +1622,30 @@ Edge *Graph::insertMemoryEdge(Edge::EdgeType _edge_type, Port _node_src,
         });
 
     return ff->get();
+}
+
+/**
+ * Inserting memory edges
+ */
+ScratchpadNode *Graph::createBufferMemory(AllocaNode *alloca, uint32_t size,
+                                          uint32_t num_byte) {
+    scratchpad_memories.push_back(std::make_unique<ScratchpadNode>(
+        NodeInfo(
+            scratchpad_memories.size(),
+            "buffer_memories_" + std::to_string(scratchpad_memories.size())),
+        alloca, size, num_byte));
+
+    return scratchpad_memories.end()->get();
+}
+
+ScratchpadNode *Graph::returnScratchpadMem(AllocaInst *alloca) {
+    auto mem = std::find_if(
+        scratchpad_memories.begin(), scratchpad_memories.end(),
+        [alloca](auto &scratch) {
+            return scratch->getAllocaNode()->getInstruction() == alloca;
+        });
+
+    return mem->get();
 }
 
 /**
@@ -1425,9 +1676,10 @@ ConstIntNode *Graph::insertConstIntNode() {
  * Insert a new sext node
  */
 InstructionNode *Graph::insertTruncNode(TruncInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<TruncNode>(
-        NodeInfo(inst_list.size(),
-                 "trunc" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "trunc" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1438,15 +1690,49 @@ InstructionNode *Graph::insertTruncNode(TruncInst &I) {
     return ff->get();
 }
 
+/**
+ * Insert a new stiofp node
+ */
+InstructionNode *Graph::insertSTIoFPNode(SIToFPInst &I) {
+    auto uid = getUID(&I);
+    inst_list.push_back(std::make_unique<STIoFPNode>(
+        NodeInfo(uid,
+                 "stiofp" + I.getName().str() + to_string(uid)),
+        &I));
 
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
+
+/**
+ * Insert a new fptoui node
+ */
+InstructionNode *Graph::insertFPToUINode(FPToUIInst &I) {
+    inst_list.push_back(std::make_unique<FPToUINode>(
+        NodeInfo(inst_list.size(),
+                 "stiofp" + I.getName().str() + to_string(inst_list.size())),
+        &I));
+
+    auto ff = std::find_if(
+        inst_list.begin(), inst_list.end(),
+        [&I](auto &arg) -> bool { return arg.get()->getInstruction() == &I; });
+    ff->get()->printDefinition(PrintType::Scala);
+
+    return ff->get();
+}
 
 /**
  * Insert a new sext node
  */
 InstructionNode *Graph::insertSextNode(SExtInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<SextNode>(
-        NodeInfo(inst_list.size(),
-                 "sext" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "sext" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1461,9 +1747,10 @@ InstructionNode *Graph::insertSextNode(SExtInst &I) {
  * Insert a new sext node
  */
 InstructionNode *Graph::insertZextNode(ZExtInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<ZextNode>(
-        NodeInfo(inst_list.size(),
-                 "sext" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "sext" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1601,6 +1888,25 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             for (auto &_l_node : loop_nodes) {
                 // TODO remove the counter
                 uint32_t c = 0;
+                // for (auto &_live_in : _l_node->live_in_ptrs_lists()) {
+                // if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
+                // continue;
+                // for (auto &_data_in : _live_in->input_data_range()) {
+                // this->outCode
+                //<< "  "
+                //<< _live_in->printInputData(PrintType::Scala, c++)
+                //<< " <> "
+                //<< _data_in.first->printOutputData(
+                // PrintType::Scala,
+                //_data_in.first
+                //->returnDataOutputPortIndex(
+                //_live_in.get())
+                //.getID())
+                //<< "\n\n";
+                //}
+                //}
+
+                // c = 0;
                 for (auto &_live_in : _l_node->live_in_lists()) {
                     if (_live_in->getArgType() != ArgumentNode::LoopLiveIn)
                         continue;
@@ -1650,25 +1956,44 @@ void Graph::printLoopDataDependencies(PrintType _pt) {
             this->outCode << helperScalaPrintHeader(
                 "Loop Data live-out dependencies");
             for (auto &_l_node : loop_nodes) {
+                // for (auto &_live_out : _l_node->live_out_lists()) {
+                // if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
+                // continue;
+                // for (auto &_data_out : _live_out->input_data_range()) {
+                // this->outCode << "  "
+                //<< _live_out->printInputData(
+                // PrintType::Scala,
+                //_live_out
+                //->returnDataInputPortIndex(
+                //_data_out.first)
+                //.getID())
+                //<< " <> "
+                //<< _data_out.first->printOutputData(
+                // PrintType::Scala,
+                //_data_out.first
+                //->returnDataOutputPortIndex(
+                //_live_out.get())
+                //.getID())
+                //<< "\n\n";
+                //}
+                //}
+
+                unsigned c = 0;
                 for (auto &_live_out : _l_node->live_out_lists()) {
                     if (_live_out->getArgType() != ArgumentNode::LoopLiveOut)
                         continue;
-                    for (auto &_data_out : _live_out->input_data_range()) {
-                        this->outCode << "  "
-                                      << _live_out->printInputData(
-                                             PrintType::Scala,
-                                             _live_out
-                                                 ->returnDataInputPortIndex(
-                                                     _data_out.first)
-                                                 .getID())
-                                      << " <> "
-                                      << _data_out.first->printOutputData(
-                                             PrintType::Scala,
-                                             _data_out.first
-                                                 ->returnDataOutputPortIndex(
-                                                     _live_out.get())
-                                                 .getID())
-                                      << "\n\n";
+                    for (auto &_data_in : _live_out->input_data_range()) {
+                        this->outCode
+                            << "  "
+                            << _live_out->printInputData(PrintType::Scala, c++)
+                            << " <> "
+                            << _data_in.first->printOutputData(
+                                   PrintType::Scala,
+                                   _data_in.first
+                                       ->returnDataOutputPortIndex(
+                                           _live_out.get())
+                                       .getID())
+                            << "\n\n";
                     }
                 }
             }
@@ -1768,17 +2093,20 @@ void Graph::printOutPort(PrintType _pt) {
             for (auto _c_node : call_node_list) {
                 this->outCode << helperScalaPrintHeader(
                     "Printing callin and callout interface");
+
                 this->outCode
-                    << "  "
-                    << _c_node->getCallIn()->printInputData(PrintType::Scala)
+                    << "  " << _c_node->getCallOut()->getName() + "_io"
                     << " <> "
-                    << "io." + _c_node->getCallIn()->getName() << "\n\n";
-                this->outCode
-                    << "  "
-                    << "io." + _c_node->getCallOut()->getName() << " <> "
                     << _c_node->getCallOut()->printOutputData(PrintType::Scala,
                                                               0)
                     << "\n\n";
+
+                this->outCode
+                    << "  "
+                    << _c_node->getCallIn()->printInputData(PrintType::Scala)
+                    << " <> " << _c_node->getCallIn()->getName() + "_io"
+                    << "\n\n";
+
                 if (_c_node->getCallIn()->numControlOutputPort() == 0)
                     this->outCode << "  "
                                   << _c_node->getCallIn()->printOutputEnable(
@@ -1789,10 +2117,18 @@ void Graph::printOutPort(PrintType _pt) {
                         this->outCode
                             << "  "
                             << _ctrl_node.first->printInputEnable(
-                                   PrintType::Scala, 0)
+                                   PrintType::Scala,
+                                   _ctrl_node.first
+                                       ->returnControlInputPortIndex(
+                                           _c_node->getCallIn())
+                                       .getID())
                             << " <> "
                             << _c_node->getCallIn()->printOutputEnable(
-                                   PrintType::Scala, 0)
+                                   PrintType::Scala,
+                                   _c_node->getCallIn()
+                                       ->returnControlOutputPortIndex(
+                                           _ctrl_node.first)
+                                       .getID())
                             << "\n\n";
                     }
                 }
@@ -1857,7 +2193,7 @@ void Graph::doInitialization() {
         }
     }
 
-    for (auto &_arg : this->getSplitCall()->live_in_lists()) {
+    for (auto &_arg : this->getSplitCall()->live_in_ptrs_lists()) {
         if (_arg->getArgType() != ArgumentNode::LiveIn) continue;
         for (auto &_node : _arg->output_data_range()) {
             if (isa<ArgumentNode>(_node.first)) continue;
@@ -1870,66 +2206,16 @@ void Graph::doInitialization() {
         }
     }
 
-    for (auto &_node : inst_list) {
-        if (auto _ld_node = dyn_cast<LoadNode>(&*_node)) {
-            // Adding edges
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    _ld_node,
-                    _ld_node->returnMemoryReadOutputPortIndex(getMemoryUnit())),
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryReadInputPortIndex(_ld_node)));
-
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    getMemoryUnit(),
-                    getMemoryUnit()->returnMemoryReadOutputPortIndex(_ld_node)),
-                std::make_pair(
-                    _ld_node,
-                    _ld_node->returnMemoryReadInputPortIndex(getMemoryUnit())));
-        } else if (auto _st_node = dyn_cast<StoreNode>(&*_node)) {
-            // Adding edges
-            insertEdge(
-                Edge::MemoryWriteTypeEdge,
-                std::make_pair(_st_node,
-                               _st_node->returnMemoryWriteOutputPortIndex(
-                                   getMemoryUnit())),
-                std::make_pair(getMemoryUnit(),
-                               getMemoryUnit()->returnMemoryWriteInputPortIndex(
-                                   _st_node)));
-
-            insertEdge(Edge::MemoryWriteTypeEdge,
-                       std::make_pair(
-                           getMemoryUnit(),
-                           getMemoryUnit()->returnMemoryWriteOutputPortIndex(
-                               _st_node)),
-                       std::make_pair(_st_node,
-                                      _st_node->returnMemoryWriteInputPortIndex(
-                                          getMemoryUnit())));
-        } else if (auto _alloca_node = dyn_cast<AllocaNode>(&*_node)) {
-            // Adding edges
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(_alloca_node,
-                               _alloca_node->returnMemoryReadOutputPortIndex(
-                                   this->getStackAllocator())),
-                std::make_pair(
-                    this->getStackAllocator(),
-                    this->getStackAllocator()->returnMemoryReadInputPortIndex(
-                        _alloca_node)));
-
-            insertEdge(
-                Edge::MemoryReadTypeEdge,
-                std::make_pair(
-                    getStackAllocator(),
-                    getStackAllocator()->returnMemoryReadOutputPortIndex(
-                        _alloca_node)),
-                std::make_pair(_alloca_node,
-                               _alloca_node->returnMemoryReadInputPortIndex(
-                                   this->getStackAllocator())));
+    for (auto &_arg : this->getSplitCall()->live_in_vals_lists()) {
+        if (_arg->getArgType() != ArgumentNode::LiveIn) continue;
+        for (auto &_node : _arg->output_data_range()) {
+            if (isa<ArgumentNode>(_node.first)) continue;
+            this->insertEdge(
+                Edge::EdgeType::DataTypeEdge,
+                std::make_pair(&*_arg,
+                               _arg->returnDataOutputPortIndex(&*_node.first)),
+                std::make_pair(&*_node.first,
+                               _node.first->returnDataInputPortIndex(&*_arg)));
         }
     }
 }
@@ -1970,3 +2256,31 @@ void Graph::groundReattachNode() {
 //
 
 void Graph::optimizationPasses() { groundStoreNodes(); }
+
+void Graph::printNodeSummary() {
+    std::ofstream _out_file(this->graph_info.Name + ".summary.json");
+
+    Json::Value _root_json;
+    Json::Value _node_entry;
+
+    for (auto &bb : this->super_node_list) {
+        auto _name = bb->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = bb->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["super_node"].append(_node_entry);
+    }
+
+    for (auto &node : this->inst_list) {
+        auto _name = node->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = node->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["node"].append(_node_entry);
+    }
+
+    _out_file << _root_json;
+    _out_file.close();
+}

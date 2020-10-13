@@ -44,13 +44,13 @@ namespace common {
 union FloatingPointIEEE754 {
     struct ieee754 {
         ieee754() : mantissa(0), exponent(0), sign(0) {}
-        unsigned int mantissa : 23;
-        unsigned int exponent : 8;
-        unsigned int sign : 1;
+        uint64_t mantissa : 52;
+        uint64_t exponent : 11; 
+        uint64_t sign : 1;
     };
     ieee754 raw;
-    unsigned int bits;
-    float f;
+    uint64_t bits;
+    double f;
 
     FloatingPointIEEE754() : f(0) {}
 };

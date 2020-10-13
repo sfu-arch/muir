@@ -9,34 +9,39 @@ double timespec_to_ms(struct timespec *ts) {
   return ts->tv_sec * 1000.0 + ts->tv_nsec / 1000000.0;
 }
 
-void vector_scale(unsigned *a, unsigned *c,
-                    unsigned scale, // 24.8 bit fixed point
-                    unsigned N) {
-  for (unsigned i = 0; i < N; ++i) {
-    // Clip pixel values
-    if (a[i] < 0) {
-      c[i] = 0;
-    } else {
-      c[i] = (a[i] * scale) >> 8;
-      if (c[i] > 255)
-        c[i] = 255;
+void relu(int *in, int *out, unsigned N) {
+  for (unsigned j = 0; j < N; ++j) {
+    for (unsigned i = 0; i < N; ++i) {
+      unsigned index = (j * N) + i;
+      if (in[index] < 0)
+        out[index] = 0;
+      else
+        out[index] = in[index];
     }
   }
 }
 
-#define TEST_SIZE 100
+#define TEST_SIZE 64
+
 #define SEED 4
 
 int main(int argc, char *argv[]) {
 
-  int A[TEST_SIZE];
-  int C[TEST_SIZE];
+  int IN[TEST_SIZE];
+  int OUT[TEST_SIZE];
 
   // prepare the input data
   srand(SEED);
   for (int i = 0; i < TEST_SIZE; ++i) {
-    A[i] = rand();
-    //    B[i] = rand();
+    if (i < TEST_SIZE / 2)
+      IN[i] = -i;
+    else
+      IN[i] = i;
+  }
+
+  printf("IN: ");
+  for (int i = 0; i < TEST_SIZE; ++i) {
+    printf(", %d", IN[i]);
   }
 
   // If we've got a parameter, assume it's the number of workers to be used
@@ -59,8 +64,7 @@ int main(int argc, char *argv[]) {
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif
   for (int i = 0; i < LOOP_SIZE; i++) {
-    // Run the component
-    vector_scale(A, C, 32, TEST_SIZE);
+    relu(IN, OUT, 8);
   }
 #ifdef TIME
   clock_gettime(CLOCK_MONOTONIC, &end_time);

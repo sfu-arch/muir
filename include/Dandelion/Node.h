@@ -34,7 +34,7 @@ class ContainerNode;
 class InstructionNode;
 class LoopNode;
 class MemoryNode;
-class StackNode;
+class ScratchpadNode;
 class PhiSelectNode;
 class SelectNode;
 class SplitCallNode;
@@ -44,6 +44,7 @@ class CallInNode;
 class CallOutNode;
 class ConstIntNode;
 class ConstFPNode;
+class AllocaNode;
 
 enum PrintType { Scala = 0, Dot, Json };
 struct PortID {
@@ -102,9 +103,12 @@ class Node {
 
     };
 
+    enum DataType { IntegerType = 0, FloatType, PointerType, UknownType };
+
    private:
     // Type of the Node
     NodeType node_type;
+
     // Node information
     NodeInfo info;
 
@@ -120,6 +124,8 @@ class Node {
 
    public:  // Public methods
     Node(NodeType _nt, NodeInfo _ni) : node_type(_nt), info(_ni) {}
+
+    NodeInfo getInfo() { return info; }
 
     PortID returnDataInputPortIndex(Node *);
     PortID returnControlInputPortIndex(Node *);
@@ -168,8 +174,19 @@ class Node {
     uint32_t numDataInputPort() { return port_data.data_input_port.size(); }
     uint32_t numDataOutputPort() { return port_data.data_output_port.size(); }
 
-    uint32_t numMemReqPort() { return read_port_data.memory_req_port.size(); }
-    uint32_t numMemRespPort() { return read_port_data.memory_resp_port.size(); }
+    uint32_t numReadMemReqPort() {
+        return read_port_data.memory_req_port.size();
+    }
+    uint32_t numReadMemRespPort() {
+        return read_port_data.memory_resp_port.size();
+    }
+
+    uint32_t numWriteMemReqPort() {
+        return write_port_data.memory_req_port.size();
+    }
+    uint32_t numWriteMemRespPort() {
+        return write_port_data.memory_resp_port.size();
+    }
 
     uint32_t numControlInputPort() {
         return port_control.control_input_port.size();
@@ -264,6 +281,48 @@ class Node {
         return helpers::make_range(outputControl_begin(), outputControl_end());
     }
 
+    // Iterator over output control edges
+    auto read_req_begin() {
+        return this->read_port_data.memory_req_port.begin();
+    }
+
+    auto read_req_end() { return this->read_port_data.memory_req_port.end(); }
+    auto read_req_range() {
+        return helpers::make_range(read_req_begin(), read_req_end());
+    }
+
+    // Iterator over output control edges
+    auto write_req_begin() {
+        return this->write_port_data.memory_req_port.begin();
+    }
+
+    auto write_req_end() { return this->write_port_data.memory_req_port.end(); }
+    auto write_req_range() {
+        return helpers::make_range(write_req_begin(), write_req_end());
+    }
+
+    // Iterator over output control edges
+    auto read_resp_begin() {
+        return this->read_port_data.memory_resp_port.begin();
+    }
+
+    auto read_resp_end() { return this->read_port_data.memory_resp_port.end(); }
+    auto read_resp_range() {
+        return helpers::make_range(read_resp_begin(), read_resp_end());
+    }
+
+    // Iterator over output control edges
+    auto write_resp_begin() {
+        return this->write_port_data.memory_resp_port.begin();
+    }
+
+    auto write_resp_end() {
+        return this->write_port_data.memory_resp_port.end();
+    }
+    auto write_resp_range() {
+        return helpers::make_range(write_resp_begin(), write_resp_end());
+    }
+
     uint32_t getID() { return info.ID; }
     std::string getName() { return info.Name; }
 
@@ -272,7 +331,7 @@ class Node {
 
     uint32_t getType() const { return node_type; }
 
-   //protected:
+    // protected:
     /**
      * Adding a node to a specific index of control input port
      */
@@ -351,9 +410,7 @@ class Node {
                std::string(" -> MemOutput with ID Not defined!");
     }
 
-    void dump(){
-        outs() << info.Name << "\n";
-    }
+    void dump() { outs() << info.Name << "\n"; }
 };
 
 /**
@@ -443,15 +500,17 @@ class ArgumentNode : public Node {
 
    private:
     ArgumentType arg_type;
+    DataType data_type;
     ContainerNode *parent_call_node;
     llvm::Value *parent_argument;
 
    public:
     explicit ArgumentNode(NodeInfo _ni, ArgumentType _arg_type,
-                          ContainerNode *_call_node = nullptr,
+                          DataType _d_type, ContainerNode *_call_node = nullptr,
                           llvm::Value *_arg = nullptr)
         : Node(Node::FunctionArgTy, _ni),
           arg_type(_arg_type),
+          data_type(_d_type),
           parent_call_node(_call_node),
           parent_argument(_arg) {}
 
@@ -463,6 +522,7 @@ class ArgumentNode : public Node {
     }
 
     auto getArgType() { return arg_type; }
+    auto getDataArgType() { return data_type; }
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -477,9 +537,15 @@ class ContainerNode : public Node {
     enum ContainType { LoopNodeTy = 0, SplitCallTy };
     using RegisterList = std::list<std::shared_ptr<ArgumentNode>>;
 
-   private:
+   protected:
     ContainType con_type;
+    // ptrs and vals are fore split call
+    RegisterList live_in_ptrs;
+    RegisterList live_in_vals;
+
+    // live_in is for loop nodes
     RegisterList live_in;
+
     RegisterList live_out;
     RegisterList carry_depen;
 
@@ -512,14 +578,30 @@ class ContainerNode : public Node {
     uint32_t findLiveOutArgumentIndex(ArgumentNode *);
     uint32_t findCarryDepenArgumentIndex(ArgumentNode *);
 
-    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type);
+    uint32_t numLiveInArgList(ArgumentNode::ArgumentType type,
+                              ArgumentNode::DataType dtype);
     uint32_t numLiveOutArgList(ArgumentNode::ArgumentType type);
     uint32_t numCarryDepenArgList(ArgumentNode::ArgumentType type);
 
     auto live_in_begin() { return this->live_in.begin(); }
     auto live_in_end() { return this->live_in.end(); }
+
+    auto live_in_ptrs_begin() { return this->live_in_ptrs.begin(); }
+    auto live_in_ptrs_end() { return this->live_in_ptrs.end(); }
+
+    auto live_in_vals_begin() { return this->live_in_vals.begin(); }
+    auto live_in_vals_end() { return this->live_in_vals.end(); }
+
     auto live_in_lists() {
         return helpers::make_range(live_in_begin(), live_in_end());
+    }
+
+    auto live_in_ptrs_lists() {
+        return helpers::make_range(live_in_ptrs_begin(), live_in_ptrs_end());
+    }
+
+    auto live_in_vals_lists() {
+        return helpers::make_range(live_in_vals_begin(), live_in_vals_end());
     }
 
     auto live_out_begin() { return this->live_out.begin(); }
@@ -562,7 +644,8 @@ class MemoryNode : public Node {
     }
 
     bool isInitilized() {
-        return (this->numMemReqPort() && this->numMemRespPort());
+        // return true;
+        return (this->numReadMemReqPort() || this->numWriteMemReqPort());
     }
 
     virtual std::string printDefinition(PrintType) override;
@@ -576,9 +659,18 @@ class MemoryNode : public Node {
 /**
  * Memory unit works as a local memory for each graph
  */
-class StackNode : public Node {
+class ScratchpadNode : public Node {
    public:
-    explicit StackNode(NodeInfo _nf) : Node(Node::StackUnitTy, _nf) {}
+    AllocaNode *alloca_node;
+    uint32_t size;
+    uint32_t num_byte;
+
+    explicit ScratchpadNode(NodeInfo _nf, AllocaNode *alloca, uint32_t mem_size,
+                            uint32_t mem_byte)
+        : Node(Node::StackUnitTy, _nf),
+          alloca_node(alloca),
+          size(mem_size),
+          num_byte(mem_byte) {}
 
     // Restrict access to data input ports
     virtual PortID addDataInputPort(Node *) override {
@@ -589,6 +681,12 @@ class StackNode : public Node {
         assert(!"You are not supposed to call this function!");
         return PortID();
     };
+
+    AllocaNode *getAllocaNode() { return alloca_node; }
+
+    uint32_t getMemSize() { return size; }
+    uint32_t getMemByte() { return num_byte; }
+
     uint32_t numDataInputPort() = delete;
     uint32_t numDataOutputPort() = delete;
 
@@ -600,8 +698,8 @@ class StackNode : public Node {
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printMemReadInput(PrintType, uint32_t) override;
     virtual std::string printMemReadOutput(PrintType, uint32_t) override;
-    // virtual std::string printMemWriteInput(PrintType, uint32_t) override;
-    // virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteInput(PrintType, uint32_t) override;
+    virtual std::string printMemWriteOutput(PrintType, uint32_t) override;
 };
 
 /**
@@ -859,6 +957,8 @@ class InstructionNode : public Node {
         SextInstructionTy,
         ZextInstructionTy,
         BitCastInstructionTy,
+        STIoFPInstructionTy,
+        FPToUIInstructionTy,
         TruncInstructionTy,
         SelectInstructionTy,
 
@@ -884,6 +984,7 @@ class InstructionNode : public Node {
 
    private:
     InstType ins_type;
+    DataType data_type;
     llvm::Instruction *parent_instruction;
 
    public:
@@ -891,9 +992,22 @@ class InstructionNode : public Node {
                     llvm::Instruction *_ins = nullptr)
         : Node(Node::InstructionNodeTy, _ni),
           ins_type(_ins_t),
+          data_type(UknownType),
+          parent_instruction(_ins) {}
+
+    InstructionNode(NodeInfo _ni, InstType _ins_t, DataType _dtype,
+                    llvm::Instruction *_ins = nullptr)
+        : Node(Node::InstructionNodeTy, _ni),
+          ins_type(_ins_t),
+          data_type(_dtype),
           parent_instruction(_ins) {}
 
     llvm::Instruction *getInstruction();
+
+    DataType getDataType() const { return data_type; }
+    bool isPointerType() const { return data_type == Node::PointerType; }
+    bool isIntegerType() const { return data_type == Node::IntegerType; }
+    bool isFloatType() const { return data_type == Node::FloatType; }
 
     uint32_t getOpCode() const { return ins_type; }
 
@@ -998,11 +1112,12 @@ class IcmpNode : public InstructionNode {
 
 class FcmpNode : public InstructionNode {
     std::map<std::string, std::string> op_codes;
+
    public:
     FcmpNode(NodeInfo _ni, llvm::FCmpInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::FcmpInstructionTy, _ins) {
-            op_codes = {{"ogt",">GT"}, {"olt","<LT"}, {"oeq","=EQ"}};
-        }
+        op_codes = {{"ogt", ">GT"}, {"olt", "<LT"}, {"oeq", "=EQ"}};
+    }
 
     static bool classof(const InstructionNode *I) {
         return I->getOpCode() == InstType::FcmpInstructionTy;
@@ -1120,6 +1235,11 @@ class PhiSelectNode : public InstructionNode {
         : InstructionNode(_ni, InstType::PhiInstructionTy, _ins),
           reverse(_rev) {}
 
+    PhiSelectNode(NodeInfo _ni, DataType _type, bool _rev,
+                  llvm::PHINode *_ins = nullptr, SuperNode *_parent = nullptr)
+        : InstructionNode(_ni, InstType::PhiInstructionTy, _type, _ins),
+          reverse(_rev) {}
+
     SuperNode *getMaskNode() const { return mask_node; }
 
     static bool classof(const InstructionNode *T) {
@@ -1142,7 +1262,6 @@ class AllocaNode : public InstructionNode {
    private:
     uint32_t size;
     uint32_t num_byte;
-    uint32_t route_id;
 
    public:
     AllocaNode(NodeInfo _ni, llvm::AllocaInst *_ins = nullptr)
@@ -1153,8 +1272,15 @@ class AllocaNode : public InstructionNode {
                uint32_t rid = 0, llvm::AllocaInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _ins),
           size(_size),
-          num_byte(_num_byte),
-          route_id(rid) {}
+          num_byte(_num_byte) {}
+
+    AllocaNode(NodeInfo _ni, DataType _type, uint32_t _num_byte,
+               uint32_t _size = 1, uint32_t rid = 0,
+               llvm::AllocaInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::AllocaInstructionTy, _type,
+                          _ins),
+          size(_size),
+          num_byte(_num_byte) {}
 
     static bool classof(const InstructionNode *T) {
         return T->getOpCode() == InstructionNode::AllocaInstructionTy;
@@ -1169,9 +1295,6 @@ class AllocaNode : public InstructionNode {
     auto getSize() { return size; }
     void setSize(uint32_t _n) { size = _n; }
 
-    auto getRouteID() { return route_id; }
-    void setRouteID(uint32_t _id) { route_id = _id; }
-
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -1183,61 +1306,6 @@ class AllocaNode : public InstructionNode {
     std::string printOffset(PrintType);
 };
 
-// class GepArrayNode : public InstructionNode {
-// private:
-// GepArrayInfo gep_info;
-
-// public:
-// explicit GepArrayNode(NodeInfo _ni, llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
-//_ins) {}
-// explicit GepArrayNode(NodeInfo _ni, GepArrayInfo _info,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
-// gep_info(_info) {}
-
-// static bool classof(const InstructionNode *T) {
-// return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
-//}
-// static bool classof(const Node *T) {
-// return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
-//}
-
-// virtual std::string printDefinition(PrintType) override;
-// virtual std::string printInputEnable(PrintType) override;
-// virtual std::string printInputEnable(PrintType, uint32_t) override;
-// virtual std::string printInputData(PrintType, uint32_t) override;
-// virtual std::string printOutputData(PrintType, uint32_t) override;
-//};
-
-// class GepStructNode : public InstructionNode {
-// private:
-// GepStructInfo gep_info;
-
-// public:
-// explicit GepStructNode(NodeInfo _ni,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy,
-//_ins) {}
-// explicit GepStructNode(NodeInfo _ni, GepStructInfo _info,
-// llvm::GetElementPtrInst *_ins = nullptr)
-//: InstructionNode(_ni, InstructionNode::GetElementPtrArrayInstTy, _ins),
-// gep_info(_info) {}
-
-// static bool classof(const InstructionNode *T) {
-// return T->getOpCode() == InstructionNode::GetElementPtrArrayInstTy;
-//}
-// static bool classof(const Node *T) {
-// return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
-//}
-
-// virtual std::string printDefinition(PrintType) override;
-// virtual std::string printInputEnable(PrintType) override;
-// virtual std::string printInputEnable(PrintType, uint32_t) override;
-// virtual std::string printInputData(PrintType, uint32_t) override;
-// virtual std::string printOutputData(PrintType, uint32_t) override;
-//};
-
 class GepNode : public InstructionNode {
    private:
     GepInfo gep_info;
@@ -1248,6 +1316,12 @@ class GepNode : public InstructionNode {
     explicit GepNode(NodeInfo _ni, common::GepInfo _info,
                      llvm::GetElementPtrInst *_ins = nullptr)
         : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _ins),
+          gep_info(_info) {}
+
+    explicit GepNode(NodeInfo _ni, DataType _type, common::GepInfo _info,
+                     llvm::GetElementPtrInst *_ins = nullptr)
+        : InstructionNode(_ni, InstructionNode::GetElementPtrInstTy, _type,
+                          _ins),
           gep_info(_info) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1273,6 +1347,12 @@ class LoadNode : public InstructionNode {
     LoadNode(NodeInfo _ni, llvm::LoadInst *_ins = nullptr,
              MemoryNode *_node = nullptr, uint32_t _id = 0)
         : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _ins),
+          mem_unit(_node),
+          route_id(_id) {}
+
+    LoadNode(NodeInfo _ni, DataType _type, llvm::LoadInst *_ins = nullptr,
+             MemoryNode *_node = nullptr, uint32_t _id = 0)
+        : InstructionNode(_ni, InstructionNode::LoadInstructionTy, _type, _ins),
           mem_unit(_node),
           route_id(_id) {}
 
@@ -1317,6 +1397,7 @@ class StoreNode : public InstructionNode {
         return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
     }
 
+    void setRouteID(uint32_t _id) { route_id = _id; }
     auto getRouteID() { return route_id; }
 
     auto isGround() {
@@ -1330,6 +1411,7 @@ class StoreNode : public InstructionNode {
     virtual std::string printInputEnable(PrintType) override;
     virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputEnable(PrintType, uint32_t) override;
+    virtual std::string printOutputEnable(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printMemWriteInput(PrintType, uint32_t) override;
@@ -1353,6 +1435,7 @@ class ReturnNode : public InstructionNode {
 
     virtual std::string printDefinition(PrintType) override;
     virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputEnable(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType, uint32_t) override;
     virtual std::string printOutputData(PrintType) override;
     virtual std::string printInputData(PrintType, uint32_t) override;
@@ -1511,8 +1594,9 @@ class ConstFPNode : public Node {
             value.f = 0;
         else if (parent_const_fp->getValueAPF().isInteger()) {
             value.f = parent_const_fp->getValueAPF().convertToFloat();
-        } else
-            value.f = parent_const_fp->getValueAPF().convertToFloat();
+        } else{
+            value.f = parent_const_fp->getValueAPF().convertToDouble();
+        }
         // value.f = 0;
     }
 
@@ -1535,6 +1619,12 @@ class ConstFPNode : public Node {
  * SplitCall node
  */
 class SplitCallNode : public ContainerNode {
+   public:
+    enum ArgType { Ptrs = 0, Vals };
+
+   private:
+    std::map<ArgumentNode *, ArgType> arg_types;
+
    public:
     explicit SplitCallNode(NodeInfo _nf)
         : ContainerNode(_nf, ContainerNode::SplitCallTy) {}
@@ -1623,10 +1713,10 @@ class ZextNode : public InstructionNode {
 /**
  * truncate node
  */
-class TruncNode: public InstructionNode {
+class TruncNode : public InstructionNode {
    public:
     TruncNode(NodeInfo _ni, llvm::TruncInst *_ins = nullptr,
-             NodeType _nd = UnkonwTy)
+              NodeType _nd = UnkonwTy)
         : InstructionNode(_ni, InstructionNode::TruncInstructionTy, _ins) {}
 
     static bool classof(const InstructionNode *T) {
@@ -1642,6 +1732,49 @@ class TruncNode: public InstructionNode {
     virtual std::string printOutputData(PrintType, uint32_t) override;
 };
 
+/**
+ * stiofp node
+ */
+class STIoFPNode : public InstructionNode {
+   public:
+    STIoFPNode(NodeInfo _ni, llvm::SIToFPInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::STIoFPInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::STIoFPInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
+
+/**
+ * stiofp node
+ */
+class FPToUINode : public InstructionNode {
+   public:
+    FPToUINode(NodeInfo _ni, llvm::FPToUIInst *_ins = nullptr,
+               NodeType _nd = UnkonwTy)
+        : InstructionNode(_ni, InstructionNode::FPToUIInstructionTy, _ins) {}
+
+    static bool classof(const InstructionNode *T) {
+        return T->getOpCode() == InstructionNode::FPToUIInstructionTy;
+    }
+    static bool classof(const Node *T) {
+        return isa<InstructionNode>(T) && classof(cast<InstructionNode>(T));
+    }
+
+    virtual std::string printDefinition(PrintType) override;
+    virtual std::string printInputEnable(PrintType) override;
+    virtual std::string printInputData(PrintType, uint32_t) override;
+    virtual std::string printOutputData(PrintType, uint32_t) override;
+};
 
 class ReattachNode : public InstructionNode {
    private:
