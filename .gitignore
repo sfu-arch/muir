@@ -5,7 +5,7 @@ tags
 .idea
 .vscode
 compile_commands.json
-
+.clangd/
 *.bc
 .*.ll
 test/c
