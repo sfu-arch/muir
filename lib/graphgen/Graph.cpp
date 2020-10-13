@@ -2263,15 +2263,6 @@ void Graph::printNodeSummary() {
     Json::Value _root_json;
     Json::Value _node_entry;
 
-    for (auto &node : this->inst_list) {
-        auto _name = node->getInfo().Name;
-        std::replace(_name.begin(), _name.end(), '.', '_');
-        _node_entry["name"] = _name;
-        _node_entry["id"] = node->getInfo().ID;
-        _node_entry["debug"] = "false";
-        _root_json["module"]["node"].append(_node_entry);
-    }
-
     for (auto &bb : this->super_node_list) {
         auto _name = bb->getInfo().Name;
         std::replace(_name.begin(), _name.end(), '.', '_');
@@ -2279,6 +2270,15 @@ void Graph::printNodeSummary() {
         _node_entry["id"] = bb->getInfo().ID;
         _node_entry["debug"] = "false";
         _root_json["module"]["super_node"].append(_node_entry);
+    }
+
+    for (auto &node : this->inst_list) {
+        auto _name = node->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = node->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["node"].append(_node_entry);
     }
 
     _out_file << _root_json;
