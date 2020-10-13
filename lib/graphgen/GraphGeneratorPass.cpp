@@ -1886,7 +1886,9 @@ void GraphGeneratorPass::init(Function &F) {
     dependency_graph->optimizationPasses();
     updateRouteIDs(F);
     dependency_graph->printGraph(PrintType::Scala, config_path);
-    // dependency_graph->printNodeSummary();
+
+    //Printing muIR graph summary
+    dependency_graph->printNodeSummary();
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {
