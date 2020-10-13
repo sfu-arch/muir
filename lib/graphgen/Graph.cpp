@@ -21,6 +21,24 @@ using namespace helpers;
 
 using InstructionList = std::list<InstructionNode>;
 
+static uint32_t                                                                       
+getUID(Instruction* I) {   
+  auto* N = I->getMetadata("UID");                            
+  if (N == nullptr)                                                     
+    return 0;                           
+  auto* S = dyn_cast<MDString>(N->getOperand(0));    
+  return stoi(S->getString().str());                                                     
+} 
+
+static uint32_t                                                                       
+getUID(BasicBlock* BB) {                                 
+  auto* N = BB->getTerminator()->getMetadata("BB_UID");                            
+  if (N == nullptr)                                                     
+    return 0;                           
+  auto* S = dyn_cast<MDString>(N->getOperand(0));    
+  return stoi(S->getString().str());                                                     
+} 
+
 /**
  * HELPER FUNCTIONS
  * Printing header part of each section of the code
@@ -1018,8 +1036,8 @@ void Graph::printCallIO(PrintType _pt) {
                             else {
                                 std::cout << instruction_node->getName()
                                           << "\n";
-                                outs()
-                                    << instruction_node->getDataType() << "\n";
+                                DEBUG(dbgs()
+                                    << instruction_node->getDataType() << "\n");
                                 assert(!"Input datatype is Uknonw");
                             }
                         }
@@ -1112,10 +1130,10 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
     string fix_name = BB.getName().str();
     std::replace(fix_name.begin(), fix_name.end(), '-', '_');
     fix_name = std::regex_replace(fix_name, std::regex("^\\."), "");
-    // outs() << a << "\n";
+    auto uid = getUID(&BB);
     super_node_list.push_back(std::make_unique<SuperNode>(
-        NodeInfo(super_node_list.size(),
-                 "bb_" + fix_name + to_string(super_node_list.size())),
+        NodeInfo(uid,
+                 "bb_" + fix_name + to_string(uid)),
         &BB));
     auto ff = std::find_if(
         super_node_list.begin(), super_node_list.end(),
@@ -1128,9 +1146,10 @@ SuperNode *Graph::insertSuperNode(BasicBlock &BB) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<BinaryOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "binaryOp_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "binaryOp_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1145,9 +1164,10 @@ InstructionNode *Graph::insertBinaryOperatorNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1162,9 +1182,10 @@ InstructionNode *Graph::insertFaddNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1179,9 +1200,10 @@ InstructionNode *Graph::insertFsubNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FaddOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1196,9 +1218,10 @@ InstructionNode *Graph::insertFmulNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FdiveOperatorNode>(
-        NodeInfo(inst_list.size(),
-                 "FP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1213,9 +1236,10 @@ InstructionNode *Graph::insertFdiveNode(BinaryOperator &I) {
  * Insert a new computation instruction
  */
 InstructionNode *Graph::insertFcmpNode(FCmpInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<FcmpNode>(
-        NodeInfo(inst_list.size(),
-                 "FPCMP_" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "FPCMP_" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1509,9 +1533,10 @@ InstructionNode *Graph::insertCallNode(CallInst &I) {
  * Insert a new Store node
  */
 InstructionNode *Graph::insertReturnNode(ReturnInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<ReturnNode>(
-        NodeInfo(inst_list.size(),
-                 "ret_" + I.getName().str() + std::to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "ret_" + I.getName().str() + std::to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1651,9 +1676,10 @@ ConstIntNode *Graph::insertConstIntNode() {
  * Insert a new sext node
  */
 InstructionNode *Graph::insertTruncNode(TruncInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<TruncNode>(
-        NodeInfo(inst_list.size(),
-                 "trunc" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "trunc" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1668,9 +1694,10 @@ InstructionNode *Graph::insertTruncNode(TruncInst &I) {
  * Insert a new stiofp node
  */
 InstructionNode *Graph::insertSTIoFPNode(SIToFPInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<STIoFPNode>(
-        NodeInfo(inst_list.size(),
-                 "stiofp" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "stiofp" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1702,9 +1729,10 @@ InstructionNode *Graph::insertFPToUINode(FPToUIInst &I) {
  * Insert a new sext node
  */
 InstructionNode *Graph::insertSextNode(SExtInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<SextNode>(
-        NodeInfo(inst_list.size(),
-                 "sext" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "sext" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -1719,9 +1747,10 @@ InstructionNode *Graph::insertSextNode(SExtInst &I) {
  * Insert a new sext node
  */
 InstructionNode *Graph::insertZextNode(ZExtInst &I) {
+    auto uid = getUID(&I);
     inst_list.push_back(std::make_unique<ZextNode>(
-        NodeInfo(inst_list.size(),
-                 "sext" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid,
+                 "sext" + I.getName().str() + to_string(uid)),
         &I));
 
     auto ff = std::find_if(
@@ -2234,15 +2263,6 @@ void Graph::printNodeSummary() {
     Json::Value _root_json;
     Json::Value _node_entry;
 
-    for (auto &node : this->inst_list) {
-        auto _name = node->getInfo().Name;
-        std::replace(_name.begin(), _name.end(), '.', '_');
-        _node_entry["name"] = _name;
-        _node_entry["id"] = node->getInfo().ID;
-        _node_entry["debug"] = "false";
-        _root_json["module"]["node"].append(_node_entry);
-    }
-
     for (auto &bb : this->super_node_list) {
         auto _name = bb->getInfo().Name;
         std::replace(_name.begin(), _name.end(), '.', '_');
@@ -2250,6 +2270,15 @@ void Graph::printNodeSummary() {
         _node_entry["id"] = bb->getInfo().ID;
         _node_entry["debug"] = "false";
         _root_json["module"]["super_node"].append(_node_entry);
+    }
+
+    for (auto &node : this->inst_list) {
+        auto _name = node->getInfo().Name;
+        std::replace(_name.begin(), _name.end(), '.', '_');
+        _node_entry["name"] = _name;
+        _node_entry["id"] = node->getInfo().ID;
+        _node_entry["debug"] = "false";
+        _root_json["module"]["node"].append(_node_entry);
     }
 
     _out_file << _root_json;
