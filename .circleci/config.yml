@@ -5,5 +5,4 @@
        - image: amd64/ubuntu:18.04
      steps:
        - checkout
-       - run: apt-get install sudo -y
        - run: printf 'y\ny\ny\n' | ./scripts/muir-setup.sh
