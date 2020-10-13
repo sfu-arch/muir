@@ -2,7 +2,7 @@
  jobs:
    build:
      docker:
-       - image: amd64/ubuntu:18.04
+       - image: amsharifian/muir-docker:1.0
      steps:
        - checkout
        - run: printf 'y\ny\ny\n' | ./scripts/muir-setup.sh
