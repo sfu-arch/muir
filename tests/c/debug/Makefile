@@ -24,7 +24,7 @@ DANDELION_CONFIG=@CMAKE_BINARY_DIR@/scripts/config.json
 all: $(SCALA)
 
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -o $@
 	$(OPT) --strip-debug -dot-cfg $@ -o $*.nodebug.bc
 	dot -Tsvg cfg.$*.dot -o cfg.$*.svg
 
