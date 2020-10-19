@@ -1,4 +1,4 @@
-LLVM_DIR=@LLVM_INSTALL_PREFIX@/bin
+LLVM_DIR=@LLVM_BUILD_BINARY_DIR@/bin
 CC=$(LLVM_DIR)/clang
 OPT=$(LLVM_DIR)/opt
 DIS=$(LLVM_DIR)/llvm-dis
@@ -23,10 +23,10 @@ DANDELION_CONFIG=@CMAKE_BINARY_DIR@/scripts/config.json
 
 all: $(SCALA)
 
-svg: $(SVG)
-
 %.bc: %.c
-	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -dot-cfg -o $@
+	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -o $@
+	$(OPT) --strip-debug -dot-cfg $@ -o $*.nodebug.bc
+	dot -Tsvg cfg.$*.dot -o cfg.$*.svg
 
 %.ll: %.bc
 	$(DIS) $<
