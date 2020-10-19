@@ -62,6 +62,7 @@ option(LLVM_BUILD_TOOLS
 
 message("LLVM STATUS:
   Definitions ${LLVM_DEFINITIONS}
+  Binaries    ${LLVM_BINARY_DIR}/bin
   Includes    ${LLVM_INCLUDE_DIRS}
   Libraries   ${LLVM_LIBRARY_DIRS}
   Targets     ${LLVM_TARGETS_TO_BUILD}"
