@@ -1843,7 +1843,9 @@ GraphGeneratorPass::init(Function& F) {
   dependency_graph->printGraph(PrintType::Scala, config_path);
 
   // Printing muIR graph summary
-  dependency_graph->printNodeSummary();
+  if(this->dump_muir){
+    dependency_graph->printMUIR();
+  }
 }
 
 bool

@@ -116,6 +116,18 @@ cl::opt<bool> testCase("test-file",
                        cl::init(true),
                        cl::cat{dandelionCategory});
 
+cl::opt<bool> dump_muir("dump-muir",
+                        cl::desc("Dumping muIR representation"),
+                        cl::value_desc("T/F {default = false}"),
+                        cl::init(false),
+                        cl::cat{dandelionCategory});
+
+cl::opt<bool> verbose("verbose",
+                      cl::desc("Verbose execution"),
+                      cl::value_desc("T/F {default = false}"),
+                      cl::init(false),
+                      cl::cat{dandelionCategory});
+
 cl::opt<string> outFile("o",
                         cl::desc("tapas output file"),
                         cl::value_desc("filename"),
@@ -550,7 +562,7 @@ runGraphGen(Module& M, string file_name) {
 
   pm.add((llvm::createStripDeadDebugInfoPass()));
   pm.add(new helpers::GepInformation(file_name));
-  pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, file_name), out));
+  pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, file_name), out, dump_muir.getValue()));
   pm.add(createVerifierPass());
   pm.run(M);
 
@@ -641,15 +653,19 @@ main(int argc, char** argv) {
 
   saveModule(*module, target_fn + ".final.bc");
 
-  std::cout << "\n=========================== OUTPUT FILES =============================="
-               "=====\n";
-  std::cout << "Dandelion output for " << target_fn << ":\n";
-  std::cout << "\tScala file: " << outFile << ".scala\n";
-  std::cout << "\tmuIR intermediate representation: " << target_fn << ".summary.json\n";
-  std::cout << "\tLLVM dependence graph: cfg." << target_fn << ".svg\n";
-  std::cout << "\tTransformed LLVM bitcode: " << target_fn << ".final.bc\n";
-  std::cout << "========================================================================="
-               "===\n\n";
+  if (verbose.getValue()) {
+    std::cout
+        << "\n=========================== OUTPUT FILES =============================="
+           "=====\n";
+    std::cout << "Dandelion output for " << target_fn << ":\n";
+    std::cout << "\tScala file: " << outFile << ".scala\n";
+    std::cout << "\tmuIR intermediate representation: " << target_fn << ".summary.json\n";
+    std::cout << "\tLLVM dependence graph: cfg." << target_fn << ".svg\n";
+    std::cout << "\tTransformed LLVM bitcode: " << target_fn << ".final.bc\n";
+    std::cout
+        << "========================================================================="
+           "===\n\n";
+  }
 
 
   return 0;

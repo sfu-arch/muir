@@ -286,7 +286,7 @@ public:
   void optimizationPasses();
   void groundStoreNodes();
   void groundReattachNode();
-  void printNodeSummary();
+  void printMUIR();
 
 protected:
   // General print functions with accepting print type

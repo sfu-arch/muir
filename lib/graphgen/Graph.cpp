@@ -2099,8 +2099,8 @@ Graph::optimizationPasses() {
 }
 
 void
-Graph::printNodeSummary() {
-  std::ofstream _out_file(this->graph_info.Name + ".summary.json");
+Graph::printMUIR() {
+  std::ofstream _out_file(this->graph_info.Name + ".muir.json");
 
   Json::Value _root_json;
 

@@ -161,6 +161,9 @@ private:
   // Default value is standard out
   llvm::raw_ostream& code_out;
 
+  // Dump muir file
+  bool dump_muir;
+
   // NOTE: Uncomment if there is any dependent analysis
   // virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
@@ -226,18 +229,18 @@ public:
     : llvm::ModulePass(ID),
       dependency_graph(std::make_unique<Graph>(NodeInfo(0, "dummy"))),
       LID(0),
-      code_out(llvm::outs()) {}
-  GraphGeneratorPass(NodeInfo _n_info)
+      code_out(llvm::outs()), dump_muir(false) {}
+  GraphGeneratorPass(NodeInfo _n_info, bool dump_muir = false)
     : llvm::ModulePass(ID),
       dependency_graph(std::make_unique<Graph>(_n_info)),
       LID(0),
-      code_out(llvm::outs()) {}
+      code_out(llvm::outs()), dump_muir(dump_muir) {}
 
-  GraphGeneratorPass(NodeInfo _n_info, llvm::raw_ostream& out)
+  GraphGeneratorPass(NodeInfo _n_info, llvm::raw_ostream& out, bool dump_muir = false)
     : llvm::ModulePass(ID),
       dependency_graph(std::make_unique<Graph>(_n_info, out)),
       LID(0),
-      code_out(out) {}
+      code_out(out), dump_muir(dump_muir) {}
 
   virtual void
   getAnalysisUsage(llvm::AnalysisUsage& AU) const override {
