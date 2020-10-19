@@ -1241,6 +1241,7 @@ private:
   InstType ins_type;
   DataType data_type;
   llvm::Instruction* parent_instruction;
+  SuperNode* parent_node;
 
 public:
   InstructionNode(NodeInfo _ni, InstType _ins_t, llvm::Instruction* _ins = nullptr)
@@ -1259,6 +1260,16 @@ public:
       parent_instruction(_ins) {}
 
   llvm::Instruction* getInstruction();
+
+  void
+  setParentNode(SuperNode* parent) {
+    this->parent_node = parent;
+  }
+
+  SuperNode*
+  getParentNode() {
+    return this->parent_node;
+  }
 
   DataType
   getDataType() const {

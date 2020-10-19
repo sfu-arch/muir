@@ -1264,10 +1264,13 @@ GraphGeneratorPass::fillBasicBlockDependencies(Function& F) {
 
         // Iterate over the basicblock's instructions
         auto instruction_node = this->map_value_node[&I];
+
         if (instruction_node == nullptr)
           continue;
         if (auto _ins = dyn_cast<InstructionNode>(this->map_value_node[&I])) {
           _bb->addInstruction(_ins);
+
+          _ins->setParentNode(_bb);
 
           // TODO: Why we are skipping reattach node?
           // Because you don't need to make reattach node's
@@ -1590,6 +1593,10 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
 
     _loop_node->setIndeuctionVariable(
         dyn_cast<InstructionNode>(map_value_node[L->getCanonicalInductionVariable()]));
+
+    for(auto &bb : L->blocks()){
+        _loop_node->pushSuperNode(dyn_cast<SuperNode>(map_value_node[bb]));
+    }
 
     loop_value_node[&*L] = _loop_node;
 
