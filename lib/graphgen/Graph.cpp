@@ -2141,8 +2141,11 @@ Graph::printNodeSummary() {
 
   for (auto& loop : this->loops()) {
     Json::Value _loop_entry;
-    _loop_entry["name"] = loop->getName();
-    _loop_entry["id"]   = loop->getID();
+    _loop_entry["name"]        = loop->getName();
+    _loop_entry["id"]          = loop->getID();
+
+    if(loop->getParentLoopNode())
+        _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();
 
 
     // Getting list of nodes
@@ -2157,12 +2160,17 @@ Graph::printNodeSummary() {
 
     // Loop carry dependencies
     //
+    Json::Value _loop_carries;
     i = 0;
-    for (auto _node : loop->carry_depen_lists()) {
-      _loop_nodes[i] = _node->getID();
-      i++;
+    for (auto& _carry : loop->carry_depen_lists()) {
+      if (_carry->getArgType() != ArgumentNode::CarryDependency)
+        continue;
+      for (auto& _data_in : _carry->input_data_range()) {
+        _loop_carries[i] = _data_in.first->getID();
+        i++;
+      }
     }
-    _loop_entry["carries"] = _loop_nodes;
+    _loop_entry["carries"] = _loop_carries;
 
     _root_json["module"]["loop"].append(_loop_entry);
   }

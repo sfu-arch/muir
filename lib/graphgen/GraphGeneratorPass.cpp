@@ -1608,9 +1608,6 @@ void GraphGeneratorPass::buildLoopNodes(Function &F,
     uint32_t c_id = 0;
     for (auto &L : getLoops(loop_info)) {
 
-        outs() << "Loop induction variable:\n";
-        L->getCanonicalInductionVariable()->dump();
-
         auto _new_loop = std::make_unique<LoopNode>(
             NodeInfo(c_id, "Loop_" + std::to_string(c_id)));
         c_id++;

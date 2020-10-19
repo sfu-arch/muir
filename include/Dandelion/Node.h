@@ -751,6 +751,7 @@ class LoopNode : public ContainerNode {
     std::list<std::pair<Node *, PortType>> port_type;
     LoopNode *parent_loop;
     std::list<InstructionNode *> instruction_list;
+    InstructionNode * induction_variable;
     std::list<SuperNode *> basic_block_list;
     std::list<InstructionNode *> ending_instructions;
 
@@ -843,6 +844,7 @@ class LoopNode : public ContainerNode {
     void setHeadNode(SuperNode *_n) { head_node = _n; }
     void setLatchNode(SuperNode *_n) { latch_node = _n; }
 
+    void setIndeuctionVariable(InstructionNode *I) { this->induction_variable = I; }
     /**
      * Make sure that loop enable signal is always set to index 0
      */
