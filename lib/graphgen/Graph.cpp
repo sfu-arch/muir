@@ -2141,11 +2141,13 @@ Graph::printNodeSummary() {
 
   for (auto& loop : this->loops()) {
     Json::Value _loop_entry;
-    _loop_entry["name"]        = loop->getName();
-    _loop_entry["id"]          = loop->getID();
+    _loop_entry["name"] = loop->getName();
+    _loop_entry["id"]   = loop->getID();
 
-    if(loop->getParentLoopNode())
-        _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();
+    if (loop->getParentLoopNode())
+      _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();
+
+    _loop_entry["induction_id"] = loop->getInductionVariable()->getID();
 
 
     // Getting list of nodes
