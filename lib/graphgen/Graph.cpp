@@ -12,6 +12,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <sstream>
 
 #define DATA_SIZE 64
 
@@ -2289,9 +2290,13 @@ void Graph::printNodeSummary() {
         Json::Value _node_entry;
         auto _name = node->getInfo().Name;
         std::replace(_name.begin(), _name.end(), '.', '_');
+        std::string _node_instruction;
+        llvm::raw_string_ostream ss(_node_instruction);
+        node->getInstruction()->print(ss);
         _node_entry["name"] = _name;
         _node_entry["id"] = node->getInfo().ID;
         _node_entry["debug"] = "false";
+        _node_entry["instruction"] = _node_instruction.c_str();
         _root_json["module"]["node"].append(_node_entry);
     }
 
