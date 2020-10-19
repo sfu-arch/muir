@@ -44,6 +44,7 @@
 #include <experimental/iterator>
 #include <memory>
 #include <string>
+#include <iostream>
 
 #include "AliasEdgeWriter.h"
 #include "Common.h"
@@ -611,6 +612,15 @@ int main(int argc, char **argv) {
     }
 
     saveModule(*module, target_fn + ".final.bc");
+
+    std::cout << "\n============================================================================\n";
+    std::cout << "Dandelion output for " << target_fn << ":\n";
+    std::cout << "\tScala file: " << outFile << ".scala\n";
+    std::cout << "\tmuIR intermediate representation: " << target_fn << ".summary.json\n";
+    std::cout << "\tLLVM dependence graph: cfg." << target_fn << ".svg\n";
+    std::cout << "\tTransformed LLVM bitcode: " << target_fn << ".final.bc\n";
+    std::cout << "============================================================================\n\n";
+
 
     return 0;
 }
