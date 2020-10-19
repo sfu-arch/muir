@@ -54,6 +54,14 @@ make
 
 **NOTE:** Currently, for simplicity of the Makefile in each example the target function's name needs to be the same name as the source file's name, hence, the Makefile can pick the right values for the compilation process.
 
+## Running Debug info
+
+To run a debug test:
+
+```
+debug-helper debugtest3.final.bc --node-id 4 --fn-name=debugtest3
+```
+
 ## Testing the generated hardware accelerators
 
 After running the ``make`` command for each test case there should be one Scala file. This Scala file is the target function accelerator description id muIR.

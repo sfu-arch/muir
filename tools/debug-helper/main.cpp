@@ -1,7 +1,5 @@
 #define DEBUG_TYPE "dandelion-debug"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -46,6 +44,7 @@
 #include <string>
 
 #include "Common.h"
+#include "DebugInfo.h"
 
 using namespace llvm;
 using llvm::legacy::PassManager;
@@ -56,25 +55,22 @@ using std::unique_ptr;
 using std::vector;
 
 using namespace helpers;
+using namespace debuginfo;
 
-//template <class T>
-//std::vector<T *> getInstList(Function *func) {
-    //std::vector<T *> return_list;
-    //for (auto &_node : llvm::instructions(func)) {
-        //if (auto cast_node = dyn_cast<T>(&_node))
-            //return_list.push_back(cast_node);
-    //}
-    //return return_list;
-//}
-
-static cl::OptionCategory ddebugCategory{"dandelion options"};
+static cl::OptionCategory ddebugCategory{"Debug dandelion options"};
 
 cl::opt<string> inPath(cl::Positional, cl::desc("<Module to analyze>"),
                        cl::value_desc("bitcode filename"), cl::init(""),
                        cl::Required, cl::cat{ddebugCategory});
 
-cl::opt<string> function_name("function", cl::desc("Target function name"),
+cl::opt<int> node_id("node-id", cl::desc("Passing node unique ID"),
+                          cl::value_desc("Node ID"), cl::Required,
+                          cl::init(0),
+                          cl::cat{ddebugCategory});
+
+cl::opt<string> fn_name("fn-name", cl::desc("Passing target function name"),
                           cl::value_desc("Function name"), cl::Required,
+                          cl::init(""),
                           cl::cat{ddebugCategory});
 
 cl::opt<string> instruction_id("id", cl::desc("Instruction ID"),
@@ -123,6 +119,13 @@ static void extractLoops(Module &m) {
     saveModule(m, inPath);
 }
 
+static void debugPass(Module &m) {
+    legacy::PassManager pm;
+    pm.add(new DebugInfo(fn_name.getValue(), node_id.getValue()));
+    pm.add(createVerifierPass());
+    pm.run(m);
+}
+
 /**
  * Running UIDLabel pss
  */
@@ -155,11 +158,8 @@ int main(int argc, char **argv) {
     }
 
     labelFunctions(*module);
-
-    outs() << function_name.getValue() << "\n";
-    outs() << instruction_id.getValue() << "\n";
-
-    saveModule(*module, function_name.getValue() + ".final.bc");
+    debugPass(*module);
+    saveModule(*module, "debug.bc");
 
     return 0;
 }

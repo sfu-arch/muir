@@ -831,10 +831,6 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                         // = 2
                         // and second elemnt is C = 1
                         auto _inst_branch = dyn_cast<BranchInst>(&*ins_it);
-                        // outs() << "DEBUG BEGIN\n";
-                        // ins_it->dump();
-                        //_inst_branch->getSuccessor(c - 1)->dump();
-                        // outs() << "DEBUG END\n";
                         auto _inst_operand = this->map_value_node.find(
                             _inst_branch->getSuccessor(c - 1));
                         if (c == 1) {
@@ -900,7 +896,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                      */
                     if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
                         DEBUG(operand->dump());
-                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(dbgs() << "Index : " << c << "\n");
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
@@ -940,7 +936,7 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
                      */
                     if (auto _phi_ins = dyn_cast<PHINode>(&*ins_it)) {
                         DEBUG(operand->dump());
-                        DEBUG(outs() << "Index : " << c << "\n");
+                        DEBUG(dbgs() << "Index : " << c << "\n");
                         DEBUG(_phi_ins->getIncomingBlock(c)->dump());
 
                         _const_node->addControlInputPort(
@@ -988,11 +984,6 @@ void GraphGeneratorPass::findDataPorts(Function &F) {
 
                 if (_dst == nullptr) continue;
                 if (_src == nullptr) continue;
-
-                //operand->dump();
-                //ins_it->dump();
-                //outs() << "Src: " << _node_src->second->getName() << "\n";
-                //outs() << "dest: " << _node_dest->second->getName() << "\n";
 
 
                 // TODO later we need to get ride of these lines
@@ -1584,12 +1575,12 @@ void GraphGeneratorPass::connectingCalldependencies(Function &F) {
 void GraphGeneratorPass::updateRouteIDs(Function &F) {
     auto cache = this->dependency_graph->getMemoryUnit();
     uint32_t cnt = 0;
-    outs() << "Enter route id update\n";
-    outs() << "Cache input: " << cache->numReadMemReqPort() << "\n";
+    DEBUG(dbgs() << "Enter route id update\n");
+    DEBUG(dbgs() << "Cache input: " << cache->numReadMemReqPort() << "\n");
     for (auto load_mem : cache->read_req_range()) {
         dyn_cast<LoadNode>(load_mem.first)->setRouteID(cnt);
         cnt++;
-        outs() << load_mem.first->getName() << "\n";
+        DEBUG(dbgs() << load_mem.first->getName() << "\n");
     }
     for (auto store_mem : cache->write_req_range()) {
         dyn_cast<StoreNode>(store_mem.first)->setRouteID(cnt);
@@ -1886,7 +1877,9 @@ void GraphGeneratorPass::init(Function &F) {
     dependency_graph->optimizationPasses();
     updateRouteIDs(F);
     dependency_graph->printGraph(PrintType::Scala, config_path);
-    // dependency_graph->printNodeSummary();
+
+    //Printing muIR graph summary
+    dependency_graph->printNodeSummary();
 }
 
 bool GraphGeneratorPass::runOnModule(Module &M) {
