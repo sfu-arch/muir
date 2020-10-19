@@ -1,3 +1,4 @@
+#include <jsoncpp/json/value.h>
 #define DEBUG_TYPE "graphgen"
 
 #include "llvm/Support/Debug.h"
@@ -2261,18 +2262,31 @@ void Graph::printNodeSummary() {
     std::ofstream _out_file(this->graph_info.Name + ".summary.json");
 
     Json::Value _root_json;
-    Json::Value _node_entry;
+
+    _root_json["module"]["name"] = this->graph_info.Name;
 
     for (auto &bb : this->super_node_list) {
+        Json::Value _node_entry;
         auto _name = bb->getInfo().Name;
         std::replace(_name.begin(), _name.end(), '.', '_');
+
+        //Getting list of nodes
+        Json::Value _node_array;
+        int i = 0;
+        for(auto _node : bb->instructions()){
+            _node_array[i] = _node->getID();
+            i++;
+        }
         _node_entry["name"] = _name;
         _node_entry["id"] = bb->getInfo().ID;
         _node_entry["debug"] = "false";
+        _node_entry["child"] = _node_array;
         _root_json["module"]["super_node"].append(_node_entry);
+        //_root_json["module"]["super_node"]["child"] = _node_array;
     }
 
     for (auto &node : this->inst_list) {
+        Json::Value _node_entry;
         auto _name = node->getInfo().Name;
         std::replace(_name.begin(), _name.end(), '.', '_');
         _node_entry["name"] = _name;
