@@ -4,6 +4,45 @@
 [![Gitter](https://badges.gitter.im/sfu-arch/community.svg)](https://gitter.im/sfu-arch/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![](https://tokei.rs/b1/github/sfu-arch/muir)](https://github.com/sfu-arch/muir)
 
+Getting Started
+===================
+Official supported environment for building and running muIR is ubuntu 18.04. You have to run these commands to install required packages from ubuntu package repositories :
+```
+sudo apt-get install build-essential cmake libjsoncpp-dev  libncurses5-dev graphviz binutils-dev
+sudo apt-get install gcc-8-multilib g++-8-multilib
+````
+
+Build
+======
+
+To build muIR dependencies, we have scripted installing the dependencies. To install the dependencies you need only to run the following commands:
+
+``` bash
+cd muir
+source ./scripts/dandelion.sh
+cd ..
+mkdir build
+cd build
+cmake -DLLVM_DIR=<your repository>/Tapir-Meta/tapir/build/lib/cmake/llvm/ -DTAPIR=ON ..
+make
+source ./scripts/setup-env.sh
+```
+
+Running tests
+===============
+Inside test directory there are set of test example which show the generality of dandelion-generator.
+To get the generated accelerator files for test cases you can run:
+
+```
+# in your code repository
+cd build/test/c/
+make all
+```
+
+For each test case there is going to be one Scala file which has the detailed implementation of dandelion-generator.
+=======================================================================================================================
+[![](https://tokei.rs/b1/github/sfu-arch/muir)](https://github.com/sfu-arch/muir)
+
 
 muIR-Generator is a tool to generator hardware accelerator from software programs. muIR-Generator uses muIR as an intermediate representation (IR) to design hardware accelerators. Currently, muIR-Generator supports C/C++ and Cilk programs.
 
@@ -73,13 +112,14 @@ Each project, separately has tutorial on how to connect the generated hardware a
 In the following repo, [Dandelion-Tutorial](https://github.com/amsharifian/dandelion-tutorial), we are documenting all the Dandelion project pieces, muIR is one of the subprojects of Dandelion.
 To have more information on the design details and other project you can follow the documentation.
 
+
 ## How to run generator on your code (detailed way)?
 
 **This section is not complete yet**
 
 <!-- For generating `.scala` for your code the following steps need to be taken :
 
-1. Emit the llvm ir (`.ll`) for your code with supported Tapir/dandelion-generator compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
+1. Emit the llvm ir (`.ll`) for your code with supported Tapir/muIR compiler(`<your repository code location>/Tapir-Meta/tapir/build/bin/clang`).
     * You can out put llvm ir with this command `./Tapir-Meta/tapir/build/bin/clang -emit-llvm [Your source code]`
 2. Run `opt` with `-mem2reg -loop-simplify -loop-simplifycfg -disable-loop-vectorization -dce` arguments on your llvm ir (`.ll`) code.
 3. Run TAPAS generator on your `.ll` file like this :
