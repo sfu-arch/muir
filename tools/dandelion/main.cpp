@@ -641,7 +641,7 @@ main(int argc, char** argv) {
 
   saveModule(*module, target_fn + ".final.bc");
 
-  std::cout << "\n======================================================================="
+  std::cout << "\n=========================== OUTPUT FILES =============================="
                "=====\n";
   std::cout << "Dandelion output for " << target_fn << ":\n";
   std::cout << "\tScala file: " << outFile << ".scala\n";

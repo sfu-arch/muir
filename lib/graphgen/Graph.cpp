@@ -2125,9 +2125,9 @@ Graph::printNodeSummary() {
 
     Json::Value _node_phi;
     i = 0;
-    for(auto phi_node : bb->phis()){
-        _node_phi[i] = phi_node->getID();
-        i++;
+    for (auto phi_node : bb->phis()) {
+      _node_phi[i] = phi_node->getID();
+      i++;
     }
     _node_entry["phis"] = _node_phi;
     _root_json["module"]["super_node"].append(_node_entry);
@@ -2144,35 +2144,21 @@ Graph::printNodeSummary() {
     _node_entry["id"]          = node->getInfo().ID;
     _node_entry["debug"]       = "false";
     _node_entry["instruction"] = _node_instruction.c_str();
-    _node_entry["parent_bb"] = node->getParentNode()->getID();
+    _node_entry["parent_bb"]   = node->getParentNode()->getID();
 
-    //Extract instruction type
+    // Extract instruction type
     std::string node_type;
-    switch(node->getType()){
-        case InstructionNode::BinaryInstructionTy:
-            node_type = "Binary";
-            break;
-        case InstructionNode::IcmpInstructionTy:
-            node_type = "Icmp";
-            break;
-        case InstructionNode::BranchInstructionTy:
-            node_type = "Branch";
-            break;
-        case InstructionNode::PhiInstructionTy:
-            node_type = "Phi";
-            break;
-        case InstructionNode::LoadInstructionTy:
-            node_type = "Load";
-            break;
-        case InstructionNode::StoreInstructionTy:
-            node_type = "Store";
-            break;
-        default:
-            node_type = "Uknown";
-            break;
+    switch (node->getType()) {
+      case InstructionNode::BinaryInstructionTy: node_type = "Binary"; break;
+      case InstructionNode::IcmpInstructionTy: node_type = "Icmp"; break;
+      case InstructionNode::BranchInstructionTy: node_type = "Branch"; break;
+      case InstructionNode::PhiInstructionTy: node_type = "Phi"; break;
+      case InstructionNode::LoadInstructionTy: node_type = "Load"; break;
+      case InstructionNode::StoreInstructionTy: node_type = "Store"; break;
+      default: node_type = "Uknown"; break;
     }
 
-    _node_entry["type"]       = node_type;
+    _node_entry["type"] = node_type;
     _root_json["module"]["node"].append(_node_entry);
   }
 
@@ -2184,7 +2170,8 @@ Graph::printNodeSummary() {
     if (loop->getParentLoopNode())
       _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();
 
-    _loop_entry["induction_id"] = loop->getInductionVariable()->getID();
+    if (loop->getInductionVariable())
+      _loop_entry["induction_id"] = loop->getInductionVariable()->getID();
 
 
     // Getting list of blocks
@@ -2196,7 +2183,6 @@ Graph::printNodeSummary() {
     }
 
     _loop_entry["basic_blocks"] = _loop_blocks;
-
 
 
     // Loop carry dependencies

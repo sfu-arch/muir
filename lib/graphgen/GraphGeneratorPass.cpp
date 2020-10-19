@@ -1591,8 +1591,9 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     // Insert loop node
     auto _loop_node = this->dependency_graph->insertLoopNode(std::move(_new_loop));
 
-    _loop_node->setIndeuctionVariable(
-        dyn_cast<InstructionNode>(map_value_node[L->getCanonicalInductionVariable()]));
+    if (L->getCanonicalInductionVariable())
+      _loop_node->setIndeuctionVariable(
+          dyn_cast<InstructionNode>(map_value_node[L->getCanonicalInductionVariable()]));
 
     for (auto& bb : L->blocks()) {
       _loop_node->pushSuperNode(dyn_cast<SuperNode>(map_value_node[bb]));
