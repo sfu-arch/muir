@@ -38,4 +38,4 @@ all: $(SCALA)
 	dot -Tsvg $< -o $@
 
 clean:
-	-rm -f *.bc *.ll *.dot *.scala *~ *.json
+	-rm -f *.bc *.ll *.dot *.scala *~ *.json *.svg
