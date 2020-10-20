@@ -1738,8 +1738,10 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
 
     // Connecting carry values
     for (auto _carry_depen : summary.carry_dependencies) {
-      auto new_carry_depen = _loop_node->insertCarryDepenArgument(
-          _carry_depen.getFirst(), ArgumentNode::CarryDependency);
+      auto new_carry_depen =
+          _loop_node->insertCarryDepenArgument(_carry_depen.getFirst(),
+                                               map_value_node[_carry_depen.getFirst()],
+                                               ArgumentNode::CarryDependency);
       for (auto _use : _carry_depen.getSecond()) {
         loop_edge_map[std::make_pair(_carry_depen.getFirst(), _use)] = new_carry_depen;
       }
@@ -1843,7 +1845,7 @@ GraphGeneratorPass::init(Function& F) {
   dependency_graph->printGraph(PrintType::Scala, config_path);
 
   // Printing muIR graph summary
-  if(this->dump_muir){
+  if (this->dump_muir) {
     dependency_graph->printMUIR();
   }
 }

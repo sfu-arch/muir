@@ -491,7 +491,8 @@ public:
 
   void
   dump() {
-    outs() << info.Name << "\n";
+    // TODO: make dump more informative!
+    outs() << "<NODE>" << info.Name << "\n";
   }
 };
 
@@ -620,22 +621,30 @@ private:
   DataType data_type;
   ContainerNode* parent_call_node;
   llvm::Value* parent_argument;
+  Node* parent_node;
 
 public:
   explicit ArgumentNode(NodeInfo _ni,
                         ArgumentType _arg_type,
                         DataType _d_type,
                         ContainerNode* _call_node = nullptr,
-                        llvm::Value* _arg         = nullptr)
+                        llvm::Value* _arg         = nullptr,
+                        Node* _arg_node           = nullptr)
     : Node(Node::FunctionArgTy, _ni),
       arg_type(_arg_type),
       data_type(_d_type),
       parent_call_node(_call_node),
-      parent_argument(_arg) {}
+      parent_argument(_arg),
+      parent_node(_arg_node) {}
 
   const llvm::Value*
   getArgumentValue() {
     return parent_argument;
+  }
+
+  Node*
+  getParentNode() {
+    return this->parent_node;
   }
 
   // Define classof function so that we can use dyn_cast function
@@ -700,6 +709,7 @@ public:
   ArgumentNode* insertLiveOutArgument(llvm::Value* Value,
                                       ArgumentNode::ArgumentType Type);
   ArgumentNode* insertCarryDepenArgument(llvm::Value* Value,
+                                         Node* _node_val,
                                          ArgumentNode::ArgumentType Type);
 
   Node* findLiveInNode(llvm::Value* _val);

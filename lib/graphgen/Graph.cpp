@@ -2121,7 +2121,7 @@ Graph::printMUIR() {
     _node_entry["name"]  = _name;
     _node_entry["id"]    = bb->getInfo().ID;
     _node_entry["debug"] = "false";
-    _node_entry["child"] = _node_array;
+    _node_entry["nodes"] = _node_array;
 
     Json::Value _node_phi;
     i = 0;
@@ -2148,17 +2148,44 @@ Graph::printMUIR() {
 
     // Extract instruction type
     std::string node_type;
-    switch (node->getType()) {
+    switch (node->getOpCode()) {
       case InstructionNode::BinaryInstructionTy: node_type = "Binary"; break;
       case InstructionNode::IcmpInstructionTy: node_type = "Icmp"; break;
       case InstructionNode::BranchInstructionTy: node_type = "Branch"; break;
       case InstructionNode::PhiInstructionTy: node_type = "Phi"; break;
       case InstructionNode::LoadInstructionTy: node_type = "Load"; break;
       case InstructionNode::StoreInstructionTy: node_type = "Store"; break;
+      case InstructionNode::ReturnInstrunctionTy: node_type = "Return"; break;
       default: node_type = "Uknown"; break;
     }
 
     _node_entry["type"] = node_type;
+
+    Json::Value _node_ops;
+    int i = 0;
+    for (auto operand_node : node->input_data_range()) {
+      if (auto arg_spliter = dyn_cast<ArgumentNode>(operand_node.first)) {
+        if (arg_spliter->getArgType() == ArgumentNode::CarryDependency)
+          _node_ops[i] = arg_spliter->getParentNode()->getID();
+        else {
+          // TODO: change minus one to function arguments
+          _node_ops[i] = -1;
+        }
+        // arg_spliter->getParentNode();
+      } else if (auto const_node = dyn_cast<ConstIntNode>(operand_node.first)) {
+        // TODO: add support for constant
+        continue;
+      } else if (auto const_node = dyn_cast<ConstFPNode>(operand_node.first)) {
+        // TODO: add support for constant
+        continue;
+      } else {
+        _node_ops[i] = operand_node.first->getID();
+      }
+      i++;
+    }
+    _node_entry["operands"] = _node_ops;
+
+
     _root_json["module"]["node"].append(_node_entry);
   }
 
@@ -2169,9 +2196,13 @@ Graph::printMUIR() {
 
     if (loop->getParentLoopNode())
       _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();
+    else
+      _loop_entry["loop_parent"] = Json::Value::null;
 
     if (loop->getInductionVariable())
       _loop_entry["induction_id"] = loop->getInductionVariable()->getID();
+    else
+      _loop_entry["induction_id"] = Json::Value::null;
 
 
     // Getting list of blocks

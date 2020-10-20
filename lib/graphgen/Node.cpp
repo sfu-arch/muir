@@ -812,6 +812,7 @@ ContainerNode::insertLiveOutArgument(llvm::Value* _val,
 
 ArgumentNode*
 ContainerNode::insertCarryDepenArgument(llvm::Value* _val,
+                                        Node* _node_val,
                                         ArgumentNode::ArgumentType _type) {
   ArgumentNode::DataType arg_dtype;
   if (_val->getType()->isPointerTy()) {
@@ -831,7 +832,8 @@ ContainerNode::insertCarryDepenArgument(llvm::Value* _val,
         _type,
         arg_dtype,
         this,
-        _val));
+        _val,
+        _node_val));
 
     ff = std::find_if(carry_depen.begin(), carry_depen.end(), [&_val](auto& arg) -> bool {
       return arg.get()->getArgumentValue() == _val;
@@ -3949,14 +3951,6 @@ std::string
 CallOutNode::printDefinition(PrintType _pt) {
   string _text;
   string _name(this->getName());
-
-  auto make_argument_port = [](const auto& _list, Node::DataType type) {
-    std::vector<uint32_t> _arg_count;
-    for (auto& l : _list) {
-      _arg_count.push_back(DATA_SIZE);
-    }
-    return _arg_count;
-  };
 
   switch (_pt) {
     case PrintType::Scala: {
