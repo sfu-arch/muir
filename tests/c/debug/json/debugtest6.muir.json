@@ -10,11 +10,12 @@
 				],
 				"carries" : 
 				[
-					27,
-					26
+					26,
+					27
 				],
 				"id" : 0,
 				"induction_id" : 16,
+				"loop_parent" : null,
 				"name" : "Loop_0"
 			},
 			{
@@ -28,11 +29,12 @@
 				],
 				"carries" : 
 				[
-					18,
-					12
+					12,
+					18
 				],
 				"id" : 1,
 				"induction_id" : 7,
+				"loop_parent" : null,
 				"name" : "Loop_1"
 			}
 		],
@@ -44,14 +46,22 @@
 				"id" : 0,
 				"instruction" : "  %cmp19 = icmp sgt i32 %n, 0, !dbg !30, !UID !31",
 				"name" : "icmp_cmp190",
+				"operands" : 
+				[
+					-1
+				],
 				"parent_bb" : 1,
-				"type" : "Branch"
+				"type" : "Icmp"
 			},
 			{
 				"debug" : "false",
 				"id" : 1,
 				"instruction" : "  br i1 %cmp19, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !32, !UID !33, !BB_UID !34",
 				"name" : "br_1",
+				"operands" : 
+				[
+					0
+				],
 				"parent_bb" : 1,
 				"type" : "Branch"
 			},
@@ -60,14 +70,19 @@
 				"id" : 2,
 				"instruction" : "  %cmp216 = icmp sgt i32 %m, 0, !UID !35",
 				"name" : "icmp_cmp2162",
+				"operands" : 
+				[
+					-1
+				],
 				"parent_bb" : 4,
-				"type" : "Branch"
+				"type" : "Icmp"
 			},
 			{
 				"debug" : "false",
 				"id" : 3,
 				"instruction" : "  br label %for.body, !dbg !32, !UID !36, !BB_UID !37",
 				"name" : "br_3",
+				"operands" : null,
 				"parent_bb" : 4,
 				"type" : "Branch"
 			},
@@ -76,6 +91,7 @@
 				"id" : 4,
 				"instruction" : "  br label %for.cond.cleanup, !dbg !38",
 				"name" : "br_4",
+				"operands" : null,
 				"parent_bb" : 0,
 				"type" : "Branch"
 			},
@@ -84,38 +100,58 @@
 				"id" : 5,
 				"instruction" : "  %sum.0.lcssa = phi i32 [ 0, %entry ], [ %sum.1.lcssa, %for.cond.cleanup.loopexit ], !UID !39",
 				"name" : "phisum_0_lcssa5",
+				"operands" : 
+				[
+					-1
+				],
 				"parent_bb" : 7,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 9,
 				"instruction" : "  ret i32 %sum.0.lcssa, !dbg !38, !UID !40, !BB_UID !41",
 				"name" : "ret_9",
+				"operands" : 
+				[
+					5
+				],
 				"parent_bb" : 7,
-				"type" : "Branch"
+				"type" : "Return"
 			},
 			{
 				"debug" : "false",
 				"id" : 7,
 				"instruction" : "  %i.021 = phi i32 [ 0, %for.body.lr.ph ], [ %inc7, %for.cond.cleanup3 ], !UID !42",
 				"name" : "phii_0217",
+				"operands" : 
+				[
+					18
+				],
 				"parent_bb" : 10,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 8,
 				"instruction" : "  %sum.020 = phi i32 [ 0, %for.body.lr.ph ], [ %sum.1.lcssa, %for.cond.cleanup3 ], !UID !43",
 				"name" : "phisum_0208",
+				"operands" : 
+				[
+					12
+				],
 				"parent_bb" : 10,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 9,
 				"instruction" : "  br i1 %cmp216, label %for.body4.preheader, label %for.cond.cleanup3, !dbg !45, !UID !46, !BB_UID !47",
 				"name" : "br_9",
+				"operands" : 
+				[
+					-1
+				],
 				"parent_bb" : 10,
 				"type" : "Branch"
 			},
@@ -124,6 +160,7 @@
 				"id" : 10,
 				"instruction" : "  br label %for.body4, !dbg !48, !UID !51, !BB_UID !52",
 				"name" : "br_10",
+				"operands" : null,
 				"parent_bb" : 14,
 				"type" : "Branch"
 			},
@@ -132,6 +169,7 @@
 				"id" : 11,
 				"instruction" : "  br label %for.cond.cleanup3, !dbg !53",
 				"name" : "br_11",
+				"operands" : null,
 				"parent_bb" : 0,
 				"type" : "Branch"
 			},
@@ -140,30 +178,48 @@
 				"id" : 12,
 				"instruction" : "  %sum.1.lcssa = phi i32 [ %sum.020, %for.body ], [ %add5, %for.cond.cleanup3.loopexit ], !UID !54",
 				"name" : "phisum_1_lcssa12",
+				"operands" : 
+				[
+					8,
+					-1
+				],
 				"parent_bb" : 16,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 18,
 				"instruction" : "  %inc7 = add nuw nsw i32 %i.021, 1, !dbg !53, !UID !55",
 				"name" : "binaryOp_inc718",
+				"operands" : 
+				[
+					7
+				],
 				"parent_bb" : 16,
-				"type" : "Branch"
+				"type" : "Binary"
 			},
 			{
 				"debug" : "false",
 				"id" : 14,
 				"instruction" : "  %exitcond23 = icmp eq i32 %inc7, %n, !dbg !30, !UID !56",
 				"name" : "icmp_exitcond2314",
+				"operands" : 
+				[
+					18,
+					-1
+				],
 				"parent_bb" : 16,
-				"type" : "Branch"
+				"type" : "Icmp"
 			},
 			{
 				"debug" : "false",
 				"id" : 15,
 				"instruction" : "  br i1 %exitcond23, label %for.cond.cleanup.loopexit, label %for.body, !dbg !32, !llvm.loop !57, !UID !59, !BB_UID !60",
 				"name" : "br_15",
+				"operands" : 
+				[
+					14
+				],
 				"parent_bb" : 16,
 				"type" : "Branch"
 			},
@@ -172,62 +228,99 @@
 				"id" : 16,
 				"instruction" : "  %j.018 = phi i32 [ %inc, %for.body4 ], [ 0, %for.body4.preheader ], !UID !61",
 				"name" : "phij_01816",
+				"operands" : 
+				[
+					27
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 17,
 				"instruction" : "  %sum.117 = phi i32 [ %add5, %for.body4 ], [ %sum.020, %for.body4.preheader ], !UID !62",
 				"name" : "phisum_11717",
+				"operands" : 
+				[
+					26,
+					-1
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Phi"
 			},
 			{
 				"debug" : "false",
 				"id" : 24,
 				"instruction" : "  %mul = mul nsw i32 %sum.117, %b, !dbg !48, !UID !63",
 				"name" : "binaryOp_mul24",
+				"operands" : 
+				[
+					17,
+					-1
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Binary"
 			},
 			{
 				"debug" : "false",
 				"id" : 25,
 				"instruction" : "  %add = add i32 %sum.117, %a, !dbg !64, !UID !65",
 				"name" : "binaryOp_add25",
+				"operands" : 
+				[
+					17,
+					-1
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Binary"
 			},
 			{
 				"debug" : "false",
 				"id" : 26,
 				"instruction" : "  %add5 = add i32 %add, %mul, !dbg !66, !UID !67",
 				"name" : "binaryOp_add526",
+				"operands" : 
+				[
+					25,
+					24
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Binary"
 			},
 			{
 				"debug" : "false",
 				"id" : 27,
 				"instruction" : "  %inc = add nuw nsw i32 %j.018, 1, !dbg !68, !UID !69",
 				"name" : "binaryOp_inc27",
+				"operands" : 
+				[
+					16
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Binary"
 			},
 			{
 				"debug" : "false",
 				"id" : 22,
 				"instruction" : "  %exitcond = icmp eq i32 %inc, %m, !dbg !70, !UID !71",
 				"name" : "icmp_exitcond22",
+				"operands" : 
+				[
+					27,
+					-1
+				],
 				"parent_bb" : 21,
-				"type" : "Branch"
+				"type" : "Icmp"
 			},
 			{
 				"debug" : "false",
 				"id" : 23,
 				"instruction" : "  br i1 %exitcond, label %for.cond.cleanup3.loopexit, label %for.body4, !dbg !45, !llvm.loop !72, !UID !74, !BB_UID !75",
 				"name" : "br_23",
+				"operands" : 
+				[
+					22
+				],
 				"parent_bb" : 21,
 				"type" : "Branch"
 			}
@@ -235,61 +328,61 @@
 		"super_node" : 
 		[
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 1,
+				"name" : "bb_entry1",
+				"nodes" : 
 				[
 					0,
 					1
 				],
-				"debug" : "false",
-				"id" : 1,
-				"name" : "bb_entry1",
 				"phis" : null
 			},
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 4,
+				"name" : "bb_for_body_lr_ph4",
+				"nodes" : 
 				[
 					2,
 					3
 				],
-				"debug" : "false",
-				"id" : 4,
-				"name" : "bb_for_body_lr_ph4",
 				"phis" : null
 			},
 			{
-				"child" : 
-				[
-					4
-				],
 				"debug" : "false",
 				"id" : 0,
 				"name" : "bb_for_cond_cleanup_loopexit0",
+				"nodes" : 
+				[
+					4
+				],
 				"phis" : null
 			},
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 7,
+				"name" : "bb_for_cond_cleanup7",
+				"nodes" : 
 				[
 					5,
 					9
 				],
-				"debug" : "false",
-				"id" : 7,
-				"name" : "bb_for_cond_cleanup7",
 				"phis" : 
 				[
 					5
 				]
 			},
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 10,
+				"name" : "bb_for_body10",
+				"nodes" : 
 				[
 					7,
 					8,
 					9
 				],
-				"debug" : "false",
-				"id" : 10,
-				"name" : "bb_for_body10",
 				"phis" : 
 				[
 					7,
@@ -297,43 +390,46 @@
 				]
 			},
 			{
-				"child" : 
-				[
-					10
-				],
 				"debug" : "false",
 				"id" : 14,
 				"name" : "bb_for_body4_preheader14",
+				"nodes" : 
+				[
+					10
+				],
 				"phis" : null
 			},
 			{
-				"child" : 
-				[
-					11
-				],
 				"debug" : "false",
 				"id" : 0,
 				"name" : "bb_for_cond_cleanup3_loopexit0",
+				"nodes" : 
+				[
+					11
+				],
 				"phis" : null
 			},
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 16,
+				"name" : "bb_for_cond_cleanup316",
+				"nodes" : 
 				[
 					12,
 					18,
 					14,
 					15
 				],
-				"debug" : "false",
-				"id" : 16,
-				"name" : "bb_for_cond_cleanup316",
 				"phis" : 
 				[
 					12
 				]
 			},
 			{
-				"child" : 
+				"debug" : "false",
+				"id" : 21,
+				"name" : "bb_for_body421",
+				"nodes" : 
 				[
 					16,
 					17,
@@ -344,9 +440,6 @@
 					22,
 					23
 				],
-				"debug" : "false",
-				"id" : 21,
-				"name" : "bb_for_body421",
 				"phis" : 
 				[
 					16,
