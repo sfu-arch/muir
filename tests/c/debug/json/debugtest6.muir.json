@@ -34,7 +34,7 @@
 				],
 				"id" : 1,
 				"induction_id" : 7,
-				"loop_parent" : null,
+				"loop_parent" : 0,
 				"name" : "Loop_1"
 			}
 		],
