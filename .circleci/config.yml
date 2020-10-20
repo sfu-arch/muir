@@ -6,3 +6,4 @@
      steps:
        - checkout
        - run: printf 'y\ny\ny\n' | ./scripts/muir-setup.sh
+       - run: ./build.sh
