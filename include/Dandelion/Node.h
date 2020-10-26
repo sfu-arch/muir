@@ -647,6 +647,11 @@ public:
     return this->parent_node;
   }
 
+  void
+  setParentNode(Node* node) {
+    this->parent_node = node;
+  }
+
   // Define classof function so that we can use dyn_cast function
   static bool
   classof(const Node* T) {
@@ -1983,7 +1988,6 @@ public:
     return T->getType() == Node::ConstIntTy;
   }
 
-  // uint32_t getValue() { return value; }
   int
   getValue() {
     return value;

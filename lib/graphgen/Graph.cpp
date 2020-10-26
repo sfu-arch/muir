@@ -2106,6 +2106,7 @@ Graph::printMUIR() {
 
   _root_json["module"]["name"] = this->graph_info.Name;
 
+  // Printing list of basic blocks
   for (auto& bb : this->super_node_list) {
     Json::Value _node_entry;
     auto _name = bb->getInfo().Name;
@@ -2133,6 +2134,7 @@ Graph::printMUIR() {
     _root_json["module"]["super_node"].append(_node_entry);
   }
 
+  // Printing list of instructions
   for (auto& node : this->inst_list) {
     Json::Value _node_entry;
     auto _name = node->getInfo().Name;
@@ -2161,26 +2163,59 @@ Graph::printMUIR() {
 
     _node_entry["type"] = node_type;
 
+    function<string(Node *)> print_id;
+    print_id = [&print_id](Node* node) -> string {
+      if (auto const_node = dyn_cast<ConstIntNode>(node)) {
+        return "CINT_" + to_string(const_node->getValue());
+      } else if (auto const_node = dyn_cast<ConstFPNode>(node)) {
+        return "CFLOAT_" + to_string(const_node->getValue());
+      } 
+      else if (auto arg_node = dyn_cast<ArgumentNode>(node)) {
+        if (arg_node->getArgType() == ArgumentNode::CarryDependency)
+          return "INST_" + to_string(arg_node->getParentNode()->getID());
+        else if(arg_node->getArgType() == ArgumentNode::LiveIn){
+            return "ARG_" + arg_node->getName();
+        }
+        else if(arg_node->getArgType() == ArgumentNode::LoopLiveIn){
+            errs() << "Node name: " << arg_node->getName() << "\n";
+            errs() << "Argtype name: " << arg_node->getArgType() << "\n";
+            errs() << "PARENT: " << arg_node->getParentNode()->getName() << "\n";
+            return print_id(arg_node->getParentNode());
+            //return "CCC";
+        }
+        else if(arg_node->getArgType() == ArgumentNode::LoopLiveOut) {
+          return "INST_" + arg_node->getParentNode()->getName();
+        }
+        else{
+            errs() << "Node name: " << arg_node->getName() << "\n";
+            assert(!"Unhandel node!");
+        }
+      } else {
+        return "INS_" + to_string(node->getID());
+      }
+    };
+
     Json::Value _node_ops;
     int i = 0;
     for (auto operand_node : node->input_data_range()) {
-      if (auto arg_spliter = dyn_cast<ArgumentNode>(operand_node.first)) {
-        if (arg_spliter->getArgType() == ArgumentNode::CarryDependency)
-          _node_ops[i] = arg_spliter->getParentNode()->getID();
-        else {
-          // TODO: change minus one to function arguments
-          _node_ops[i] = -1;
-        }
-        // arg_spliter->getParentNode();
-      } else if (auto const_node = dyn_cast<ConstIntNode>(operand_node.first)) {
-        // TODO: add support for constant
-        continue;
-      } else if (auto const_node = dyn_cast<ConstFPNode>(operand_node.first)) {
-        // TODO: add support for constant
-        continue;
-      } else {
-        _node_ops[i] = operand_node.first->getID();
-      }
+      _node_ops[i] = print_id(operand_node.first);
+      // if (auto arg_spliter = dyn_cast<ArgumentNode>(operand_node.first)) {
+      // if (arg_spliter->getArgType() == ArgumentNode::CarryDependency)
+      //_node_ops[i] = to_string(arg_spliter->getParentNode()->getID());
+      // else {
+      //// TODO: change minus one to function arguments
+      //_node_ops[i] = print_id(arg_spliter);
+      //}
+      //// arg_spliter->getParentNode();
+      //} else if (auto const_node = dyn_cast<ConstIntNode>(operand_node.first)) {
+      //// TODO: add support for constant
+      //_node_ops[i] = "C_" + to_string(const_node->getValue());
+      //} else if (auto const_node = dyn_cast<ConstFPNode>(operand_node.first)) {
+      //// TODO: add support for constant
+      //_node_ops[i] = "F_" + to_string(const_node->getValue());
+      //} else {
+      //_node_ops[i] = "INS_" + to_string(operand_node.first->getID());
+      //}
       i++;
     }
     _node_entry["operands"] = _node_ops;
@@ -2189,10 +2224,11 @@ Graph::printMUIR() {
     _root_json["module"]["node"].append(_node_entry);
   }
 
+  // Printing list of nodes
   for (auto& loop : this->loops()) {
     Json::Value _loop_entry;
     _loop_entry["name"] = loop->getName();
-    _loop_entry["id"]   = loop->getID();
+    _loop_entry["id"]   = to_string(loop->getID());
 
     if (loop->getParentLoopNode())
       _loop_entry["loop_parent"] = loop->getParentLoopNode()->getID();

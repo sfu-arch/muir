@@ -176,6 +176,8 @@ UpdateLiveInConnections(Loop* _loop,
           auto _src = map_value_node[_value];
           auto _tar = map_value_node[&I];
 
+          new_live_in->setParentNode(_tar);
+
           // TODO later we need to get ride of these lines
           if (auto call_out = dyn_cast<CallNode>(_tar))
             _tar = call_out->getCallOut();
@@ -220,6 +222,8 @@ UpdateLiveOutConnections(Loop* _loop,
           auto _src = map_value_node[&I];
           auto _tar = map_value_node[U];
 
+          new_live_out->setParentNode(_tar);
+
           // TODO later we need to get ride of these lines
           if (auto call_out = dyn_cast<CallNode>(_tar))
             _tar = call_out->getCallOut();
@@ -255,6 +259,7 @@ UpdateInnerLiveInConnections(Loop* _loop,
           // TODO: This part needs to be re-thinked!
           auto new_live_in =
               _loop_node->insertLiveInArgument(_value, ArgumentNode::LoopLiveIn);
+          new_live_in->setParentNode(map_value_node[_value]);
 
           Node* _src = nullptr;
           if (_parent_loop_node->findLiveInNode(_value) == nullptr)
@@ -307,6 +312,8 @@ UpdateInnerLiveOutConnections(Loop* _loop,
 
           auto _src = map_value_node[&I];
           auto _tar = map_value_node[U];
+
+          new_live_out->setParentNode(_tar);
 
           // auto _tar = _parent_loop_node->findLiveOut(U);
           // Node * _tar = nullptr;
@@ -1670,8 +1677,10 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     // Edge type 1
     for (auto _live_in : summary.live_in_in_ins) {
       auto _node = _loop_node->findLiveInNode(_live_in);
-      if (_node == nullptr)
+      if (_node == nullptr){
         _node = _loop_node->insertLiveInArgument(_live_in, ArgumentNode::LoopLiveIn);
+        dyn_cast<ArgumentNode>(_node)->setParentNode(map_value_node[_live_in]);
+      }
 
       live_in_ins_loop_edge[_live_in].insert(L);
     }
@@ -1679,13 +1688,15 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     for (auto _live_in : summary.live_in_out_loop) {
       auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
       if (_node == nullptr) {
-        _loop_node->insertLiveInArgument(_live_in.getFirst(), ArgumentNode::LoopLiveIn);
+        auto new_loop_live_in = _loop_node->insertLiveInArgument(_live_in.getFirst(), ArgumentNode::LoopLiveIn);
+        new_loop_live_in->setParentNode(map_value_node[_live_in.getFirst()]);
       }
       for (auto _loop_in : _live_in.getSecond()) {
         auto _tmp = this->loop_value_node[_loop_in]->findLiveInNode(_live_in.getFirst());
         if (_tmp == nullptr) {
-          this->loop_value_node[_loop_in]->insertLiveInArgument(_live_in.getFirst(),
+          auto new_loop_live_in =  this->loop_value_node[_loop_in]->insertLiveInArgument(_live_in.getFirst(),
                                                                 ArgumentNode::LoopLiveIn);
+            new_loop_live_in->setParentNode(map_value_node[_live_in.getFirst()]);
         }
 
         live_in_loop_loop_edge[_live_in.getFirst()].insert(std::make_pair(L, _loop_in));
@@ -1706,6 +1717,8 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
       if (_new_live_out_node == nullptr) {
         _new_live_out_node =
             _loop_node->insertLiveOutArgument(_live_out, ArgumentNode::LoopLiveOut);
+        dyn_cast<ArgumentNode>(_new_live_out_node)
+            ->setParentNode(map_value_node[_live_out]);
       }
 
       live_out_ins_loop_edge[_live_out].insert(L);
@@ -1715,8 +1728,10 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     for (auto _live_out : summary.live_out_in_loop) {
       auto _node = _loop_node->findLiveOutNode(_live_out.getFirst());
       if (_node == nullptr) {
-        _loop_node->insertLiveOutArgument(_live_out.getFirst(),
+        auto _new_live_out_node = _loop_node->insertLiveOutArgument(_live_out.getFirst(),
                                           ArgumentNode::LoopLiveOut);
+        dyn_cast<ArgumentNode>(_new_live_out_node)
+            ->setParentNode(map_value_node[_live_out.getFirst()]);
       }
       for (auto _n : _live_out.getSecond()) {
         auto _tmp = this->loop_value_node[_n]->findLiveOutNode(_live_out.getFirst());
