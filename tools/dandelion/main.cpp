@@ -559,6 +559,7 @@ runGraphGen(Module& M, string file_name) {
   // pm.add(createAAResultsWrapperPass());
   // pm.add(new aew::AliasEdgeWriter());
 
+  pm.add(new debuginfo::DebugInfo(file_name, false));
   pm.add((llvm::createStripDeadDebugInfoPass()));
   pm.add(new helpers::GepInformation(file_name));
   pm.add(new graphgen::GraphGeneratorPass(NodeInfo(0, file_name), out, dump_muir.getValue()));

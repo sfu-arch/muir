@@ -1276,6 +1276,8 @@ public:
 
   llvm::Instruction* getInstruction();
 
+  std::vector<int> debug_parent_node;
+
   void
   setParentNode(SuperNode* parent) {
     this->parent_node = parent;

@@ -1385,9 +1385,9 @@ Graph::insertStoreNode(StoreInst& I) {
 InstructionNode*
 Graph::insertCallNode(CallInst& I) {
   // if (I.getName().str() == "")
-  auto uid         = getUID(&I);
-  inst_list.push_back(std::make_unique<CallNode>(
-      NodeInfo(uid, "call_" + std::to_string(uid)), &I));
+  auto uid = getUID(&I);
+  inst_list.push_back(
+      std::make_unique<CallNode>(NodeInfo(uid, "call_" + std::to_string(uid)), &I));
   // else
   // inst_list.push_back(std::make_unique<CallNode>(
   // NodeInfo(inst_list.size(), I.getName().str()), &I));
@@ -1595,11 +1595,9 @@ Graph::insertSTIoFPNode(SIToFPInst& I) {
  */
 InstructionNode*
 Graph::insertFPToUINode(FPToUIInst& I) {
-  auto uid         = getUID(&I);
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<FPToUINode>(
-      NodeInfo(uid,
-               "stiofp" + I.getName().str() + to_string(uid)),
-      &I));
+      NodeInfo(uid, "stiofp" + I.getName().str() + to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -2175,7 +2173,7 @@ Graph::printMUIR() {
         } else if (arg_node->getArgType() == ArgumentNode::LoopLiveIn) {
           return print_id(arg_node->getParentNode());
         } else if (arg_node->getArgType() == ArgumentNode::LoopLiveOut) {
-          return "INST_" + arg_node->getParentNode()->getName();
+          return "INST_" + to_string(arg_node->getParentNode()->getID());
         } else {
           errs() << "Node name: " << arg_node->getName() << "\n";
           assert(!"Unhandel node!");
@@ -2192,6 +2190,15 @@ Graph::printMUIR() {
       i++;
     }
     _node_entry["operands"] = _node_ops;
+
+
+    Json::Value _node_debug_parent;
+    i = 0;
+    for (auto _d_parent : node->debug_parent_node) {
+      _node_debug_parent[i] = _d_parent;
+      i++;
+    }
+    _node_entry["debug_parent_info"] = _node_debug_parent;
 
 
     _root_json["module"]["node"].append(_node_entry);
@@ -2241,6 +2248,25 @@ Graph::printMUIR() {
 
     _root_json["module"]["loop"].append(_loop_entry);
   }
+
+
+  Json::Value _arg_entry;
+  for (auto& _arg : this->getSplitCall()->live_in_vals_lists()) {
+    _arg_entry["name"] = _arg->getName();
+    _arg_entry["id"]   = to_string(_arg->getID());
+    _arg_entry["type"] = "Value";
+
+    _root_json["module"]["argument"].append(_arg_entry);
+  }
+
+  for (auto& _arg : this->getSplitCall()->live_in_ptrs_lists()) {
+    _arg_entry["name"] = _arg->getName();
+    _arg_entry["id"]   = to_string(_arg->getID());
+    _arg_entry["type"] = "Pointers";
+
+    _root_json["module"]["argument"].append(_arg_entry);
+  }
+
 
   _out_file << _root_json;
   _out_file.close();

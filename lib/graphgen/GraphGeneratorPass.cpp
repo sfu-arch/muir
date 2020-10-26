@@ -1677,7 +1677,7 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     // Edge type 1
     for (auto _live_in : summary.live_in_in_ins) {
       auto _node = _loop_node->findLiveInNode(_live_in);
-      if (_node == nullptr){
+      if (_node == nullptr) {
         _node = _loop_node->insertLiveInArgument(_live_in, ArgumentNode::LoopLiveIn);
         dyn_cast<ArgumentNode>(_node)->setParentNode(map_value_node[_live_in]);
       }
@@ -1688,15 +1688,16 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     for (auto _live_in : summary.live_in_out_loop) {
       auto _node = _loop_node->findLiveInNode(_live_in.getFirst());
       if (_node == nullptr) {
-        auto new_loop_live_in = _loop_node->insertLiveInArgument(_live_in.getFirst(), ArgumentNode::LoopLiveIn);
+        auto new_loop_live_in = _loop_node->insertLiveInArgument(
+            _live_in.getFirst(), ArgumentNode::LoopLiveIn);
         new_loop_live_in->setParentNode(map_value_node[_live_in.getFirst()]);
       }
       for (auto _loop_in : _live_in.getSecond()) {
         auto _tmp = this->loop_value_node[_loop_in]->findLiveInNode(_live_in.getFirst());
         if (_tmp == nullptr) {
-          auto new_loop_live_in =  this->loop_value_node[_loop_in]->insertLiveInArgument(_live_in.getFirst(),
-                                                                ArgumentNode::LoopLiveIn);
-            new_loop_live_in->setParentNode(map_value_node[_live_in.getFirst()]);
+          auto new_loop_live_in = this->loop_value_node[_loop_in]->insertLiveInArgument(
+              _live_in.getFirst(), ArgumentNode::LoopLiveIn);
+          new_loop_live_in->setParentNode(map_value_node[_live_in.getFirst()]);
         }
 
         live_in_loop_loop_edge[_live_in.getFirst()].insert(std::make_pair(L, _loop_in));
@@ -1728,8 +1729,8 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
     for (auto _live_out : summary.live_out_in_loop) {
       auto _node = _loop_node->findLiveOutNode(_live_out.getFirst());
       if (_node == nullptr) {
-        auto _new_live_out_node = _loop_node->insertLiveOutArgument(_live_out.getFirst(),
-                                          ArgumentNode::LoopLiveOut);
+        auto _new_live_out_node = _loop_node->insertLiveOutArgument(
+            _live_out.getFirst(), ArgumentNode::LoopLiveOut);
         dyn_cast<ArgumentNode>(_new_live_out_node)
             ->setParentNode(map_value_node[_live_out.getFirst()]);
       }
@@ -1889,11 +1890,32 @@ GraphGeneratorPass::runOnModule(Module& M) {
 
       } while (hasLoop);
 
-      // stripDebugInfo(F);
       visit(F);
+
+
+      //Injecting debug infos
+      auto& debug_info_pass = getAnalysis<debuginfo::DebugInfo>();
+      for (auto& bb : F) {
+        for (auto& ins : bb) {
+          auto inst_node_find = map_value_node.find(&ins);
+          if (inst_node_find != map_value_node.end()) {
+            auto inst_node = dyn_cast<InstructionNode>(inst_node_find->second);
+
+            outs() << "name: " << ins.getName() << "\n";
+            for (auto val : debug_info_pass.node_operands[&ins]) {
+              inst_node->debug_parent_node.push_back(val);
+              outs() << "\t" << val << "\n";
+            }
+          }
+        }
+      }
+
+
       init(F);
     }
+
   }
+
 
   return false;
 }

@@ -52,6 +52,10 @@ void LabelUID::visitGeneric(string S, T &IT) {
 void LabelUID::visitFunction(Function &F) {
     if (F.isDeclaration()) return;
     visitGeneric<Function>("UID", F);
+
+    for(auto &argument : F.args()){
+        visitGeneric<Function>("ARGID_" + argument.getName().str(), F);
+    }
 }
 
 void LabelUID::visitInstruction(Instruction &I) {

@@ -121,7 +121,7 @@ static void extractLoops(Module &m) {
 
 static void debugPass(Module &m) {
     legacy::PassManager pm;
-    pm.add(new DebugInfo(fn_name.getValue(), node_id.getValue()));
+    pm.add(new DebugInfo(fn_name.getValue(), &node_id.getValue()));
     pm.add(createVerifierPass());
     pm.run(m);
 }

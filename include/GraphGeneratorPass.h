@@ -24,6 +24,7 @@
 #include "Dandelion/Edge.h"
 #include "Dandelion/Graph.h"
 #include "Dandelion/Node.h"
+#include "DebugInfo.h"
 
 #include <map>
 #include <queue>
@@ -248,6 +249,7 @@ public:
     // AU.addRequired<aew::AliasEdgeWriter>();
     AU.addRequired<llvm::LoopInfoWrapperPass>();
     AU.addRequired<helpers::GepInformation>();
+    AU.addRequired<debuginfo::DebugInfo>();
     // AU.addRequired<loopclouser::LoopClouser>();
     AU.setPreservesAll();
   }

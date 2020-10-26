@@ -19,20 +19,30 @@
 namespace debuginfo {
 
 struct DebugInfo : public llvm::ModulePass {
-    static char ID;
+  static char ID;
 
-    std::map<llvm::Instruction *, llvm::BasicBlock *> inst_bb;
-    std::map<llvm::Instruction *, std::vector<uint32_t>> node_operands;
+  std::map<llvm::Instruction*, llvm::BasicBlock*> inst_bb;
+  std::map<llvm::Instruction*, std::vector<uint32_t>> node_operands;
 
-    std::string function_name;
-    uint32_t node_id;
+  std::string function_name;
+  int node_id;
 
-    DebugInfo(std::string function_name, uint32_t id)
-        : llvm::ModulePass(ID), function_name(function_name), node_id(id) {}
+  bool print_values;
 
-    bool runOnModule(llvm::Module &m) override;
-    bool doFinalization(llvm::Module &M) override;
+  DebugInfo(std::string function_name, uint32_t id)
+    : llvm::ModulePass(ID),
+      function_name(function_name),
+      node_id(id),
+      print_values(false) {}
 
+  DebugInfo(std::string function_name, bool print_verbose)
+    : llvm::ModulePass(ID),
+      function_name(function_name),
+      node_id(-1),
+      print_values(print_verbose) {}
+
+  bool runOnModule(llvm::Module& m) override;
+  bool doFinalization(llvm::Module& M) override;
 };
 
 }  // namespace debuginfo
