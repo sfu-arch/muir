@@ -545,12 +545,11 @@ runGraphGen(Module& M, string file_name) {
   pm.add(new llvm::AssumptionCacheTracker());
   // pm.add(createBreakCriticalEdgesPass());
   // pm.add(createLoopSimplifyPass());
-  pm.add(createLoopSimplifyPass());
+  //pm.add(createLoopSimplifyPass());
   // pm.add(llvm::createCFGSimplificationPass());
   pm.add(new LoopInfoWrapperPass());
   pm.add(new DominatorTreeWrapperPass());
   // pm.add(new loopclouser::LoopClouser());
-
   // pm.add(createBasicAAWrapperPass());
   // pm.add(llvm::createTypeBasedAAWrapperPass());
   // pm.add(createGlobalsAAWrapperPass());
@@ -601,6 +600,24 @@ labelFunctions(Module& M) {
   }
 }
 
+
+/**
+ * Function lists
+ */
+static void
+runPreOptimizations(Module& M) {
+  legacy::PassManager pm;
+  //pm.add(new llvm::AssumptionCacheTracker());
+  pm.add(createLoopSimplifyPass());
+  //pm.add(new LoopInfoWrapperPass());
+  //pm.add(new DominatorTreeWrapperPass());
+  pm.add((llvm::createStripDeadDebugInfoPass()));
+  pm.add(createVerifierPass());
+  pm.run(M);
+}
+
+
+
 int
 main(int argc, char** argv) {
   // This boilerplate provides convenient stack traces and clean LLVM exit
@@ -631,6 +648,7 @@ main(int argc, char** argv) {
       splitGeps(F);
   }
 
+  runPreOptimizations(*module);
   labelFunctions(*module);
 
   for (auto& F : *module) {

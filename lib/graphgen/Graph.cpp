@@ -1176,10 +1176,9 @@ Graph::insertIcmpOperatorNode(ICmpInst& I) {
  */
 InstructionNode*
 Graph::insertBranchNode(BranchInst& I) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<BranchNode>(
-      NodeInfo(inst_list.size(),
-               "br_" + I.getName().str() + std::to_string(inst_list.size())),
-      &I));
+      NodeInfo(uid, "br_" + I.getName().str() + std::to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -1211,24 +1210,23 @@ Graph::insertPhiNode(PHINode& I) {
     }
   }
 
+  auto uid = getUID(&I);
+
   if (I.getType()->isPointerTy()) {
     inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(),
-                 "phi" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid, "phi" + I.getName().str() + to_string(uid)),
         Node::DataType::PointerType,
         reverse,
         &I));
   } else if (I.getType()->isIntegerTy()) {
     inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(),
-                 "phi" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid, "phi" + I.getName().str() + to_string(uid)),
         Node::DataType::IntegerType,
         reverse,
         &I));
   } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
     inst_list.push_back(std::make_unique<PhiSelectNode>(
-        NodeInfo(inst_list.size(),
-                 "phi" + I.getName().str() + to_string(inst_list.size())),
+        NodeInfo(uid, "phi" + I.getName().str() + to_string(uid)),
         Node::DataType::FloatType,
         reverse,
         &I));
@@ -1244,10 +1242,9 @@ Graph::insertPhiNode(PHINode& I) {
  */
 InstructionNode*
 Graph::insertSelectNode(SelectInst& I) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<SelectNode>(
-      NodeInfo(inst_list.size(),
-               "select_" + I.getName().str() + to_string(inst_list.size())),
-      &I));
+      NodeInfo(uid, "select_" + I.getName().str() + to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -1260,9 +1257,9 @@ Graph::insertSelectNode(SelectInst& I) {
  */
 AllocaNode*
 Graph::insertAllocaNode(AllocaInst& I, uint32_t size, uint32_t num_byte) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<AllocaNode>(
-      NodeInfo(inst_list.size(),
-               "alloca_" + I.getName().str() + to_string(inst_list.size())),
+      NodeInfo(uid, "alloca_" + I.getName().str() + to_string(uid)),
       AllocaNode::DataType::PointerType,
       num_byte,
       size,
@@ -1280,9 +1277,9 @@ Graph::insertAllocaNode(AllocaInst& I, uint32_t size, uint32_t num_byte) {
  */
 InstructionNode*
 Graph::insertGepNode(GetElementPtrInst& I, GepInfo _info) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<GepNode>(
-      NodeInfo(inst_list.size(),
-               "Gep_" + I.getName().str() + to_string(inst_list.size())),
+      NodeInfo(uid, "Gep_" + I.getName().str() + to_string(uid)),
       BinaryOperatorNode::DataType::PointerType,
       _info,
       &I));
@@ -1295,10 +1292,9 @@ Graph::insertGepNode(GetElementPtrInst& I, GepInfo _info) {
 
 InstructionNode*
 Graph::insertBitcastNode(BitCastInst& I) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<BitcastNode>(
-      NodeInfo(inst_list.size(),
-               "bitcast_" + I.getName().str() + to_string(inst_list.size())),
-      &I));
+      NodeInfo(uid, "bitcast_" + I.getName().str() + to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -1312,37 +1308,38 @@ Graph::insertBitcastNode(BitCastInst& I) {
 InstructionNode*
 Graph::insertLoadNode(LoadInst& I) {
   auto _load_list = getNodeList<LoadNode>(this);
+  auto uid        = getUID(&I);
   if (I.getType()->isIntegerTy()) {
-    inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        Node::DataType::IntegerType,
-        &I,
-        this->getMemoryUnit()));
+    inst_list.push_back(
+        std::make_unique<LoadNode>(NodeInfo(uid, "ld_" + std::to_string(uid)),
+                                   Node::DataType::IntegerType,
+                                   &I,
+                                   this->getMemoryUnit()));
   } else if (I.getType()->isPointerTy()) {
-    inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        Node::DataType::PointerType,
-        &I,
-        this->getMemoryUnit()));
+    inst_list.push_back(
+        std::make_unique<LoadNode>(NodeInfo(uid, "ld_" + std::to_string(uid)),
+                                   Node::DataType::PointerType,
+                                   &I,
+                                   this->getMemoryUnit()));
   } else if (I.getType()->isFloatTy() || I.getType()->isDoubleTy()) {
-    inst_list.push_back(std::make_unique<LoadNode>(
-        NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-        Node::DataType::FloatType,
-        &I,
-        this->getMemoryUnit()));
+    inst_list.push_back(
+        std::make_unique<LoadNode>(NodeInfo(uid, "ld_" + std::to_string(uid)),
+                                   Node::DataType::FloatType,
+                                   &I,
+                                   this->getMemoryUnit()));
   } else if (I.getType()->isArrayTy()) {
     if (I.getType()->getArrayElementType()->isIntegerTy()) {
-      inst_list.push_back(std::make_unique<LoadNode>(
-          NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-          Node::DataType::IntegerType,
-          &I,
-          this->getMemoryUnit()));
+      inst_list.push_back(
+          std::make_unique<LoadNode>(NodeInfo(uid, "ld_" + std::to_string(uid)),
+                                     Node::DataType::IntegerType,
+                                     &I,
+                                     this->getMemoryUnit()));
     } else if (I.getType()->getArrayElementType()->isFloatTy()) {
-      inst_list.push_back(std::make_unique<LoadNode>(
-          NodeInfo(inst_list.size(), "ld_" + std::to_string(inst_list.size())),
-          Node::DataType::FloatType,
-          &I,
-          this->getMemoryUnit()));
+      inst_list.push_back(
+          std::make_unique<LoadNode>(NodeInfo(uid, "ld_" + std::to_string(uid)),
+                                     Node::DataType::FloatType,
+                                     &I,
+                                     this->getMemoryUnit()));
     } else {
       I.getType()->getArrayElementType()->dump();
       assert(!"Uncatched array type for load nodes");
@@ -1371,11 +1368,10 @@ Graph::insertLoadNode(LoadInst& I) {
  */
 InstructionNode*
 Graph::insertStoreNode(StoreInst& I) {
+  auto uid         = getUID(&I);
   auto _store_list = getNodeList<StoreNode>(this);
   inst_list.push_back(std::make_unique<StoreNode>(
-      NodeInfo(inst_list.size(), "st_" + std::to_string(inst_list.size())),
-      &I,
-      this->getMemoryUnit()));
+      NodeInfo(uid, "st_" + std::to_string(uid)), &I, this->getMemoryUnit()));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -1389,8 +1385,9 @@ Graph::insertStoreNode(StoreInst& I) {
 InstructionNode*
 Graph::insertCallNode(CallInst& I) {
   // if (I.getName().str() == "")
+  auto uid         = getUID(&I);
   inst_list.push_back(std::make_unique<CallNode>(
-      NodeInfo(inst_list.size(), "call_" + std::to_string(inst_list.size())), &I));
+      NodeInfo(uid, "call_" + std::to_string(uid)), &I));
   // else
   // inst_list.push_back(std::make_unique<CallNode>(
   // NodeInfo(inst_list.size(), I.getName().str()), &I));
@@ -1598,9 +1595,10 @@ Graph::insertSTIoFPNode(SIToFPInst& I) {
  */
 InstructionNode*
 Graph::insertFPToUINode(FPToUIInst& I) {
+  auto uid         = getUID(&I);
   inst_list.push_back(std::make_unique<FPToUINode>(
-      NodeInfo(inst_list.size(),
-               "stiofp" + I.getName().str() + to_string(inst_list.size())),
+      NodeInfo(uid,
+               "stiofp" + I.getName().str() + to_string(uid)),
       &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
@@ -2163,32 +2161,24 @@ Graph::printMUIR() {
 
     _node_entry["type"] = node_type;
 
-    function<string(Node *)> print_id;
+    function<string(Node*)> print_id;
     print_id = [&print_id](Node* node) -> string {
       if (auto const_node = dyn_cast<ConstIntNode>(node)) {
         return "CINT_" + to_string(const_node->getValue());
       } else if (auto const_node = dyn_cast<ConstFPNode>(node)) {
         return "CFLOAT_" + to_string(const_node->getValue());
-      } 
-      else if (auto arg_node = dyn_cast<ArgumentNode>(node)) {
+      } else if (auto arg_node = dyn_cast<ArgumentNode>(node)) {
         if (arg_node->getArgType() == ArgumentNode::CarryDependency)
           return "INST_" + to_string(arg_node->getParentNode()->getID());
-        else if(arg_node->getArgType() == ArgumentNode::LiveIn){
-            return "ARG_" + arg_node->getName();
-        }
-        else if(arg_node->getArgType() == ArgumentNode::LoopLiveIn){
-            errs() << "Node name: " << arg_node->getName() << "\n";
-            errs() << "Argtype name: " << arg_node->getArgType() << "\n";
-            errs() << "PARENT: " << arg_node->getParentNode()->getName() << "\n";
-            return print_id(arg_node->getParentNode());
-            //return "CCC";
-        }
-        else if(arg_node->getArgType() == ArgumentNode::LoopLiveOut) {
+        else if (arg_node->getArgType() == ArgumentNode::LiveIn) {
+          return "ARG_" + arg_node->getName();
+        } else if (arg_node->getArgType() == ArgumentNode::LoopLiveIn) {
+          return print_id(arg_node->getParentNode());
+        } else if (arg_node->getArgType() == ArgumentNode::LoopLiveOut) {
           return "INST_" + arg_node->getParentNode()->getName();
-        }
-        else{
-            errs() << "Node name: " << arg_node->getName() << "\n";
-            assert(!"Unhandel node!");
+        } else {
+          errs() << "Node name: " << arg_node->getName() << "\n";
+          assert(!"Unhandel node!");
         }
       } else {
         return "INS_" + to_string(node->getID());
@@ -2199,23 +2189,6 @@ Graph::printMUIR() {
     int i = 0;
     for (auto operand_node : node->input_data_range()) {
       _node_ops[i] = print_id(operand_node.first);
-      // if (auto arg_spliter = dyn_cast<ArgumentNode>(operand_node.first)) {
-      // if (arg_spliter->getArgType() == ArgumentNode::CarryDependency)
-      //_node_ops[i] = to_string(arg_spliter->getParentNode()->getID());
-      // else {
-      //// TODO: change minus one to function arguments
-      //_node_ops[i] = print_id(arg_spliter);
-      //}
-      //// arg_spliter->getParentNode();
-      //} else if (auto const_node = dyn_cast<ConstIntNode>(operand_node.first)) {
-      //// TODO: add support for constant
-      //_node_ops[i] = "C_" + to_string(const_node->getValue());
-      //} else if (auto const_node = dyn_cast<ConstFPNode>(operand_node.first)) {
-      //// TODO: add support for constant
-      //_node_ops[i] = "F_" + to_string(const_node->getValue());
-      //} else {
-      //_node_ops[i] = "INS_" + to_string(operand_node.first->getID());
-      //}
       i++;
     }
     _node_entry["operands"] = _node_ops;
