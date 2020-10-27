@@ -1901,10 +1901,8 @@ GraphGeneratorPass::runOnModule(Module& M) {
           if (inst_node_find != map_value_node.end()) {
             auto inst_node = dyn_cast<InstructionNode>(inst_node_find->second);
 
-            outs() << "name: " << ins.getName() << "\n";
             for (auto val : debug_info_pass.node_operands[&ins]) {
               inst_node->debug_parent_node.push_back(val);
-              outs() << "\t" << val << "\n";
             }
           }
         }

@@ -2169,7 +2169,7 @@ Graph::printMUIR() {
         if (arg_node->getArgType() == ArgumentNode::CarryDependency)
           return "INST_" + to_string(arg_node->getParentNode()->getID());
         else if (arg_node->getArgType() == ArgumentNode::LiveIn) {
-          return "ARG_" + arg_node->getName();
+          return "ARG_" + to_string(arg_node->getID());
         } else if (arg_node->getArgType() == ArgumentNode::LoopLiveIn) {
           return print_id(arg_node->getParentNode());
         } else if (arg_node->getArgType() == ArgumentNode::LoopLiveOut) {
