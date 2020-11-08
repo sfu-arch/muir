@@ -63,7 +63,6 @@ void conv2d(int32_t* mat, int32_t* res,
       int32_t val = 0;
       for(int y = 0; y <= 2*R; ++y) {
           for(int x = 0; x <= 2*R; ++x){
-            printf("val: %d, coeffs: %d, mat: %d\n", val, coeffs[c], mat[index2 + i + (x-2)]);
             val += coeffs[c++] * mat[index2 + i + (x - 2)];
           }
         index2 += W;
