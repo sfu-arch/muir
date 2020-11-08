@@ -76,10 +76,6 @@ void conv2d(int32_t* mat, int32_t* res,
 int main(){
   test_setup();
   conv2d(img_in, img_out, coeffs, IMG_SIZE, IMG_SIZE, 5, 8);
-  if(test_check())
-      printf("OK!\n");
-  else
-      printf("WRONG!\n");
 
   return 0;
 

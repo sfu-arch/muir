@@ -746,10 +746,16 @@ GraphGeneratorPass::visitCallInst(llvm::CallInst& I) {
     auto called =
         dyn_cast<Function>(CallSite(_call).getCalledValue()->stripPointerCasts());
     if (!called) {
+      I.dump();
       assert(!"Function pointer is not supported, please consider to remove the function pointers");
     }
-    if (called->isDeclaration())
+    if (called->isDeclaration()){
+      //skip debug intrinsics
+      if(called->getName().contains_lower("llvm.dbg.value"))
+          return;
+      I.dump();
       assert(!"Library function call is not supported");
+    }
   }
 
   map_value_node[&I] = this->dependency_graph->insertCallNode(I);

@@ -32,7 +32,7 @@ all: $(SCALA)
 	$(DIS) $<
 
 %.scala: %.ll
-	$(DANDELION) -fn-name=$* -config=$(DANDELION_CONFIG) $< -o $*
+	$(DANDELION) -fn-name=$* -config=$(DANDELION_CONFIG) -verbose -dump-muir $< -o $*
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
