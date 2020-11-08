@@ -1507,6 +1507,16 @@ GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo& loop_info) {
       }
     }
   }
+
+
+  // Setting parent loops
+  for (auto& L : getLoops(loop_info)) {
+    auto _loop_node = loop_value_node[&*L];
+    if (auto _parent_loop = L->getParentLoop()) {
+      outs() << "FIND PARENT\n";
+      _loop_node->setParentLoop(loop_value_node[_parent_loop]);
+    }
+  }
 }
 
 void
@@ -1763,6 +1773,15 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
       }
     }
   }
+
+  // Setting parent loops
+  for (auto& L : getLoops(loop_info)) {
+    auto _loop_node = loop_value_node[&*L];
+    if (auto _parent_loop = L->getParentLoop()) {
+      outs() << "FIND PARENT\n";
+      _loop_node->setParentLoop(loop_value_node[_parent_loop]);
+    }
+  }
 }
 
 void
@@ -1893,7 +1912,7 @@ GraphGeneratorPass::runOnModule(Module& M) {
       visit(F);
 
 
-      //Injecting debug infos
+      // Injecting debug infos
       auto& debug_info_pass = getAnalysis<debuginfo::DebugInfo>();
       for (auto& bb : F) {
         for (auto& ins : bb) {
@@ -1911,7 +1930,6 @@ GraphGeneratorPass::runOnModule(Module& M) {
 
       init(F);
     }
-
   }
 
 

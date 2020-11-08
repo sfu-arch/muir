@@ -1016,6 +1016,12 @@ public:
     return parent_loop;
   }
 
+  void
+  setParentLoop(LoopNode* parent) {
+    this->parent_loop = parent;
+  }
+
+
   auto
   getInductionVariable() {
     return this->induction_variable;
