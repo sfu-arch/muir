@@ -1513,7 +1513,6 @@ GraphGeneratorPass::updateLoopDependencies(llvm::LoopInfo& loop_info) {
   for (auto& L : getLoops(loop_info)) {
     auto _loop_node = loop_value_node[&*L];
     if (auto _parent_loop = L->getParentLoop()) {
-      outs() << "FIND PARENT\n";
       _loop_node->setParentLoop(loop_value_node[_parent_loop]);
     }
   }
