@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/CallSite.h"
@@ -22,7 +23,7 @@ struct DebugInfo : public llvm::ModulePass {
   static char ID;
 
   std::map<llvm::Instruction*, llvm::BasicBlock*> inst_bb;
-  std::map<llvm::Instruction*, std::vector<uint32_t>> node_operands;
+  std::map<llvm::Instruction*, std::set<uint32_t>> node_operands;
 
   std::string function_name;
   int node_id;

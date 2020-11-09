@@ -1160,10 +1160,9 @@ Graph::insertSyncNode(SyncInst& I) {
  */
 InstructionNode*
 Graph::insertIcmpOperatorNode(ICmpInst& I) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<IcmpNode>(
-      NodeInfo(inst_list.size(),
-               "icmp_" + I.getName().str() + to_string(inst_list.size())),
-      &I));
+      NodeInfo(uid, "icmp_" + I.getName().str() + to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
@@ -2154,6 +2153,9 @@ Graph::printMUIR() {
       case InstructionNode::LoadInstructionTy: node_type = "Load"; break;
       case InstructionNode::StoreInstructionTy: node_type = "Store"; break;
       case InstructionNode::ReturnInstrunctionTy: node_type = "Return"; break;
+      case InstructionNode::GetElementPtrInstTy: node_type = "Gep"; break;
+      case InstructionNode::GetElementPtrArrayInstTy: node_type = "Gep_Array"; break;
+      case InstructionNode::GetElementPtrStructInstTy: node_type = "Gep_Struct"; break;
       default: node_type = "Uknown"; break;
     }
 

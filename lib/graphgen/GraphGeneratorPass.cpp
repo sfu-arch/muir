@@ -747,12 +747,13 @@ GraphGeneratorPass::visitCallInst(llvm::CallInst& I) {
         dyn_cast<Function>(CallSite(_call).getCalledValue()->stripPointerCasts());
     if (!called) {
       I.dump();
-      assert(!"Function pointer is not supported, please consider to remove the function pointers");
+      assert(!"Function pointer is not supported, please consider to remove the function "
+              "pointers");
     }
-    if (called->isDeclaration()){
-      //skip debug intrinsics
-      if(called->getName().contains_lower("llvm.dbg.value"))
-          return;
+    if (called->isDeclaration()) {
+      // skip debug intrinsics
+      if (called->getName().contains_lower("llvm.dbg.value"))
+        return;
       I.dump();
       assert(!"Library function call is not supported");
     }
@@ -1783,7 +1784,6 @@ GraphGeneratorPass::buildLoopNodes(Function& F, llvm::LoopInfo& loop_info) {
   for (auto& L : getLoops(loop_info)) {
     auto _loop_node = loop_value_node[&*L];
     if (auto _parent_loop = L->getParentLoop()) {
-      outs() << "FIND PARENT\n";
       _loop_node->setParentLoop(loop_value_node[_parent_loop]);
     }
   }
@@ -1795,7 +1795,7 @@ GraphGeneratorPass::connectLoopEdge() {
   for (auto _edge : live_in_ins_loop_edge) {
     auto _node_src = this->map_value_node.find(_edge.first);
     if (_node_src == this->map_value_node.end()) {
-      _edge.first->dump();
+      DEBUG(_edge.first->dump());
       assert(!"WRONG");
     }
     for (auto _tar : _edge.second) {
@@ -1924,7 +1924,6 @@ GraphGeneratorPass::runOnModule(Module& M) {
           auto inst_node_find = map_value_node.find(&ins);
           if (inst_node_find != map_value_node.end()) {
             auto inst_node = dyn_cast<InstructionNode>(inst_node_find->second);
-
             for (auto val : debug_info_pass.node_operands[&ins]) {
               inst_node->debug_parent_node.push_back(val);
             }
