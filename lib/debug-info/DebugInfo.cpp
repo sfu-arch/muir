@@ -48,8 +48,6 @@ getARGID(Argument* ARG) {
 }
 
 
-
-
 /// This function recursively search for the operand nodes, and if the operands are in the
 /// same basicblock and are not PHI, it adds them under node_operands map
 static void
@@ -66,12 +64,12 @@ visitOperands(llvm::Instruction& ins,
         node_operands.push_back(getUID(op_ins));
         visited_bb.insert(ins.getParent());
         visitOperands(*op_ins, node_operands, visited_bb);
-      } else if(auto arg = dyn_cast<Argument>(op.get())) {
+      } else if (auto arg = dyn_cast<Argument>(op.get())) {
         arg->print(outs());
         node_operands.push_back(getARGID(arg));
-      }else{
-          //The value is constant
-          continue;
+      } else {
+        // The value is constant
+        continue;
       }
     }
   } else {

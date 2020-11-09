@@ -1160,10 +1160,9 @@ Graph::insertSyncNode(SyncInst& I) {
  */
 InstructionNode*
 Graph::insertIcmpOperatorNode(ICmpInst& I) {
+  auto uid = getUID(&I);
   inst_list.push_back(std::make_unique<IcmpNode>(
-      NodeInfo(inst_list.size(),
-               "icmp_" + I.getName().str() + to_string(inst_list.size())),
-      &I));
+      NodeInfo(uid, "icmp_" + I.getName().str() + to_string(uid)), &I));
 
   auto ff = std::find_if(inst_list.begin(), inst_list.end(), [&I](auto& arg) -> bool {
     return arg.get()->getInstruction() == &I;
