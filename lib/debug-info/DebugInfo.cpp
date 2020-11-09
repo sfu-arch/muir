@@ -47,38 +47,60 @@ getARGID(Argument* ARG) {
   return stoi(S->getString().str());
 }
 
+/// This function recursively search for the operand nodes, and if the operands are in the
+/// same basicblock and are not PHI, it adds them under node_operands map
+static void
+visitPhiOperands(llvm::Instruction* ins,
+                 std::set<uint32_t>& node_operands,
+                 std::set<BasicBlock*>& visited_bb) {
+  auto find_bb = visited_bb.find(ins->getParent());
+  if (find_bb != visited_bb.end())
+    return;
+  // If intruction is PHI find all the child's dependencies
+  for (auto& op : ins->operands()) {
+    if (auto op_ins = dyn_cast<llvm::Instruction>(op.get())) {
+      if (op_ins->getParent() == ins->getParent()) {
+        node_operands.insert(getUID(op_ins));
+      }
+    } else {
+      // TODO: Enable this part after adding UIDs to
+      // function arguments
+      continue;
+    }
+  }
+}
+
 
 /// This function recursively search for the operand nodes, and if the operands are in the
 /// same basicblock and are not PHI, it adds them under node_operands map
 static void
-visitOperands(llvm::Instruction& ins,
-              std::vector<uint32_t>& node_operands,
+visitOperands(llvm::Instruction* ins,
+              std::set<uint32_t>& node_operands,
               std::set<BasicBlock*>& visited_bb) {
-  auto find_bb = visited_bb.find(ins.getParent());
+  auto find_bb = visited_bb.find(ins->getParent());
   if (find_bb != visited_bb.end())
     return;
   // If intruction is PHI find all the child's dependencies
-  if (auto phi_ins = dyn_cast<llvm::PHINode>(&ins)) {
+  if (auto phi_ins = dyn_cast<llvm::PHINode>(ins)) {
     for (auto& op : phi_ins->operands()) {
       if (auto op_ins = dyn_cast<llvm::Instruction>(op.get())) {
-        node_operands.push_back(getUID(op_ins));
-        visited_bb.insert(ins.getParent());
-        visitOperands(*op_ins, node_operands, visited_bb);
+        visited_bb.insert(ins->getParent());
+        visitPhiOperands(op_ins, node_operands, visited_bb);
       } else if (auto arg = dyn_cast<Argument>(op.get())) {
         arg->print(outs());
-        node_operands.push_back(getARGID(arg));
+        node_operands.insert(getARGID(arg));
       } else {
         // The value is constant
         continue;
       }
     }
   } else {
-    for (auto& op : ins.operands()) {
+    for (auto& op : ins->operands()) {
       if (auto op_ins = dyn_cast<llvm::Instruction>(op.get())) {
-        if (op_ins->getParent() == ins.getParent()) {
-          node_operands.push_back(getUID(op_ins));
-          visited_bb.insert(ins.getParent());
-          visitOperands(*op_ins, node_operands, visited_bb);
+        if (op_ins->getParent() == ins->getParent()) {
+          node_operands.insert(getUID(op_ins));
+          visitOperands(op_ins, node_operands, visited_bb);
+          visited_bb.insert(ins->getParent());
         }
       } else {
         // TODO: Enable this part after adding UIDs to
@@ -109,13 +131,13 @@ DebugInfo::runOnModule(Module& m) {
         std::set<BasicBlock*> visited_bb;
         if (int(this->node_id) != -1) {
           if (inst_uid == this->node_id) {
-            std::vector<uint32_t> parent_ids;
-            visitOperands(ins, parent_ids, visited_bb);
+            std::set<uint32_t> parent_ids;
+            visitOperands(&ins, parent_ids, visited_bb);
             this->node_operands[&ins] = parent_ids;
           }
         } else {
-          std::vector<uint32_t> parent_ids;
-          visitOperands(ins, parent_ids, visited_bb);
+          std::set<uint32_t> parent_ids;
+          visitOperands(&ins, parent_ids, visited_bb);
           this->node_operands[&ins] = parent_ids;
         }
       }

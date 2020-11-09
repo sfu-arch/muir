@@ -2153,6 +2153,9 @@ Graph::printMUIR() {
       case InstructionNode::LoadInstructionTy: node_type = "Load"; break;
       case InstructionNode::StoreInstructionTy: node_type = "Store"; break;
       case InstructionNode::ReturnInstrunctionTy: node_type = "Return"; break;
+      case InstructionNode::GetElementPtrInstTy: node_type = "Gep"; break;
+      case InstructionNode::GetElementPtrArrayInstTy: node_type = "Gep_Array"; break;
+      case InstructionNode::GetElementPtrStructInstTy: node_type = "Gep_Struct"; break;
       default: node_type = "Uknown"; break;
     }
 
