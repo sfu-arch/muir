@@ -39,9 +39,7 @@ cd build/test/c/
 make all
 ```
 
-For each test case there is going to be one Scala file which has the detailed implementation of dandelion-generator.
-=======================================================================================================================
-[![](https://tokei.rs/b1/github/sfu-arch/muir)](https://github.com/sfu-arch/muir)
+**For each test case there is going to be one Scala file which has the detailed implementation of dandelion-generator.**
 
 
 muIR-Generator is a tool to generator hardware accelerator from software programs. muIR-Generator uses muIR as an intermediate representation (IR) to design hardware accelerators. Currently, muIR-Generator supports C/C++ and Cilk programs.
