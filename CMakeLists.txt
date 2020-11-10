@@ -62,6 +62,7 @@ option(LLVM_BUILD_TOOLS
 
 message("LLVM STATUS:
   Definitions ${LLVM_DEFINITIONS}
+  Binaries    ${LLVM_BINARY_DIR}/bin
   Includes    ${LLVM_INCLUDE_DIRS}
   Libraries   ${LLVM_LIBRARY_DIRS}
   Targets     ${LLVM_TARGETS_TO_BUILD}"
@@ -94,6 +95,7 @@ set(CMAKE_TEMP_LIBRARY_PATH "${PROJECT_BINARY_DIR}/lib")
 #configure_file("${CMAKE_SOURCE_DIR}/tests" "${CMAKE_CURRENT_BINARY_DIR}/" @COPYONLY)
 file(COPY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
 configure_file("${CMAKE_SOURCE_DIR}/tests/c/Makefile" "${CMAKE_CURRENT_BINARY_DIR}/tests/c/Makefile" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/tests/c/debug/Makefile" "${CMAKE_CURRENT_BINARY_DIR}/tests/c/debug/Makefile" @ONLY)
 configure_file("${CMAKE_SOURCE_DIR}/tests/bc/Machsuite/common.mk" "${CMAKE_CURRENT_BINARY_DIR}/tests/bc/Machsuite/common.mk" @ONLY)
 configure_file("${CMAKE_SOURCE_DIR}/scripts/colors.sh" "${CMAKE_CURRENT_BINARY_DIR}/scripts/colors.sh" @ONLY)
 configure_file("${CMAKE_SOURCE_DIR}/scripts/config.json" "${CMAKE_CURRENT_BINARY_DIR}/scripts" @ONLY)

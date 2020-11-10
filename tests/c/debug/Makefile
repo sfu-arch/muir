@@ -25,14 +25,15 @@ all: $(SCALA)
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o - | $(OPT) -mem2reg -loop-simplify -loop-simplifycfg -simplifycfg -disable-loop-vectorization -dce -o $@
+	$(OPT) --strip-debug -dot-cfg $@ -o $*.nodebug.bc
+	dot -Tsvg cfg.$*.dot -o cfg.$*.svg
 
 %.ll: %.bc
 	$(DIS) $<
 
 %.scala: %.ll
 	$(DANDELION) -fn-name=$* -config=$(DANDELION_CONFIG) -verbose -dump-muir $< -o $*
-	$(OPT) --strip-debug -dot-cfg $*.final.bc -o $*.final.nodebug.bc
-	dot -Tsvg cfg.$*.dot -o cfg.$*.svg
+
 
 %.svg: %.dot
 	dot -Tsvg $< -o $@
