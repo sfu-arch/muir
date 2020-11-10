@@ -67,7 +67,7 @@ function build_verilator(){
         git clone "http://git.veripool.org/git/verilator"
         cd verilator
         git pull
-        git checkout verilator_4_016
+        git checkout v4.016
         unset VERILATOR_ROOT
         autoconf
         ./configure
@@ -112,9 +112,8 @@ function build_tapir(){
 function build_dependencies(){
     echo -e "${GREEN}Installing dependencies, it needs sudo access to update packages...${NOCOLOR}"
     sudo apt update
-    sudo apt install -y build-essential cmake libjsoncpp-dev libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib libfl2 libfl-dev git make autoconf g++ flex bison python gpg default-jdk python3 python3-dev python3-pip gcc libtinfo-dev zlib1g-dev ninja-build libsnappy-dev linux-libc-dev:i386
-    sudo rm /usr/bin/g++
-    sudo ln -s /usr/bin/g++-8 /usr/bin/g++
+    sudo apt install -y build-essential cmake libjsoncpp-dev libncurses5-dev graphviz binutils-dev libfl2 libfl-dev git make autoconf g++ flex bison python gpg default-jdk python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev ninja-build libsnappy-dev
+
     echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
     sudo apt update
