@@ -19,6 +19,8 @@ all: dandelion
 
 dandelion: $(KERN).bc
 	$(DANDELION) -fn-name=$(KERN) -config=$(DANDELION_CONFIG) $< -o $(KERN)
+	$(OPT) --strip-debug -dot-cfg $(KERN).final.bc -o $(KERN).final.nodebug.bc
+	dot -Tsvg cfg.$(KERN).dot -o cfg.$(KERN).svg
 
 clean:
-	-rm -f *.final.bc *.ll *.scala *~ *.json
+	-rm -f *.final.bc *.ll *.scala *~ *.json *.dot *.svg *.final.nodebug.bc
