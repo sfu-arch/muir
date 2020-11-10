@@ -26,11 +26,6 @@ WHITE='\033[1;37m'
 # ----------------------------------
 # GIT
 # ----------------------------------
-CHISEL_GIT="https://github.com/freechipsproject/chisel3.git"
-FIRRTL_GIT="https://github.com/freechipsproject/firrtl.git"
-CHISEL_TESTERS_GIT="https://github.com/freechipsproject/chisel-testers.git"
-BERKELEY_HARD_FLOAT_GIT="https://github.com/ucb-bar/berkeley-hardfloat.git"
-DSPTOOLS_GIT="https://github.com/ucb-bar/dsptools.git"
 TAPIR_META="https://github.com/sfu-arch/Tapir-Meta.git"
 
 DEPEN="dependencies"
@@ -72,7 +67,7 @@ function build_verilator(){
         git clone "http://git.veripool.org/git/verilator"
         cd verilator
         git pull
-        git checkout verilator_4_016
+        git checkout v4.016
         unset VERILATOR_ROOT
         autoconf
         ./configure
@@ -117,9 +112,8 @@ function build_tapir(){
 function build_dependencies(){
     echo -e "${GREEN}Installing dependencies, it needs sudo access to update packages...${NOCOLOR}"
     sudo apt update
-    sudo apt install -y build-essential cmake libjsoncpp-dev libncurses5-dev graphviz binutils-dev gcc-8-multilib g++-8-multilib libfl2 libfl-dev git make autoconf g++ flex bison python gpg default-jdk python3 python3-dev python3-pip gcc libtinfo-dev zlib1g-dev ninja-build libsnappy-dev linux-libc-dev:i386
-    sudo rm /usr/bin/g++
-    sudo ln -s /usr/bin/g++-8 /usr/bin/g++
+    sudo apt install -y build-essential cmake libjsoncpp-dev libncurses5-dev graphviz binutils-dev libfl2 libfl-dev git make autoconf g++ flex bison python gpg default-jdk python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev ninja-build libsnappy-dev
+
     echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
     sudo apt update
@@ -128,26 +122,15 @@ function build_dependencies(){
     echo -e "${GREEN}Dependencies installed sucessfully...${NOCOLOR}"
 }
 
-function build_chisel(){
-    echo -e "${GREEN}Buidling chisel dependencies...${NOCOLOR}"
-    #progress-bar 10
-    git_clone "firrtl" ${FIRRTL_GIT}
-    git_clone "chisel3" ${CHISEL_GIT}
-    git_clone "chisel-testers" ${CHISEL_TESTERS_GIT}
-    git_clone "hardfloat" ${BERKELEY_HARD_FLOAT_GIT}
-    git_clone "dsptools" ${DSPTOOLS_GIT}
-}
-
-
 # ----------------------------------
 # SCRIPTS
 # ----------------------------------
 
-echo -e "${GREEN}Setting up Dandelion dependencies.......${NOCOLOR}"
+echo -e "${GREEN}Setting up muIR dependencies.......${NOCOLOR}"
 
 #1) Clone and build all the dependencies
 while true; do
-    read -p "Do you wish to install Dandelion dependencies? [y/N]" yn
+    read -p "Do you wish to install muIR dependencies? [y/N]" yn
     case ${yn:-N} in
         [Yy]* ) build_dependencies; break;;
         [Nn]* ) break;;
@@ -173,16 +156,4 @@ while true; do
         * ) echo "Please answer yes or no.";;
     esac
 done
-
-while true; do
-    read -p "Do you wish to install Chisel dependencies? [Y/n]" yn
-    case ${yn:-Y} in
-        [Yy]* ) build_chisel; break;;
-        [Nn]* ) exit;;
-        * ) echo "Please answer yes or no.";;
-    esac
-done
-
-
-
 

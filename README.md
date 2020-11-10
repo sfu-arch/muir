@@ -161,4 +161,4 @@ https://github.com/sfu-arch/dandelion-lib/wiki
 
 Author:
 ========
-* Amirali Sharifian (amiralis@sfu.ca)
+* Amirali Sharifian (am.sharifian@gmail.com)
